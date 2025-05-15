@@ -1,0 +1,57 @@
+/* === PALETA DE COLORES === */
+
+:root {
+    /* SYSTEM */
+  --bg-main: #f9f9f9;
+  --bg-success: #a5dc86;
+  --bg-warning: #f8bb86;
+  --bg-danger: #f27474;
+  --bg-unread: #fff;
+  --bg-read: #f8f9fa;
+
+  --bg-blue-100: #021527;
+  --bg-blue-200: #090244;
+  --bg-blue-400: #03195B;
+  --bg-blue-500: #002E5D;
+  --bg-blue-700: #075797;
+  --bg-blue-800: #276BA5;
+  --bg-blue-900: #CCD7E9;
+  --bg-red-500: #E31E24;
+
+    /* GRAYSCALE */
+  --bg-black: #000;
+  --bg-gray-200: #1a1a1a;
+  --bg-gray-400: #333;
+  --bg-gray-600: #707070;
+  --bg-gray-700: #9F9F9F;
+  --bg-gray-800: #EDEDED;
+  --bg-gray-900: #F8F9FB;
+
+    /* BUTTONS */
+  --bg-button-view: #CCD7E9;
+  --bg-button-edit: #60AABC;
+  --bg-button-delete: #DB5E68;
+  --bg-button-primary: #075797;
+  --bg-button-secondary: #CDCDCD;
+
+  /* BUTTON HOVER */
+  --bg-view-hover: #CCD7E9;
+  --bg-edit-hover: #60AABC;
+  --bg-delete-hover: #DB5E68;
+  --bg-primary-hover: #075797;
+  --bg-secondary-hover: #CDCDCD;
+
+  /* BUTTON ACTIVE */
+  --bg-view-active: #CCD7E9;
+  --bg-edit-active: #60AABC;
+  --bg-delete-active: #DB5E68;
+  --bg-primary-active: #075797;
+  --bg-secondary-active: #CDCDCD;
+
+  /* BUTTON DISABLED */
+  --bg-view-disabled: #CCD7E9;
+  --bg-edit-disabled: #60AABC;
+  --bg-delete-disabled: #DB5E68;
+  --bg-primary-disabled: #075797;
+  --bg-secondary-disabled: #CDCDCD;
+}
