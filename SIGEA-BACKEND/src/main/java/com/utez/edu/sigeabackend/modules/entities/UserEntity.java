@@ -1,5 +1,6 @@
 package com.utez.edu.sigeabackend.modules.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -139,6 +140,7 @@ public class UserEntity {
         this.email = email;
     }
 
+    @JsonIgnore
     public String getPassword() {
         return password;
     }
