@@ -1,7 +1,10 @@
 package com.utez.edu.sigeabackend.modules.controllers;
 
 import com.utez.edu.sigeabackend.modules.entities.UserEntity;
+import com.utez.edu.sigeabackend.modules.entities.dto.CreateUserDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.UpdateUserDto;
 import com.utez.edu.sigeabackend.modules.services.UserService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,13 +31,13 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<UserEntity> create(@PathVariable long id) {
-        return service.findById(id);
+    public ResponseEntity<UserEntity> create(@Valid @RequestBody CreateUserDto dto) {
+        return service.create(dto);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<UserEntity> update(@PathVariable long id, @RequestBody UserEntity user) {
-        return service.update(id, user);
+    public ResponseEntity<UserEntity> update(@PathVariable long id, @Valid @RequestBody UpdateUserDto dto) {
+        return service.update(id, dto);
     }
 
     @DeleteMapping("/{id}")

@@ -1,9 +1,14 @@
 package com.utez.edu.sigeabackend.auth.modules;
 
+import com.utez.edu.sigeabackend.auth.ActiveUserService;
 import com.utez.edu.sigeabackend.auth.DTO.*;
+import com.utez.edu.sigeabackend.modules.repositories.UserRepository;
+import com.utez.edu.sigeabackend.utils.security.JWTUtil;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -11,9 +16,20 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService service;
+    private final JWTUtil jwtUtil;
+    private final UserRepository userRepo;
+    private final ActiveUserService activeUserService;
 
-    public AuthController(AuthService service) {
+    public AuthController(
+            AuthService service,
+            JWTUtil jwtUtil,
+            UserRepository userRepo,
+            ActiveUserService activeUserService
+    ) {
         this.service = service;
+        this.jwtUtil = jwtUtil;
+        this.userRepo = userRepo;
+        this.activeUserService = activeUserService;
     }
 
     @PostMapping("/login")
@@ -41,4 +57,22 @@ public class AuthController {
     ) {
         return service.resetPassword(dto);
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.substring(7);
+        String email = jwtUtil.extractUsername(token);
+        // buscar al user
+        userRepo.findByEmail(email).ifPresent(u ->
+                activeUserService.registerLogout(u.getId())
+        );
+        return ResponseEntity.ok("Logout exitoso");
+    }
+
+    @GetMapping("/active-users")
+    public ResponseEntity<?> activeUsers() {
+        int count = activeUserService.getActiveUserCount();
+        return ResponseEntity.ok(Map.of("activeUsers", count));
+    }
+
 }

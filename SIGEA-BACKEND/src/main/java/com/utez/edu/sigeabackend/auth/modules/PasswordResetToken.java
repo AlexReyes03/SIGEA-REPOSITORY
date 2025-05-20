@@ -7,25 +7,19 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "password_reset_token",
-        indexes = @Index(columnList = "token", name = "idx_prt_token"))
+        indexes = @Index(columnList = "tokenHash", name = "idx_prt_token_hash"))
 public class PasswordResetToken {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Código OTP (6 dígitos)
-    @Column(nullable = false, length = 6, unique = true)
-    private String token;
+    @Column(nullable = false, length = 60)
+    private String tokenHash;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_prt_user"))
+    @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "fk_prt_user"))
     private UserEntity user;
 
-    @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
-
-    @Column(name = "used", nullable = false)
     private boolean used = false;
 
     public Long getId() {
@@ -36,12 +30,12 @@ public class PasswordResetToken {
         this.id = id;
     }
 
-    public String getToken() {
-        return token;
+    public String getTokenHash() {
+        return tokenHash;
     }
 
-    public void setToken(String token) {
-        this.token = token;
+    public void setTokenHash(String tokenHash) {
+        this.tokenHash = tokenHash;
     }
 
     public UserEntity getUser() {
@@ -67,4 +61,6 @@ public class PasswordResetToken {
     public void setUsed(boolean used) {
         this.used = used;
     }
+
+    // + getters/setters
 }
