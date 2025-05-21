@@ -1,8 +1,8 @@
 package com.utez.edu.sigeabackend.modules.controllers;
 
-import com.utez.edu.sigeabackend.modules.entities.UserEntity;
 import com.utez.edu.sigeabackend.modules.entities.dto.CreateUserDto;
 import com.utez.edu.sigeabackend.modules.entities.dto.UpdateUserDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.UserResponseDto;
 import com.utez.edu.sigeabackend.modules.services.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -21,22 +21,27 @@ public class UserController {
     }
 
     @GetMapping
-    public ResponseEntity<List<UserEntity>> getAll() {
+    public ResponseEntity<List<UserResponseDto>> getAll() {
         return service.listAll();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UserEntity> getById(@PathVariable long id) {
+    public ResponseEntity<UserResponseDto> getById(@PathVariable long id) {
         return service.findById(id);
     }
 
     @PostMapping
-    public ResponseEntity<UserEntity> create(@Valid @RequestBody CreateUserDto dto) {
+    public ResponseEntity<UserResponseDto> create(
+            @Valid @RequestBody CreateUserDto dto
+    ) {
         return service.create(dto);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<UserEntity> update(@PathVariable long id, @Valid @RequestBody UpdateUserDto dto) {
+    public ResponseEntity<UserResponseDto> update(
+            @PathVariable long id,
+            @Valid @RequestBody UpdateUserDto dto
+    ) {
         return service.update(id, dto);
     }
 

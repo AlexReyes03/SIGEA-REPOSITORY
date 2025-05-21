@@ -122,10 +122,13 @@ public class AuthService {
                 "registrationNumber", user.getRegistrationNumber(),
                 "status", user.getStatus().name(),
                 "role", Map.of(
-                        "id", user.getRole().getId(),
+                        "id",   user.getRole().getId(),
                         "name", user.getRole().getRoleName()
                 ),
-                "campusId", user.getPlantel().getId()
+                "campus", Map.of(
+                        "id",   user.getPlantel().getId(),
+                        "name", user.getPlantel().getName()
+                )
         ));
         return ResponseEntity.ok(payload);
     }
