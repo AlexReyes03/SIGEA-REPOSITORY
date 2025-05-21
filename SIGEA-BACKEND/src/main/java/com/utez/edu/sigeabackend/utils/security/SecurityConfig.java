@@ -48,8 +48,8 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth ->
-                        auth.requestMatchers("/api/auth/**").permitAll()
-                                .anyRequest().permitAll() //.authenticated()
+                        auth.requestMatchers("/sigea/auth/**").permitAll()
+                                .anyRequest().permitAll() //.authenticated() .permitAll()
                 )
                 .sessionManagement(sess ->
                         sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS)

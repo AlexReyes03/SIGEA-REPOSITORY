@@ -109,7 +109,7 @@ public class AuthService {
         Instant expiration = Instant.now().plusSeconds(10 * 60 * 60); // 10 h
         activeUserService.registerLogin(user.getId(), expiration);
 
-        // Construir respuesta (user + token)
+        // Construir respuesta (user + token + status)
         Map<String, Object> payload = new HashMap<>();
         payload.put("statusCode", HttpStatus.OK.value());
         payload.put("token", jwt);
@@ -135,21 +135,21 @@ public class AuthService {
 
     @Transactional
     public ResponseEntity<?> requestPasswordReset(PasswordResetRequestDto dto) {
-        // 1) Limpia tokens expirados
+        // Limpia tokens expirados
         tokenRepo.deleteByExpiresAtBefore(LocalDateTime.now());
 
-        // 2) Busca usuario; si no existe, devolvemos OK de todas formas
+        // Busca usuario; si no existe, devolvemos OK de todas formas
         Optional<UserEntity> userOpt = userRepo.findByEmail(dto.email());
         if (userOpt.isEmpty()) {
             return ResponseEntity.ok("Si el correo existe, hemos enviado un código de verificación.");
         }
         UserEntity user = userOpt.get();
 
-        // 3) Genera OTP crudo
+        // Genera OTP crudo
         int codeInt = 100_000 + random.nextInt(900_000);
         String code = String.valueOf(codeInt);
 
-        // 4) Hashea el OTP y persiste sólo el hash
+        // Hashea el OTP y persiste sólo el hash
         PasswordResetToken prt = new PasswordResetToken();
         prt.setUser(user);
         prt.setTokenHash(passwordEncoder.encode(code));
@@ -157,7 +157,7 @@ public class AuthService {
         prt.setUsed(false);
         tokenRepo.save(prt);
 
-        // 5) Envía el OTP “crudo” al correo
+        // Envía el OTP “crudo” al correo
         SimpleMailMessage mail = new SimpleMailMessage();
         mail.setTo(user.getEmail());
         mail.setSubject("Código de verificación");
@@ -165,12 +165,12 @@ public class AuthService {
                 "\nExpira en 15 minutos.");
         mailSender.send(mail);
 
-        // 6) Respuesta
+        // Respuesta
         return ResponseEntity.ok("Si el correo existe, hemos enviado un código de verificación.");
     }
 
     public ResponseEntity<?> verifyCode(VerifyCodeDto dto) {
-        // 1) Buscar el token más reciente para este usuario
+        // Buscar el token más reciente para este usuario
         Optional<PasswordResetToken> prtOpt = tokenRepo
                 .findTopByUser_EmailOrderByExpiresAtDesc(dto.email());
 
@@ -180,7 +180,7 @@ public class AuthService {
         }
         PasswordResetToken prt = prtOpt.get();
 
-        // 2) Verificar condiciones de uso
+        // Verificar condiciones de uso
         boolean expired = prt.getExpiresAt().isBefore(LocalDateTime.now());
         boolean wrongUser = !prt.getUser().getEmail().equals(dto.email());
         boolean wrongCode = !passwordEncoder.matches(dto.code(), prt.getTokenHash());
@@ -190,11 +190,11 @@ public class AuthService {
                     .body("Código inválido o expirado");
         }
 
-        // 3) Marcar como usado
+        // Marcar como usado
         prt.setUsed(true);
         tokenRepo.save(prt);
 
-        // 4) Responder éxito
+        // Responder éxito
         return ResponseEntity.ok("Código verificado con éxito");
     }
 

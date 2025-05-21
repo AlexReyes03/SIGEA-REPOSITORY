@@ -35,7 +35,7 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // Helper centralizado para convertir entidad → DTO
+    // Helper
     private UserResponseDto toDto(UserEntity u) {
         return new UserResponseDto(
                 u.getId(),
@@ -68,7 +68,7 @@ public class UserService {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
-    @Transactional  // sobrescribe readOnly para permitir writes
+    @Transactional
     public ResponseEntity<UserResponseDto> create(CreateUserDto dto) {
         if (userRepo.existsByEmail(dto.email()) ||
                 userRepo.existsByRegistrationNumber(dto.registrationNumber())) {

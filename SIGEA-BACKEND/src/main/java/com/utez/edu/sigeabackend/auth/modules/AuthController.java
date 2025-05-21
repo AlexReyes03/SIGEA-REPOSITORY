@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/sigea/auth")
 @CrossOrigin(origins = "*")
 public class AuthController {
 
@@ -62,7 +62,6 @@ public class AuthController {
     public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
         String token = authHeader.substring(7);
         String email = jwtUtil.extractUsername(token);
-        // buscar al user
         userRepo.findByEmail(email).ifPresent(u ->
                 activeUserService.registerLogout(u.getId())
         );
