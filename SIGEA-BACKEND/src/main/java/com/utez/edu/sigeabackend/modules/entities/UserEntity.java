@@ -73,6 +73,11 @@ public class UserEntity {
     )
     private LocalDateTime createdAt;
 
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
+
     // -- Constructors --
     public UserEntity() {}
 
