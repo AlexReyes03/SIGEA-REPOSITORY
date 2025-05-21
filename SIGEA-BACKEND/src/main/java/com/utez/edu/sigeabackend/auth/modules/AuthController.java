@@ -62,9 +62,7 @@ public class AuthController {
     public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
         String token = authHeader.substring(7);
         String email = jwtUtil.extractUsername(token);
-        userRepo.findByEmail(email).ifPresent(u ->
-                activeUserService.registerLogout(u.getId())
-        );
+        userRepo.findByEmail(email).ifPresent(u -> activeUserService.registerLogout(u.getId()));
         return ResponseEntity.ok("Logout exitoso");
     }
 
