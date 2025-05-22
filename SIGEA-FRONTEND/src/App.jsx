@@ -1,11 +1,14 @@
+import React from 'react';
+import AppRouter from './routes/AppRouter';
+import { ToastProvider } from './components/providers/ToastProvider';
+import { ConfirmDialogProvider } from './components/providers/ConfirmDialogProvider';
 
-
-function App() {
+export default function App() {
   return (
-    <>
-      
-    </>
-  )
+    <ToastProvider>
+      <ConfirmDialogProvider>
+        <AppRouter />
+      </ConfirmDialogProvider>
+    </ToastProvider>
+  );
 }
-
-export default App

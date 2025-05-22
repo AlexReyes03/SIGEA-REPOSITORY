@@ -1,7 +1,19 @@
-/* === PALETA DE COLORES === */
+/* === IMPORTS ===*/
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined');
 
+/* === FUENTE === */
+body,
+input,
+button,
+select,
+textarea {
+  font-family: 'Poppins', sans-serif;
+}
+
+/* === PALETA DE COLORES === */
 :root {
-    /* SYSTEM */
+  /* SYSTEM */
   --bg-main: #f9f9f9;
   --bg-success: #a5dc86;
   --bg-warning: #f8bb86;
@@ -11,47 +23,77 @@
 
   --bg-blue-100: #021527;
   --bg-blue-200: #090244;
-  --bg-blue-400: #03195B;
-  --bg-blue-500: #002E5D;
+  --bg-blue-400: #03195b;
+  --bg-blue-500: #002e5d;
   --bg-blue-700: #075797;
-  --bg-blue-800: #276BA5;
-  --bg-blue-900: #CCD7E9;
-  --bg-red-500: #E31E24;
+  --bg-blue-800: #276ba5;
+  --bg-blue-900: #ccd7e9;
+  --bg-red-500: #e31e24;
 
-    /* GRAYSCALE */
+  /* GRAYSCALE */
   --bg-black: #000;
   --bg-gray-200: #1a1a1a;
   --bg-gray-400: #333;
   --bg-gray-600: #707070;
-  --bg-gray-700: #9F9F9F;
-  --bg-gray-800: #EDEDED;
-  --bg-gray-900: #F8F9FB;
+  --bg-gray-700: #9f9f9f;
+  --bg-gray-800: #ededed;
+  --bg-gray-900: #f8f9fb;
 
-    /* BUTTONS */
-  --bg-button-view: #CCD7E9;
-  --bg-button-edit: #60AABC;
-  --bg-button-delete: #DB5E68;
+  /* BUTTONS */
+  --bg-button-view: #ccd7e9;
+  --bg-button-edit: #60aabc;
+  --bg-button-delete: #db5e68;
   --bg-button-primary: #075797;
-  --bg-button-secondary: #CDCDCD;
+  --bg-button-secondary: #cdcdcd;
 
   /* BUTTON HOVER */
-  --bg-view-hover: #CCD7E9;
-  --bg-edit-hover: #60AABC;
-  --bg-delete-hover: #DB5E68;
+  --bg-view-hover: #ccd7e9;
+  --bg-edit-hover: #60aabc;
+  --bg-delete-hover: #db5e68;
   --bg-primary-hover: #075797;
-  --bg-secondary-hover: #CDCDCD;
+  --bg-secondary-hover: #cdcdcd;
 
   /* BUTTON ACTIVE */
-  --bg-view-active: #CCD7E9;
-  --bg-edit-active: #60AABC;
-  --bg-delete-active: #DB5E68;
+  --bg-view-active: #ccd7e9;
+  --bg-edit-active: #60aabc;
+  --bg-delete-active: #db5e68;
   --bg-primary-active: #075797;
-  --bg-secondary-active: #CDCDCD;
+  --bg-secondary-active: #cdcdcd;
 
   /* BUTTON DISABLED */
-  --bg-view-disabled: #CCD7E9;
-  --bg-edit-disabled: #60AABC;
-  --bg-delete-disabled: #DB5E68;
+  --bg-view-disabled: #ccd7e9;
+  --bg-edit-disabled: #60aabc;
+  --bg-delete-disabled: #db5e68;
   --bg-primary-disabled: #075797;
-  --bg-secondary-disabled: #CDCDCD;
+  --bg-secondary-disabled: #cdcdcd;
+}
+
+.bg-blue-500 {
+  background-color: var(--bg-blue-500);
+}
+
+.text-blue-800 {
+  color: var(--bg-blue-800);
+}
+
+.text-blue-500 {
+  color: var(--bg-blue-700);
+}
+
+.button-blue-800 {
+  background: var(--bg-blue-800);
+  transition: filter .15s ease, box-shadow .15s ease;
+}
+
+.button-blue-800:hover {
+  filter: brightness(.9);
+}
+
+.button-blue-800:active {
+  filter: brightness(.7);
+}
+
+.button-blue-800:focus {
+  outline: 3px solid var(--bg-blue-800) !important;
+  outline-offset: 3px;
 }
