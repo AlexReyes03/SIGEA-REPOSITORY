@@ -17,3 +17,4 @@ export const getActiveUsers = async () => {
   const { activeUsers } = await request('/auth/active-users');
   return activeUsers;
 };
+
