@@ -12,7 +12,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/sigea/auth")
-@CrossOrigin(origins = "*")
 public class AuthController {
 
     private final AuthService service;
