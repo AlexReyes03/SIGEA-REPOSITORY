@@ -165,7 +165,6 @@ public class AuthService {
                 "\nExpira en 15 minutos.");
         mailSender.send(mail);
 
-        // Respuesta
         return ResponseEntity.ok("Si el correo existe, hemos enviado un código de verificación.");
     }
 
@@ -194,14 +193,13 @@ public class AuthService {
         prt.setUsed(true);
         tokenRepo.save(prt);
 
-        // Responder éxito
         return ResponseEntity.ok("Código verificado con éxito");
     }
 
 
     @Transactional
     public ResponseEntity<?> resetPassword(PasswordResetDto dto) {
-        // Validar el código OTP (verifyCode ya marca el token como usado)
+        // Validar el código OTP
         ResponseEntity<?> verification = verifyCode(
                 new VerifyCodeDto(dto.email(), dto.code())
         );
@@ -209,7 +207,7 @@ public class AuthService {
             return verification;
         }
 
-        // Cargar el usuario (o lanzar 400 si no existe)
+        // Cargar el usuario
         UserEntity user = userRepo.findByEmail(dto.email())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "Usuario no encontrado"
@@ -219,7 +217,6 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(dto.newPassword()));
         userRepo.save(user);
 
-        // Responder éxito
         return ResponseEntity.ok("Contraseña actualizada correctamente");
     }
 }

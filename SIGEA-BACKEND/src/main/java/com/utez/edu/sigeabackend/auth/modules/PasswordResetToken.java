@@ -61,6 +61,4 @@ public class PasswordResetToken {
     public void setUsed(boolean used) {
         this.used = used;
     }
-
-    // + getters/setters
 }
