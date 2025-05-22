@@ -16,7 +16,7 @@ export default function Recover() {
       if (!email.trim()) return;
   
       try {
-        showSuccess('Correo enviado', `Se ha enviado un código de verificación a ${email} revisa tu bandeja de spam`);
+        showSuccess('Hecho', `Se ha enviado un código de verificación a ${email} revisa tu bandeja de spam`);
         navigate('/verify-code');
       } catch (err) {
         showError('Error', err.message);

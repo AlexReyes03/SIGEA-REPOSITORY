@@ -18,7 +18,7 @@ export default function VerifyCode() {
       if (!token.trim()) return;
   
       try {
-        showSuccess('Código enviado', `El código es ${token}`);
+        showSuccess('Hecho', `El código es ${token}`);
         navigate('/reset-password');
       } catch (err) {
         showError('Error', err.message);

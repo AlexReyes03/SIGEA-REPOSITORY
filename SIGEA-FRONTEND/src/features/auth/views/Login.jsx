@@ -29,7 +29,7 @@ export default function LoginForm() {
 
       console.log(user);
 
-      showSuccess('Bienvenido', `¡Hola, ${user.name}!`);
+      showSuccess('Bienvenido', `¡Qué gusto verte, ${user.name}!`);
 
       switch (user.role.name) {
         case 'ADMIN':

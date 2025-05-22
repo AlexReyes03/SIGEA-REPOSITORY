@@ -28,9 +28,14 @@ export default function ResetPassword() {
         showError('Error', 'Las contraseñas no coinciden');
         return;
       }
+
+      if (password.length < 8) {
+        showError('Error', 'La contraseña debe tener al menos 8 caracteres para ser segura');
+        return;
+      }
   
       try {
-        showSuccess('Código enviado', `Contraseña actualizada por ${password}`);
+        showSuccess('Hecho', `Contraseña actualizada por ${password}`);
         navigate('/');
       } catch (err) {
         showError('Error', err.message);
