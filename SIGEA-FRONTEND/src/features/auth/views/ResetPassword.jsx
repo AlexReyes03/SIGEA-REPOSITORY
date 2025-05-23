@@ -30,7 +30,7 @@ export default function ResetPassword() {
       }
 
       if (password.length < 8) {
-        showError('Error', 'La contraseña debe tener al menos 8 caracteres para ser segura');
+        showError('Error', 'La contraseña debe tener al menos 8 caracteres');
         return;
       }
   

@@ -40,7 +40,7 @@ export default function VerifyCode() {
 
             <hr className="my-5" />
 
-            <Button type="submit" label="Solicitar Código" className="button-blue-800 w-100 rounded-3 fs-4" loading={loading} disabled={isDisabled} />
+            <Button type="submit" label="Verificar" className="button-blue-800 w-100 rounded-3 fs-4" loading={loading} disabled={isDisabled} />
 
             <div className="text-end my-3 text-muted fw-semibold">
           ¿Este no es tu correo?

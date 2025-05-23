@@ -14,8 +14,8 @@ export default function AuthLayout({ title, subtitle, children }) {
           </div>
 
           <div className="flex-grow-1 d-flex flex-column justify-content-center">
-            <h1 className="text-center text-blue-500 fw-semibold mb-0">{title}</h1>
-            <p className="text-center text-muted mb-5">{subtitle}</p>
+            <h1 className="text-center text-blue-500 fw-semibold mb-0 mx-5">{title}</h1>
+            <p className="text-center text-muted mb-5 mx-5">{subtitle}</p>
             <div className="row justify-content-center mt-2">
               <div className="col-12 col-lg-8">{children}</div>
             </div>
