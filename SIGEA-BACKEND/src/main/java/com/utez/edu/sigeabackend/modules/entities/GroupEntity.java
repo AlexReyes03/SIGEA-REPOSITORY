@@ -5,68 +5,72 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
-@Table(name = "class_group")
+@Table(name = "group_table")
 public class GroupEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
-    private long id;
+    @Column(name = "group_id")
+    private Long id;
 
-    @Column(name = "startTime")
+    @Column(name = "name", nullable = false, length = 100)
+    private String name;
+
+    @Column(name = "start_time", nullable = false)
     private LocalTime startTime;
 
-    @Column(name= "endTime")
+    @Column(name= "end_time", nullable = false)
     private LocalTime endTime;
 
-    @Column(name = "startDate")
-    private Date startDate;
-
-    @Column(name = "endDate")
-    private Date endDate;
-
-    @Enumerated(EnumType.STRING)  // Colección de los días de la semana en BD
+    @Enumerated(EnumType.STRING)
+    @Column(name = "week_day", nullable = false)
     private WeekDays weekDay;
 
-
-    // ******* RELACIONES ********
-    /**
-     * Relación muchos-a-uno con userEntity
-     * Nueva columna relacionada "teacher_id"
-     */
+    // Relación con el docente
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "teacher_id")
+    @JoinColumn(name = "teacher_id", nullable = false)
     private UserEntity teacher;
 
-    /**
-     * Relación muchos-a-uno con CareerEntity
-     * Nueva columna relacionada "career_id"
-     */
+    // Relación con la carrera
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "career_id")
+    @JoinColumn(name = "career_id", nullable = false)
     private CareerEntity career;
+
+    // Estudiantes asignados al grupo
+    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<GroupStudentEntity> students = new HashSet<>();
 
     public GroupEntity() {
     }
 
-    public GroupEntity(long id, LocalTime startTime, LocalTime endTime, Date startDate, Date endDate, WeekDays weekDay, UserEntity teacher, CareerEntity career) {
+    public GroupEntity(Long id, String name, LocalTime startTime, LocalTime endTime, WeekDays weekDay, UserEntity teacher, CareerEntity career, Set<GroupStudentEntity> students) {
         this.id = id;
+        this.name = name;
         this.startTime = startTime;
         this.endTime = endTime;
-        this.startDate = startDate;
-        this.endDate = endDate;
         this.weekDay = weekDay;
         this.teacher = teacher;
         this.career = career;
+        this.students = students;
     }
 
-    public long getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(long id) {
+    public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public LocalTime getStartTime() {
@@ -83,22 +87,6 @@ public class GroupEntity {
 
     public void setEndTime(LocalTime endTime) {
         this.endTime = endTime;
-    }
-
-    public Date getStartDate() {
-        return startDate;
-    }
-
-    public void setStartDate(Date startDate) {
-        this.startDate = startDate;
-    }
-
-    public Date getEndDate() {
-        return endDate;
-    }
-
-    public void setEndDate(Date endDate) {
-        this.endDate = endDate;
     }
 
     public WeekDays getWeekDay() {
@@ -123,5 +111,13 @@ public class GroupEntity {
 
     public void setCareer(CareerEntity career) {
         this.career = career;
+    }
+
+    public Set<GroupStudentEntity> getStudents() {
+        return students;
+    }
+
+    public void setStudents(Set<GroupStudentEntity> students) {
+        this.students = students;
     }
 }

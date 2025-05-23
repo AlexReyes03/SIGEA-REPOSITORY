@@ -5,37 +5,34 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "student_group")
+@Table(name = "group_student")
 
-public class Student_group {
+public class GroupStudentEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
-    private LocalDateTime entryDate;
 
-    // ******* RELACIONES ********
-    /**
-     * Relación muchos-a-uno con userEntity
-     * Nueva columna relacionada "student_id"
-     */
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "student_id")
-    private UserEntity student;
-
-    /**
-     * Relación muchos-a-uno con GroupEntity
-     * Nueva columna relacionada "group_id"
-     */
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "group_id")
-    private GroupEntity group;
+        private LocalDateTime entryDate;
 
 
-    public Student_group() {
+        @ManyToOne(fetch = FetchType.EAGER)
+        @JoinColumn(name = "student_id")
+        private UserEntity student;
+
+
+
+
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "group_id", nullable = false)
+        private GroupEntity group;
+
+
+
+    public GroupStudentEntity() {
     }
 
-    public Student_group(long id, UserEntity student, GroupEntity group, LocalDateTime entryDate) {
+    public GroupStudentEntity(long id, UserEntity student, GroupEntity group, LocalDateTime entryDate) {
         this.id = id;
         this.student = student;
         this.group = group;
@@ -73,5 +70,7 @@ public class Student_group {
     public void setEntryDate(LocalDateTime entryDate) {
         this.entryDate = entryDate;
     }
+
+
 }
 
