@@ -13,16 +13,16 @@ public class GroupStudentEntity {
     @Embeddable
     public static class Id implements Serializable {
         @Column(name = "group_id")
-        private Long groupId;
+        private long groupId;
 
         @Column(name = "student_id")
-        private Long studentId;
+        private long studentId;
 
         // constructor, equals & hashCode
         public Id() {
         }
 
-        public Id(Long groupId, Long studentId) {
+        public Id(long groupId, long studentId) {
             this.groupId = groupId;
             this.studentId = studentId;
         }
@@ -43,15 +43,15 @@ public class GroupStudentEntity {
         }
 
         // getters & setters
-        public Long getGroupId() {
+        public long getGroupId() {
             return groupId;
         }
 
-        public void setGroupId(Long groupId) {
+        public void setGroupId(long groupId) {
             this.groupId = groupId;
         }
 
-        public Long getStudentId() {
+        public long getStudentId() {
             return studentId;
         }
 
