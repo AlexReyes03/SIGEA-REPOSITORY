@@ -2,75 +2,98 @@ package com.utez.edu.sigeabackend.modules.entities;
 
 import jakarta.persistence.*;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
-@Table(name = "group_student")
+@Table(name = "student_group")
 
 public class GroupStudentEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    @Embeddable
+    public static class Id implements Serializable {
+        @Column(name = "group_id")
+        private Long groupId;
 
+        @Column(name = "student_id")
+        private Long studentId;
 
-        private LocalDateTime entryDate;
+        // constructor, equals & hashCode
+        public Id() {
+        }
 
+        public Id(Long groupId, Long studentId) {
+            this.groupId = groupId;
+            this.studentId = studentId;
+        }
 
-        @ManyToOne(fetch = FetchType.EAGER)
-        @JoinColumn(name = "student_id")
-        private UserEntity student;
+        //Permite que Hibernate reconozca correctamente la identidad de la fila en su caché y en las asociaciones.
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof Id)) return false;
+            Id that = (Id) o;
+            return Objects.equals(groupId, that.groupId) &&
+                    Objects.equals(studentId, that.studentId);
+        }
 
+        @Override
+        public int hashCode() {
+            return Objects.hash(groupId, studentId);
+        }
 
+        // getters & setters
+        public Long getGroupId() {
+            return groupId;
+        }
 
+        public void setGroupId(Long groupId) {
+            this.groupId = groupId;
+        }
 
-        @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "group_id", nullable = false)
-        private GroupEntity group;
+        public Long getStudentId() {
+            return studentId;
+        }
 
-
-
-    public GroupStudentEntity() {
+        public void setStudentId(Long studentId) {
+            this.studentId = studentId;
+        }
     }
 
-    public GroupStudentEntity(long id, UserEntity student, GroupEntity group, LocalDateTime entryDate) {
-        this.id = id;
-        this.student = student;
+    @EmbeddedId
+    private Id id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @MapsId("groupId")
+    @JoinColumn(name = "group_id")
+    private GroupEntity group;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @MapsId("studentId")
+    @JoinColumn(name = "student_id")
+    private UserEntity student;
+
+    @Column(name = "entry_date", nullable = false)
+    private LocalDateTime entryDate;
+
+    public GroupStudentEntity() {}
+
+    public GroupStudentEntity(GroupEntity group, UserEntity student) {
         this.group = group;
-        this.entryDate = entryDate;
-    }
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
-
-    public UserEntity getStudent() {
-        return student;
-    }
-
-    public void setStudent(UserEntity student) {
         this.student = student;
+        this.id = new Id(group.getId(), student.getId());
+        this.entryDate = LocalDateTime.now();
     }
 
-    public GroupEntity getGroup() {
-        return group;
-    }
-
-    public void setGroup(GroupEntity group) {
-        this.group = group;
-    }
-
-    public LocalDateTime getEntryDate() {
-        return entryDate;
-    }
-
-    public void setEntryDate(LocalDateTime entryDate) {
-        this.entryDate = entryDate;
-    }
-
+    // getters & setters
+    public Id getId() { return id; }
+    public void setId(Id id) { this.id = id; }
+    public GroupEntity getGroup() { return group; }
+    public void setGroup(GroupEntity group) { this.group = group; }
+    public UserEntity getStudent() { return student; }
+    public void setStudent(UserEntity student) { this.student = student; }
+    public LocalDateTime getEntryDate() { return entryDate; }
+    public void setEntryDate(LocalDateTime entryDate) { this.entryDate = entryDate; }
 
 }
 

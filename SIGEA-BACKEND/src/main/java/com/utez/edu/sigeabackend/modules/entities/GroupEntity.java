@@ -14,7 +14,7 @@ public class GroupEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "group_id")
-    private Long id;
+    private long groupId;
 
     @Column(name = "name", nullable = false, length = 100)
     private String name;
@@ -46,8 +46,8 @@ public class GroupEntity {
     public GroupEntity() {
     }
 
-    public GroupEntity(Long id, String name, LocalTime startTime, LocalTime endTime, WeekDays weekDay, UserEntity teacher, CareerEntity career, Set<GroupStudentEntity> students) {
-        this.id = id;
+    public GroupEntity(long groupId, String name, LocalTime startTime, LocalTime endTime, WeekDays weekDay, UserEntity teacher, CareerEntity career, Set<GroupStudentEntity> students) {
+        this.groupId = groupId;
         this.name = name;
         this.startTime = startTime;
         this.endTime = endTime;
@@ -58,11 +58,11 @@ public class GroupEntity {
     }
 
     public Long getId() {
-        return id;
+        return groupId;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setId(Long groupId) {
+        this.groupId = groupId;
     }
 
     public String getName() {
