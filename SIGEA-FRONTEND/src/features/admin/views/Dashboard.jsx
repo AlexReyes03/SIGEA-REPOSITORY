@@ -13,7 +13,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="container py-5">
+    <div className="">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1>Bienvenido, Administrador</h1>
         <Button label="Cerrar Sesión" icon="pi pi-sign-out" className="p-button-danger" onClick={handleLogout} />

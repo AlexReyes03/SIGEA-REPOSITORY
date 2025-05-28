@@ -77,9 +77,7 @@ export default function LoginForm() {
 
         <div className="text-end my-3 text-muted fw-semibold">
           ¿Olvidaste tu contraseña?
-          <span onClick={() => navigate('/recover')}
-            className="ms-2 text-primary"
-            style={{ cursor: 'pointer' }}>
+          <span onClick={() => navigate('/recover')} className="ms-2 text-primary" style={{ cursor: 'pointer' }}>
             Haz click aquí
           </span>
         </div>

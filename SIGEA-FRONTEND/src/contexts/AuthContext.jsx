@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import * as authService from '../api/authService';
 
-const AuthContext = createContext();
+export const AuthContext = createContext();
 
 // Decodificar payload JWT
 function decodeJWT(token) {

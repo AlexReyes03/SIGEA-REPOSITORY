@@ -77,7 +77,11 @@ textarea {
 }
 
 .text-blue-500 {
-  color: var(--bg-blue-700);
+  color: var(--bg-blue-500);
+}
+
+.text-gray-600 {
+  color: var(--bg-gray-600);
 }
 
 .button-blue-800 {

@@ -1,9 +1,10 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 
 import PublicRoute from './PublicRoute';
 import PrivateRoute from './PrivateRoute';
 
+import AppLayout from '../components/AppLayout';
 import AuthLayout from '../features/auth/components/AuthLayout';
 import LoginForm from '../features/auth/views/Login';
 import RecoverEmailForm from '../features/auth/views/Recover';
@@ -16,7 +17,6 @@ import StudentDashboard from '../features/student/views/Dashboard';
 
 export default function AppRouter() {
   return (
-    <BrowserRouter>
       <Routes>
         {/* Login */}
         <Route
@@ -71,7 +71,9 @@ export default function AppRouter() {
           path="/admin"
           element={
             <PrivateRoute allowedRoles={['ADMIN']}>
-              <AdminDashboard />
+              <AppLayout pageTitle="Panel de Administración">
+                <AdminDashboard />
+              </AppLayout>
             </PrivateRoute>
           }
         />
@@ -96,6 +98,5 @@ export default function AppRouter() {
 
         {/* …otras rutas */}
       </Routes>
-    </BrowserRouter>
   );
 }

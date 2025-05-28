@@ -4,17 +4,7 @@ import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 const ConfirmDialogContext = createContext(null);
 
 export const ConfirmDialogProvider = ({ children }) => {
-  const confirmAction = ({
-    message,
-    header = 'Confirmación',
-    icon = 'pi pi-exclamation-triangle',
-    acceptLabel = 'Sí',
-    rejectLabel = 'Cancelar',
-    acceptClassName = 'p-button-danger',
-    rejectClassName = '',
-    onAccept,
-    onReject
-  }) => {
+  const confirmAction = ({ message, header = 'Confirmación', icon = 'pi pi-exclamation-triangle', acceptLabel = 'Sí', rejectLabel = 'Cancelar', acceptClassName = 'p-button-danger', rejectClassName = '', onAccept, onReject }) => {
     confirmDialog({
       message,
       header,
@@ -24,16 +14,14 @@ export const ConfirmDialogProvider = ({ children }) => {
       acceptClassName,
       rejectClassName,
       accept: onAccept,
-      reject: onReject
+      reject: onReject,
     });
   };
 
   return (
     <>
       <ConfirmDialog />
-      <ConfirmDialogContext.Provider value={{ confirmAction }}>
-        {children}
-      </ConfirmDialogContext.Provider>
+      <ConfirmDialogContext.Provider value={{ confirmAction }}>{children}</ConfirmDialogContext.Provider>
     </>
   );
 };
