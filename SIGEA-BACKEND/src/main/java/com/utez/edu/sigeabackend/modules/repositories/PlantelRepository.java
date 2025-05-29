@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface PlantelRepository extends JpaRepository<PlantelEntity, Long> {
+    boolean existsByName(String name);
 }
