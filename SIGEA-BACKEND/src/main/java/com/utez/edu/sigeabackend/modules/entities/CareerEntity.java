@@ -10,7 +10,7 @@ public class CareerEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "careerId", nullable = false)
+    @Column(name = "id", nullable = false)
     private long careerId;
 
     @Column(name = "name", nullable = false)
