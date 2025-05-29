@@ -10,8 +10,8 @@ public class CareerEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false)
-    private long id;
+    @Column(name = "careerId", nullable = false)
+    private long careerId;
 
     @Column(name = "name", nullable = false)
     private String name;
@@ -38,8 +38,8 @@ public class CareerEntity {
     public CareerEntity() {
     }
 
-    public CareerEntity(long id, String name, PlantelEntity plantel, Set<GroupEntity> groups, Set<ModuleEntity> modules) {
-        this.id = id;
+    public CareerEntity(long careerId, String name, PlantelEntity plantel, Set<GroupEntity> groups, Set<ModuleEntity> modules) {
+        this.careerId = careerId;
         this.name = name;
         this.plantel = plantel;
         this.groups = groups;
@@ -47,11 +47,11 @@ public class CareerEntity {
     }
 
     public long getId() {
-        return id;
+        return careerId;
     }
 
     public void setId(long id) {
-        this.id = id;
+        this.careerId = id;
     }
 
     public String getName() {
