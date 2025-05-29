@@ -42,8 +42,8 @@ const Navbar = forwardRef(function Navbar({ toggleSidebar }, toggleRef) {
         </button>
 
         {/* logo + campus */}
-        <img src={logo} height={32} alt="logo" className="me-2" title='Corporativo CETEC ©' style={{ cursor: 'pointer' }} onClick={() => navigate('/')} />
-        <h6 className="mb-0 me-auto text-truncate fw-semibold fs-5 user-select-none text-blue-500" title='Sistema de Gestión Académica'>{`SIGEA - ${campusName}`}</h6>
+        <img src={logo} height={32} alt="logo" className="me-2" title="Corporativo CETEC ©" style={{ cursor: 'pointer' }} onClick={() => navigate('/')} />
+        <h6 className="mb-0 me-auto text-truncate fw-semibold fs-5 user-select-none text-blue-500" title="Sistema de Gestión Académica">{`SIGEA - ${campusName}`}</h6>
 
         {/* card usuario */}
         <div ref={containerRef} className="position-relative d-none d-sm-flex align-items-center">

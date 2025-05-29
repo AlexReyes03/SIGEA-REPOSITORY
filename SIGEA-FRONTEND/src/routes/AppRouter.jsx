@@ -14,6 +14,7 @@ import ResetPasswordForm from '../features/auth/views/ResetPassword';
 import AdminDashboard from '../features/admin/views/Dashboard';
 import TeacherDashboard from '../features/teacher/views/Dashboard';
 import StudentDashboard from '../features/student/views/Dashboard';
+import Profile from '../features/admin/views/Profile';
 
 export default function AppRouter() {
   return (
@@ -73,6 +74,17 @@ export default function AppRouter() {
             <PrivateRoute allowedRoles={['ADMIN']}>
               <AppLayout pageTitle="Panel de Administración">
                 <AdminDashboard />
+              </AppLayout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/admin/profile"
+          element={
+            <PrivateRoute allowedRoles={['ADMIN']}>
+              <AppLayout pageTitle="Perfil de Administrador">
+                <Profile />
               </AppLayout>
             </PrivateRoute>
           }
