@@ -11,7 +11,7 @@ public class QualificationEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private long id;
+    private long qualificationId;
 
     @Column(name = "value")
     private int value;
@@ -40,20 +40,20 @@ public class QualificationEntity {
     public QualificationEntity() {
     }
 
-    public QualificationEntity(long id, int value, Date date, SubjectEntity subject, UserEntity student) {
-        this.id = id;
+    public QualificationEntity(long qualificationId, int value, Date date, SubjectEntity subject, UserEntity student) {
+        this.qualificationId = qualificationId;
         this.value = value;
         this.date = date;
         this.subject = subject;
         this.student = student;
     }
 
-    public long getId() {
-        return id;
+    public long getQualificationId() {
+        return qualificationId;
     }
 
-    public void setId(long id) {
-        this.id = id;
+    public void setQualificationId(long qualificationId) {
+        this.qualificationId = qualificationId;
     }
 
     public int getValue() {
