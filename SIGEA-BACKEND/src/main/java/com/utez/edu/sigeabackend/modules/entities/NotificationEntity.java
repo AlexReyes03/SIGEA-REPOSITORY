@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 public class NotificationEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private long id;
+    private long notificationId;
 
     @Column(name= "title", nullable = false)
     private String title;
@@ -46,8 +46,8 @@ public class NotificationEntity {
 
     public NotificationEntity() {
     }
-    public NotificationEntity(long id, String title, String message, LocalDateTime sendDate, Boolean isSeen, UserEntity user, ModuleEntity moduleEntity) {
-        this.id = id;
+    public NotificationEntity(long notificationId, String title, String message, LocalDateTime sendDate, Boolean isSeen, UserEntity user, ModuleEntity moduleEntity) {
+        this.notificationId = notificationId;
         this.title = title;
         this.message = message;
         this.sendDate = sendDate;
@@ -57,11 +57,11 @@ public class NotificationEntity {
     }
 
     public long getId() {
-        return id;
+        return notificationId;
     }
 
     public void setId(long id) {
-        this.id = id;
+        this.notificationId = id;
     }
 
     public String getTitle() {
