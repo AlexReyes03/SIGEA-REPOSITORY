@@ -1,5 +1,6 @@
 package com.utez.edu.sigeabackend.utils.security;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,13 +29,16 @@ public class JWTRequestFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain chain
     ) throws ServletException, IOException {
-
         final String authHeader = request.getHeader("Authorization");
         String username = null, jwt = null;
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             jwt = authHeader.substring(7);
-            username = jwtUtil.extractUsername(jwt);
+            try {
+                username = jwtUtil.extractUsername(jwt);
+            } catch (ExpiredJwtException ex) {
+                logger.debug("JWT expirado, cerrando sesión del usuario", ex);
+            }
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
