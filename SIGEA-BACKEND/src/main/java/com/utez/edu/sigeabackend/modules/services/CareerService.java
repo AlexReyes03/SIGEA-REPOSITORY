@@ -31,13 +31,14 @@ public class CareerService {
     }
 
     public ResponseEntity<?> findById(long id) {
-        var optional = repository.findById(id);
-        if (optional.isPresent()) {
-            return responseService.getOkResponse("Carrera encontrada", optional.get());
+        CareerEntity career = repository.findById(id).orElse(null);
+        if (career != null) {
+            return responseService.getOkResponse("Carrera encontrada", career);
         } else {
             return responseService.get404Response();
         }
     }
+
 
     public ResponseEntity<?> save(CareerEntity career, long plantelId) {
         PlantelEntity plantel = plantelRepository.findById(plantelId)
