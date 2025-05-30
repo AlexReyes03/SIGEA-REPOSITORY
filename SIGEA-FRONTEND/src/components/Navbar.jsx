@@ -37,7 +37,7 @@ const Navbar = forwardRef(function Navbar({ toggleSidebar }, toggleRef) {
     <nav className="navbar navbar-light bg-white shadow-sm fixed-top" style={{ height: 70, zIndex: 1050 }}>
       <div className="container-fluid d-flex align-items-center">
         {/* Botón Menú */}
-        <button ref={toggleRef} className="btn btn-white border-0 text-secondary me-2" onClick={toggleSidebar}>
+        <button ref={toggleRef} className="btn btn-white border-0 text-secondary me-1" onClick={toggleSidebar}>
           <MdMenu size={24} />
         </button>
 
@@ -48,7 +48,7 @@ const Navbar = forwardRef(function Navbar({ toggleSidebar }, toggleRef) {
         {/* card usuario */}
         <div ref={containerRef} className="position-relative d-none d-sm-flex align-items-center">
           <motion.div
-            className="d-flex align-items-center bg-light rounded border-0"
+            className="d-flex align-items-center bg-gray-800 rounded border-0"
             initial={{ width: 80 }}
             animate={{ width: hover || showDropdown ? 200 : 80 }}
             transition={{ duration: 0.3 }}
