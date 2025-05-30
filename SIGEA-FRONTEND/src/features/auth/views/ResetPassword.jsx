@@ -4,13 +4,12 @@ import { Button } from 'primereact/button';
 
 import { resetPassword } from '../../../api/authService';
 import PasswordInput from '../../../components/PasswordInput';
-import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/providers/ToastProvider';
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const { loading } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
   const { showSuccess, showError } = useToast();
   const navigate = useNavigate();
 
@@ -40,14 +39,17 @@ export default function ResetPassword() {
     }
 
     try {
+      setSubmitting(true);
       await resetPassword(email, code, password);
       showSuccess('Hecho', 'Contraseña actualizada con éxito.');
       navigate('/');
     } catch (err) {
       showError('Error', err.message);
+    } finally {
+      setSubmitting(false);
     }
   };
-  const isDisabled = !password.trim() || !confirmPassword.trim() || loading;
+  const isDisabled = !password.trim() || !confirmPassword.trim() || submitting;
 
   return (
     <form onSubmit={handleSubmit} autoComplete="off" spellCheck="false">
@@ -73,7 +75,7 @@ export default function ResetPassword() {
 
         <hr className="my-5" />
 
-        <Button type="submit" label="Cambiar Contraseña" className="button-blue-800 w-100 rounded-3 fs-4" loading={loading} disabled={isDisabled} />
+        <Button type="submit" label="Cambiar Contraseña" className="button-blue-800 w-100 rounded-3 fs-4" loading={submitting} disabled={isDisabled} />
 
         <div className="text-end my-3 text-muted fw-semibold"></div>
       </div>

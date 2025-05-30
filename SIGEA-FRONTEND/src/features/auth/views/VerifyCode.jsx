@@ -4,12 +4,13 @@ import { Button } from 'primereact/button';
 import { InputOtp } from 'primereact/inputotp';
 
 import { verifyOtp } from '../../../api/authService';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useToast } from '../../../components/providers/ToastProvider';
 
 export default function VerifyCode() {
-  const { loading } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
   const [code, setCode] = useState('');
   const { state } = useLocation();
+  const { showSuccess, showError } = useToast();
   const email = state?.email || '';
   const navigate = useNavigate();
 
@@ -18,13 +19,16 @@ export default function VerifyCode() {
     if (!code.trim()) return;
 
     try {
+      setSubmitting(true);
       await verifyOtp(email, code);
       navigate('/reset-password', { state: { email, code } });
     } catch (err) {
       showError('Error', err.message);
+    } finally {
+      setSubmitting(false);
     }
   };
-  const isDisabled = !code.trim() || loading;
+  const isDisabled = !code.trim() || submitting;
 
   return (
     <form onSubmit={handleSubmit} autoComplete="off" spellCheck="false">
@@ -46,7 +50,7 @@ export default function VerifyCode() {
 
         <hr className="my-5" />
 
-        <Button type="submit" label="Verificar" className="button-blue-800 w-100 rounded-3 fs-4" loading={loading} disabled={isDisabled} />
+        <Button type="submit" label="Verificar" className="button-blue-800 w-100 rounded-3 fs-4" loading={submitting} disabled={isDisabled} />
 
         <div className="text-end my-3 text-muted fw-semibold">
           ¿Este no es tu correo?
