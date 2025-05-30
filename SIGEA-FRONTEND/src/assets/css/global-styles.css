@@ -68,6 +68,10 @@ textarea {
   --bg-secondary-disabled: #cdcdcd;
 }
 
+.btn-rounded-circle {
+  border-radius: 50% !important;
+}
+
 .bg-blue-500 {
   background-color: var(--bg-blue-500);
 }
