@@ -14,6 +14,8 @@ import NotFound from '../components/404';
 
 import AdminDashboard from '../features/admin/views/Dashboard';
 import AdminProfile from '../features/admin/views/Profile';
+import AdminUsersManagement from '../features/admin/views/UsersManagment';
+
 
 import TeacherDashboard from '../features/teacher/views/Dashboard';
 
@@ -64,6 +66,7 @@ export default function AppRouter() {
           {/* ADMIN */}
           <Route path="admin" element={<AdminDashboard />} />
           <Route path="admin/profile" element={<AdminProfile />} />
+          <Route path="admin/users" element={<AdminUsersManagement />} />
 
           {/* DOCENTE */}
           <Route path="teacher" element={<TeacherDashboard />} />
