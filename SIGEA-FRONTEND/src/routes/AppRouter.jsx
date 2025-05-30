@@ -3,112 +3,78 @@ import { Routes, Route } from 'react-router-dom';
 
 import PublicRoute from './PublicRoute';
 import PrivateRoute from './PrivateRoute';
-
 import AppLayout from '../components/AppLayout';
 import AuthLayout from '../features/auth/components/AuthLayout';
+
 import LoginForm from '../features/auth/views/Login';
 import RecoverEmailForm from '../features/auth/views/Recover';
 import VerifyCodeForm from '../features/auth/views/VerifyCode';
 import ResetPasswordForm from '../features/auth/views/ResetPassword';
+import NotFound from '../components/404';
 
 import AdminDashboard from '../features/admin/views/Dashboard';
+import AdminProfile from '../features/admin/views/Profile';
+
 import TeacherDashboard from '../features/teacher/views/Dashboard';
+
 import StudentDashboard from '../features/student/views/Dashboard';
-import Profile from '../features/admin/views/Profile';
 
 export default function AppRouter() {
   return (
-      <Routes>
-        {/* Login */}
+    <Routes>
+      {/* PÚBLICAS */}
+      <Route element={<PublicRoute />}>
         <Route
           path="/"
           element={
-            <PublicRoute>
-              <AuthLayout title="Inicio de Sesión" subtitle="Por favor ingresa tus credenciales">
-                <LoginForm />
-              </AuthLayout>
-            </PublicRoute>
+            <AuthLayout title="Inicio de Sesión" subtitle="Ingresa tus credenciales">
+              <LoginForm />
+            </AuthLayout>
           }
         />
-
-        {/* Recover */}
         <Route
-          path="/recover"
+          path="recover"
           element={
-            <PublicRoute>
-              <AuthLayout title="Recuperación de contraseña" subtitle="Por favor ingresa el correo electrónico asociado a tu cuenta">
-                <RecoverEmailForm />
-              </AuthLayout>
-            </PublicRoute>
+            <AuthLayout title="Recuperación de contraseña" subtitle="Ingrese el correo electrónico asociado a su cuenta">
+              <RecoverEmailForm />
+            </AuthLayout>
           }
         />
-
-        {/* Verify code */}
         <Route
-          path="/verify-code"
+          path="verify-code"
           element={
-            <PublicRoute>
-              <AuthLayout title="Código de seguridad" subtitle="Ingresa el código de seguridad enviado a tu correo">
-                <VerifyCodeForm />
-              </AuthLayout>
-            </PublicRoute>
+            <AuthLayout title="Código de seguridad" subtitle="Ingrese el código de verificación enviado a su correo electrónico">
+              <VerifyCodeForm />
+            </AuthLayout>
           }
         />
-
-        {/* Reset password */}
         <Route
-          path="/reset-password"
+          path="reset-password"
           element={
-            <PublicRoute>
-              <AuthLayout title="Nueva contraseña" subtitle="Ingresa una nueva contraseña para tu cuenta">
-                <ResetPasswordForm />
-              </AuthLayout>
-            </PublicRoute>
+            <AuthLayout title="Nueva contraseña" subtitle="Ingrese una nueva contraseña para su cuenta">
+              <ResetPasswordForm />
+            </AuthLayout>
           }
         />
+      </Route>
 
-        {/* Rutas protegidas… */}
-        <Route
-          path="/admin"
-          element={
-            <PrivateRoute allowedRoles={['ADMIN']}>
-              <AppLayout pageTitle="Panel de Administración">
-                <AdminDashboard />
-              </AppLayout>
-            </PrivateRoute>
-          }
-        />
+      {/* PRIVADAS Y PROTEGIDAS */}
+      <Route element={<PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'STUDENT']} />}>
+        <Route element={<AppLayout />}>
+          {/* ADMIN */}
+          <Route path="admin" element={<AdminDashboard />} />
+          <Route path="admin/profile" element={<AdminProfile />} />
 
-        <Route
-          path="/admin/profile"
-          element={
-            <PrivateRoute allowedRoles={['ADMIN']}>
-              <AppLayout pageTitle="Perfil de Administrador">
-                <Profile />
-              </AppLayout>
-            </PrivateRoute>
-          }
-        />
+          {/* DOCENTE */}
+          <Route path="teacher" element={<TeacherDashboard />} />
 
-        <Route
-          path="/teacher"
-          element={
-            <PrivateRoute allowedRoles={['TEACHER']}>
-              <TeacherDashboard />
-            </PrivateRoute>
-          }
-        />
+          {/* ESTUDIANTE */}
+          <Route path="student" element={<StudentDashboard />} />
+        </Route>
+      </Route>
 
-        <Route
-          path="/student"
-          element={
-            <PrivateRoute allowedRoles={['STUDENT']}>
-              <StudentDashboard />
-            </PrivateRoute>
-          }
-        />
-
-        {/* …otras rutas */}
-      </Routes>
+      {/* CUALQUIER OTRA → 404 */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
 }

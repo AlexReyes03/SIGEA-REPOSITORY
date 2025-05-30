@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from 'primereact/button';
 
+import { resetPassword } from '../../../api/authService';
 import PasswordInput from '../../../components/PasswordInput';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/providers/ToastProvider';
@@ -12,6 +13,10 @@ export default function ResetPassword() {
   const { loading } = useAuth();
   const { showSuccess, showError } = useToast();
   const navigate = useNavigate();
+
+  const { state } = useLocation();
+  const email = state?.email || '';
+  const code = state?.code || '';
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
@@ -35,7 +40,8 @@ export default function ResetPassword() {
     }
 
     try {
-      showSuccess('Hecho', `Contraseña actualizada por ${password}`);
+      await resetPassword(email, code, password);
+      showSuccess('Hecho', 'Contraseña actualizada con éxito.');
       navigate('/');
     } catch (err) {
       showError('Error', err.message);
@@ -67,7 +73,7 @@ export default function ResetPassword() {
 
         <hr className="my-5" />
 
-        <Button type="submit" label="Solicitar Código" className="button-blue-800 w-100 rounded-3 fs-4" loading={loading} disabled={isDisabled} />
+        <Button type="submit" label="Cambiar Contraseña" className="button-blue-800 w-100 rounded-3 fs-4" loading={loading} disabled={isDisabled} />
 
         <div className="text-end my-3 text-muted fw-semibold"></div>
       </div>

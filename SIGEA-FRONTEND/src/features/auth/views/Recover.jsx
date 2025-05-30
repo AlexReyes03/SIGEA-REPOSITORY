@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from 'primereact/button';
 
+import { requestOtp } from '../../../api/authService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/providers/ToastProvider';
 
 export default function Recover() {
   const [email, setEmail] = useState('');
-  const { loading } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
   const { showSuccess, showError } = useToast();
   const navigate = useNavigate();
 
@@ -16,13 +17,17 @@ export default function Recover() {
     if (!email.trim()) return;
 
     try {
-      showSuccess('Hecho', `Se ha enviado un código de verificación a ${email} revisa tu bandeja de spam`);
-      navigate('/verify-code');
+      setSubmitting(true);
+      await requestOtp(email);
+      showSuccess('Hecho', `Hemos enviado un código a ${email} revisa tu bandeja de spam`);
+      navigate('/verify-code', { state: { email } });
     } catch (err) {
       showError('Error', err.message);
+    } finally {
+      setSubmitting(false);
     }
   };
-  const isDisabled = !email.trim() || loading;
+  const isDisabled = !email.trim() || submitting;
 
   return (
     <form onSubmit={handleSubmit} autoComplete="off" spellCheck="false">
@@ -47,7 +52,7 @@ export default function Recover() {
 
         <hr className="my-5" />
 
-        <Button type="submit" label="Solicitar Código" className="button-blue-800 w-100 rounded-3 fs-4" loading={loading} disabled={isDisabled} />
+        <Button type="submit" label="Solicitar Código" className="button-blue-800 w-100 rounded-3 fs-4" loading={submitting} disabled={isDisabled} />
 
         <div className="text-end my-3 text-muted fw-semibold">
           Volver al

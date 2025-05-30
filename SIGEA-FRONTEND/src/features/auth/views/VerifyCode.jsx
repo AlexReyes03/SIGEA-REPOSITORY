@@ -1,38 +1,38 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from 'primereact/button';
 import { InputOtp } from 'primereact/inputotp';
 
+import { verifyOtp } from '../../../api/authService';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useToast } from '../../../components/providers/ToastProvider';
 
 export default function VerifyCode() {
-  const [token, setTokens] = useState('');
   const { loading } = useAuth();
-  const { showSuccess, showError } = useToast();
+  const [code, setCode] = useState('');
+  const { state } = useLocation();
+  const email = state?.email || '';
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!token.trim()) return;
+    if (!code.trim()) return;
 
     try {
-      showSuccess('Hecho', `El código es ${token}`);
-      navigate('/reset-password');
+      await verifyOtp(email, code);
+      navigate('/reset-password', { state: { email, code } });
     } catch (err) {
       showError('Error', err.message);
     }
   };
-  const isDisabled = !token.trim() || loading;
+  const isDisabled = !code.trim() || loading;
 
   return (
     <form onSubmit={handleSubmit} autoComplete="off" spellCheck="false">
       <div className="px-3">
         <div className="d-flex justify-content-center mb-4">
           <InputOtp
-            value={token}
-            onChange={(e) => setTokens(e.value)}
-            mask
+            value={code}
+            onChange={(e) => setCode(e.value)}
             length={6}
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleSubmit(e);

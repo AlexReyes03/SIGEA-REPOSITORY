@@ -13,8 +13,14 @@ export const logout = async () => {
   localStorage.removeItem('token');
 };
 
-export const getActiveUsers = async () => {
-  const { activeUsers } = await request('/auth/active-users');
-  return activeUsers;
-};
+export const requestOtp = (email) =>
+  request('/auth/forgot-password', { method: 'POST', body: { email } });
 
+export const verifyOtp = (email, code) =>
+  request('/auth/verify-code', { method: 'POST', body: { email, code } });
+
+export const resetPassword = (email, code, newPassword) =>
+  request('/auth/reset-password', {
+    method: 'POST',
+    body: { email, code, newPassword }
+  });

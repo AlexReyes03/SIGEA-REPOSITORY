@@ -1,7 +1,10 @@
 import React, { useState, useRef } from 'react';
+import { Outlet } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
-import { useAuth } from '../contexts/AuthContext';
+import ActiveUsersCard from './ActiveUsersCard';
 
 export default function AppLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -20,8 +23,10 @@ export default function AppLayout({ children }) {
 
       {/* Contenido principal */}
       <main className="" style={{ paddingTop: '80px', paddingLeft: '5rem', bottom: 0, paddingRight: '1rem', zIndex: 1020, }}>
-        {children}
+        <Outlet />
       </main>
+
+      <ActiveUsersCard />
     </>
   );
 }
