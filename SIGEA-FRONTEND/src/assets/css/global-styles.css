@@ -121,6 +121,7 @@ Button {
 .sidebar-btn {
   background-color: #fff;
   color: var(--bg-gray-600);
+  border: none;
   border-radius: 0 5rem 5rem 0;
   transition: 0.2s;
 }

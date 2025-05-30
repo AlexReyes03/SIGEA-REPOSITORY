@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from 'primereact/button';
-import { MdOutlineEmail } from 'react-icons/md'; 
+import { MdOutlineEmail } from 'react-icons/md';
 
 import PasswordInput from '../../../components/PasswordInput';
 import { useAuth } from '../../../contexts/AuthContext';

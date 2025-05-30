@@ -1,19 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from 'primereact/button';
 import { MdOutlineEmojiEvents, MdOutlinePerson, MdOutlineCoPresent, MdOutlineGroup, MdOutlineRadioButtonChecked, MdArrowDropUp } from 'react-icons/md';
 import { Rating } from "primereact/rating";
 
-import { useAuth } from '../../../contexts/AuthContext';
-
 export default function Dashboard() {
-  const { logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/');
-  };
 
   return (
     <>

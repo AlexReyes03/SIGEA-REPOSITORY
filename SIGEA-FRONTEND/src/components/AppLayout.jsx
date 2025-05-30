@@ -6,7 +6,7 @@ import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import ActiveUsersCard from './ActiveUsersCard';
 
-export default function AppLayout({ children }) {
+export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const toggleSidebar = () => setSidebarOpen((o) => !o);
   const closeSidebar = () => setSidebarOpen(false);
