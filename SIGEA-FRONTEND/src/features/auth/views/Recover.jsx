@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from 'primereact/button';
+import { MdOutlineEmail } from 'react-icons/md';
 
 import { requestOtp } from '../../../api/authService';
-import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/providers/ToastProvider';
 
 export default function Recover() {
@@ -47,7 +47,7 @@ export default function Recover() {
             }}
           />
           <label htmlFor="emailRecover">Correo electrónico</label>
-          <span className="material-symbols-outlined position-absolute end-0 me-3 top-50 translate-middle-y text-muted user-select-none">mail</span>
+          <MdOutlineEmail size={24} className="position-absolute end-0 me-3 top-50 translate-middle-y text-muted user-select-none"/>
         </div>
 
         <hr className="my-5" />

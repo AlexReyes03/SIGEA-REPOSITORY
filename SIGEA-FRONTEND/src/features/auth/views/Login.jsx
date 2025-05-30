@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from 'primereact/button';
+import { MdOutlineEmail } from 'react-icons/md'; 
 
 import PasswordInput from '../../../components/PasswordInput';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -53,7 +54,7 @@ export default function LoginForm() {
         <div className="form-floating position-relative mb-4">
           <input id="floatingInput" type="email" className="form-control pe-5" placeholder=" " autoComplete="off" spellCheck="false" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={handleEmailKeyDown} />
           <label htmlFor="floatingInput">Correo electrónico</label>
-          <span className="material-symbols-outlined position-absolute end-0 me-3 top-50 translate-middle-y text-muted user-select-none">mail</span>
+          <MdOutlineEmail size={24} className="position-absolute end-0 me-3 top-50 translate-middle-y text-muted user-select-none"/>
         </div>
 
         <div className="mb-4">
