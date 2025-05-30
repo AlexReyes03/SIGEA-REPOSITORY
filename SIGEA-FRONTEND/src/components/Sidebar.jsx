@@ -66,7 +66,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
         if (!isOpen) toggleSidebar();
       }}
     >
-      <ul className="list-unstyled p-2 m-0">
+      <ul className="list-unstyled py-2 m-0">
         {MENU_ITEMS.map((item, idx) => (
           <motion.li key={item.label} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.1 }} className="mb-2">
             <button type="button" className="btn btn-light d-flex align-items-center sidebar-btn w-100" onClick={() => handleItemClick(item)}>
