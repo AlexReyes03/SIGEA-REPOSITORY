@@ -168,6 +168,7 @@ public class AuthService {
         return ResponseEntity.ok("Si el correo existe, hemos enviado un código de verificación.");
     }
 
+    @Transactional(readOnly = true)
     public ResponseEntity<?> verifyCode(VerifyCodeDto dto) {
         // Buscar el token más reciente para este usuario
         Optional<PasswordResetToken> prtOpt = tokenRepo
