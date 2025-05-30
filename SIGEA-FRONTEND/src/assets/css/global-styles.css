@@ -74,8 +74,24 @@ textarea {
   border-radius: 50% !important;
 }
 
+Button {
+  border-radius: 5px;
+}
+
+.p-button-text {
+  margin-inline: 0.5rem;
+}
+
+.bg-main {
+  background-color: var(--bg-gray-800);
+}
+
 .bg-blue-500 {
   background-color: var(--bg-blue-500);
+}
+
+.bg-gray-800 {
+  background-color: var(--bg-gray-800);
 }
 
 .text-blue-800 {
@@ -110,7 +126,7 @@ textarea {
 
 .sidebar-btn {
   background-color: #fff;
-  color: var(--bg-gray-400);
+  color: var(--bg-gray-600);
   border-radius: 0 5rem 5rem 0;
   transition: 0.2s;
 }
@@ -125,4 +141,14 @@ textarea {
 .title-icon {
   background-color: var(--bg-blue-900);
   color: var(--bg-blue-500)
+}
+
+.icon-average-down {
+  background-color: #F8D3D3;
+  color: #F27474;
+}
+
+.icon-average-up {
+  background-color: #D3ECD0;
+  color: #4FB446;
 }

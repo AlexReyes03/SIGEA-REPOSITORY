@@ -57,7 +57,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
         top: '70px',
         bottom: 0,
         left: 0,
-        width: isOpen ? '15.5rem' : '4.3rem',
+        width: isOpen ? '15.5rem' : '3.5rem',
         overflow: 'hidden',
         transition: 'width 0.25s ease-in-out',
         zIndex: 1040,
