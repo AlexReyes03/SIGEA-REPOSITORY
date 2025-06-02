@@ -49,8 +49,8 @@ export default function Profile() {
         </div>
 
         <div className="row mt-3">
-          <div className="col-4">
-            <div className="card border-0">
+          <div className="col-12 col-md-4 mb-3 mb-md-0">
+            <div className="card border-0 h-100">
               <div className="card-body">
 
                 <div className="d-flex justify-content-center mt-2 mb-3">
@@ -68,8 +68,8 @@ export default function Profile() {
               </div>
             </div>
           </div>
-          <div className="col-8">
-            <div className="card border-0">
+          <div className="col-12 col-md-8 mb-3 mb-md-0">
+            <div className="card border-0 h-100">
               <div className="card-body">
 
                 <div className="d-flex align-items-center">
@@ -80,7 +80,7 @@ export default function Profile() {
                 </div>
 
                 <div className="row m-3 text-secondary">
-                  <div className="col-6">
+                  <div className="col-6 text-nowrap overflow-x-auto">
                     <p>Nombre Completo</p>
                     <p>Correo electrónico</p>
                     <p>Contraseña</p>
@@ -88,7 +88,7 @@ export default function Profile() {
                     <p>Fecha de alta</p>
                     <p>Estado</p>
                   </div>
-                  <div className="col-6">
+                  <div className="col-6 text-nowrap overflow-x-auto">
                     <p>{user.name} {user.paternalSurname || ''} {user.maternalSurname || ''}</p>
                     <p>{user.email}</p>
                     <p>************</p>
@@ -103,9 +103,9 @@ export default function Profile() {
           </div>
         </div>
 
-        <div className="row mt-3">
-          <div className="col-4">
-            <div className="card border-0">
+        <div className="row mt-0 mt-md-3">
+          <div className="col-12 col-md-4 mb-3 mb-md-0">
+            <div className="card border-0 h-100">
               <div className="card-body">
 
                 <div className="d-flex align-items-center">
@@ -127,8 +127,8 @@ export default function Profile() {
               </div>
             </div>
           </div>
-          <div className="col-8">
-            <div className="card border-0">
+          <div className="col-12 col-md-8 mb-3 mb-md-0">
+            <div className="card border-0 h-100">
               <div className="card-body">
 
                 <div className="d-flex align-items-center">
