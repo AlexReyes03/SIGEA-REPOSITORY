@@ -32,8 +32,9 @@ export default function Careers() {
         showError(err.message || 'Error al cargar carreras');
       }
     };
+
     load();
-  }, [showError]);
+  }, []);
 
   const loadCareers = async () => {
     try {
@@ -43,10 +44,6 @@ export default function Careers() {
       showError(e.message || 'Error al obtener carreras');
     }
   };
-
-  useEffect(() => {
-    loadCareers();
-  }, []);
 
   /* Crea una carrera */
   const handleCreate = async (e) => {
@@ -129,7 +126,7 @@ export default function Careers() {
 
           return (
             <div key={career.id} className="col-12 col-sm-6 col-lg-4 col-xl-3 mb-3" style={{ maxWidth: '25rem' }}>
-              <div className="card border-0 h-100 hovereable" onClick={() => navigate(`/admin/careers/${career.id}/groups`)}>
+              <div className="card border-0 h-100 hovereable" onClick={() => navigate('/admin/careers/groups', { state: { career } })}>
                 <img src={career.imageUrl || 'https://placehold.co/600x400?text=Cetec-Fallback'} className="card-img-top" alt={career.name} style={{ objectFit: 'cover', height: 180 }} />
 
                 <div className="card-body">
@@ -182,7 +179,7 @@ export default function Careers() {
               <div className="modal-body">
                 <div className="mb-3">
                   <label className="form-label">Nombre</label>
-                  <input name="name" className="form-control" autoComplete="off" spellCheck="false" placeholder='Carrera Técnica en' required pattern="^[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñ ]+$" title="Debe iniciar en mayúscula y solo letras/espacios" />
+                  <input name="name" className="form-control" autoComplete="off" spellCheck="false" placeholder="Carrera Técnica en" required pattern="^[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñ ]+$" title="Debe iniciar en mayúscula y solo letras/espacios" />
                 </div>
 
                 {/* plantel_id oculto */}
@@ -221,7 +218,17 @@ export default function Careers() {
                 <div className="modal-body">
                   <div className="mb-3">
                     <label className="form-label">Nombre</label>
-                    <input name="name" className="form-control" defaultValue={editingCareer.name} placeholder='Carrera Técnica en' autoComplete="off" spellCheck="false" required pattern="^[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñ ]+$" title="Debe iniciar en mayúscula y solo letras/espacios" />
+                    <input
+                      name="name"
+                      className="form-control"
+                      defaultValue={editingCareer.name}
+                      placeholder="Carrera Técnica en"
+                      autoComplete="off"
+                      spellCheck="false"
+                      required
+                      pattern="^[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñ ]+$"
+                      title="Debe iniciar en mayúscula y solo letras/espacios"
+                    />
                   </div>
 
                   <input type="hidden" name="plantelId" value={user.campus.id} />

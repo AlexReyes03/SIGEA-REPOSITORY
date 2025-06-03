@@ -1,11 +1,13 @@
 import request from './fetchWrapper';
 
 export const getAllUsers = async () => {
-  return await request('/api/users');
+  const res = await request('/api/users');
+  return res;
 };
 
 export const getUserById = async (id) => {
-  return await request(`/api/users/${id}`);
+  const res = await request(`/api/users/${id}`);
+  return res.data;
 };
 
 export const createUser = async (userDto) => {

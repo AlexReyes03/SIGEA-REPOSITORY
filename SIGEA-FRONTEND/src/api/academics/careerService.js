@@ -6,7 +6,8 @@ export const getAllCareers = async () => {
 };
 
 export const getCareerById = async (id) => {
-  return await request(`/api/careers/${id}`);
+  const res = await request(`/api/careers/${id}`);
+  return res.data;
 };
 
 export const createCareer = async (careerDto, plantelId) => {

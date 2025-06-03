@@ -67,7 +67,7 @@ export default function AppRouter() {
           <Route path="admin" element={<AdminDashboard />} />
           <Route path="admin/profile" element={<AdminProfile />} />
           <Route path="admin/careers" element={<AdminCareers />} />
-          <Route path="admin/careers/:id/groups" element={<CareerGroups />} />
+          <Route path="admin/careers/groups" element={<CareerGroups />} />
 
           {/* DOCENTE */}
           <Route path="teacher" element={<TeacherDashboard />} />

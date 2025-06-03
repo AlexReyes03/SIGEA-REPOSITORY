@@ -26,7 +26,6 @@ export default function Dashboard() {
         if (next > 5) next = 5.0;
         if (next < 0) next = 0.0;
 
-        // Determina si el valor ha subido o bajado
         setIsUp(next >= prev);
 
         return next;
