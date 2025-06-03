@@ -19,13 +19,13 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
       case 'ADMIN':
         return [
           { label: 'Inicio', path: '/admin', Icon: MdHome },
-          { label: 'Cursos', path: '/admin/courses', Icon: MdSchool },
+          { label: 'Carreras', path: '/admin/careers', Icon: MdSchool },
           { label: 'Usuarios', path: '/admin/users', Icon: MdGroups },
           { label: 'Perfil', path: '/admin/profile', Icon: MdPerson },
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },
         ];
 
-      case 'TEACHER':
+      case 'TEACHER': // Ejemplos
         return [
           { label: 'Inicio', path: '/teacher', Icon: MdHome },
           { label: 'Mis Cursos', path: '/teacher/courses', Icon: MdSchool },
@@ -33,7 +33,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },
         ];
 
-      case 'STUDENT':
+      case 'STUDENT': // Ejemplos
         return [
           { label: 'Inicio', path: '/student', Icon: MdHome },
           { label: 'Mis Cursos', path: '/student/courses', Icon: MdSchool },
@@ -63,6 +63,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
     if (!isOpen) return;
     if (item.path) {
       navigate(item.path);
+      onClose();
     } else {
       confirmAction({
         message: '¿Estás seguro de que quieres cerrar sesión?',

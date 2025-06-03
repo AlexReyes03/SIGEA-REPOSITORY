@@ -147,3 +147,20 @@ Button {
   background-color: #D3ECD0;
   color: #4FB446;
 }
+
+.hovereable:hover {
+  box-shadow: 0 0px 0.5rem rgba(0, 0, 0, 0.2) !important;
+  transition: box-shadow 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+/* Anular margin/padding/decoration SOLO en menús de PrimeReact */
+.p-menu-list {
+  margin-bottom: 0 !important;
+  padding-left: 0 !important;
+}
+
+.p-menuitem,
+.p-menuitem .p-menuitem-link {
+  text-decoration: none !important;
+}

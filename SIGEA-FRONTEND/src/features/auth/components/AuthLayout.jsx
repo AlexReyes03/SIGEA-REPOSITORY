@@ -24,7 +24,7 @@ export default function AuthLayout({ title, subtitle, children }) {
         </div>
 
         {/* Panel derecho: color sólido + inner shadow */}
-        <div className="col-md-6 d-none d-sm-block auth-panel-right bg-blue-500"></div>
+        <div className="col-md-6 d-none d-md-block auth-panel-right bg-blue-500"></div>
       </div>
     </main>
   );

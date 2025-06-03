@@ -27,7 +27,7 @@ export default function ActiveUsersCard() {
 
   return (
     <motion.div
-      className="d-flex align-items-center bg-white text-dark rounded-4 shadow px-3 d-none d-md-flex"
+      className="d-flex align-items-center bg-white text-dark rounded-4 shadow px-3 d-none d-sm-flex"
       style={{
         position: 'fixed',
         bottom: '1rem',
