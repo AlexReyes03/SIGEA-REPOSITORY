@@ -16,7 +16,22 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.Optional;
 
+@Service
+public class GroupService {
+    private final GroupRepository repository;
+    private final UserRepository userRepository;
+    private final CareerRepository careerRepository;
+    private final CustomResponseEntity responseService;
 
+    public GroupService(GroupRepository repository,
+                        UserRepository userRepository,
+                        CareerRepository careerRepository,
+                        CustomResponseEntity responseService) {
+        this.repository = repository;
+        this.userRepository = userRepository;
+        this.careerRepository = careerRepository;
+        this.responseService = responseService;
+    }
 
     //Trae todos los grupos
     public ResponseEntity<?> findAllGroups() {
