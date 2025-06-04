@@ -41,7 +41,7 @@ public class GroupController {
         return service.findById(id);
     }
 
-    @PostMapping("/")
+    @PostMapping
     public ResponseEntity<?> createGroup(@RequestBody GroupEntity group){
         return service.create(group);
     }

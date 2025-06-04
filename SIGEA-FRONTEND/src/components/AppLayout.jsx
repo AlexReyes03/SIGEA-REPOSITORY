@@ -6,7 +6,7 @@ import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import ActiveUsersCard from './ActiveUsersCard';
 
-export default function AppLayout({ children }) {
+export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const toggleSidebar = () => setSidebarOpen((o) => !o);
   const closeSidebar = () => setSidebarOpen(false);
@@ -22,7 +22,7 @@ export default function AppLayout({ children }) {
       <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} onClose={closeSidebar} toggleRef={toggleRef} onLogout={logout} />
 
       {/* Contenido principal */}
-      <main className="bg-main vh-100" style={{ paddingTop: '80px', paddingLeft: '4.5rem', bottom: 0, paddingRight: '1rem', zIndex: 1020, }}>
+      <main className="bg-main" style={{ minHeight: '100dvh', paddingTop: '80px', paddingLeft: '4.5rem', bottom: 0, paddingRight: '1rem', zIndex: 1020, }}>
         <Outlet />
       </main>
 

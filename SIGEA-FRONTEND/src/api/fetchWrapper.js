@@ -1,14 +1,6 @@
 import { BASE_URL } from './common-url';
 
-export default async function request(
-  endpoint,
-  {
-    method = 'GET',
-    body = null,
-    headers = {},
-    signal = undefined,
-  } = {}
-) {
+export default async function request(endpoint, { method = 'GET', body = null, headers = {}, signal = undefined } = {}) {
   const url = `${BASE_URL}${endpoint}`;
   const token = localStorage.getItem('token');
 
@@ -34,8 +26,9 @@ export default async function request(
   }
 
   if (!res.ok) {
-    const error = data?.message || res.statusText;
-    throw new Error(error);
+    const error = new Error(data?.message || res.statusText);
+    error.status = res.status;
+    throw error;
   }
 
   return data;

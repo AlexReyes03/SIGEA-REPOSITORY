@@ -27,7 +27,7 @@ export default function ActiveUsersCard() {
 
   return (
     <motion.div
-      className="d-flex align-items-center bg-white rounded-4 shadow px-3"
+      className="d-flex align-items-center bg-white text-dark rounded-4 shadow px-3 d-none d-sm-flex"
       style={{
         position: 'fixed',
         bottom: '1rem',
@@ -37,7 +37,7 @@ export default function ActiveUsersCard() {
         height: '50px',
       }}
       initial={{ width: '4.8rem' }}
-      animate={{ width: hover ? '14rem' : '4.8rem' }}
+      animate={{ width: hover ? '14rem' : '4.6rem' }}
       transition={{ duration: 0.3 }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -45,14 +45,14 @@ export default function ActiveUsersCard() {
       {/* Texto */}
       <AnimatePresence>
         {hover && (
-          <motion.span key="label" className="fw-semibold text-truncate text-nowrap text-dark me-auto" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.3 }}>
+          <motion.span key="label" className="fw-semibold text-truncate text-nowrap me-auto" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.3 }}>
             Usuarios activos
           </motion.span>
         )}
       </AnimatePresence>
 
       {/* Contador */}
-      <span className="fw-semibold text-dark mx-2">{count}</span>
+      <span className="fw-semibold mx-2">{count}</span>
 
       {/* Dot */}
       <div

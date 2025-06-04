@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from 'primereact/button';
-import { MdOutlineEmail } from 'react-icons/md'; 
+import { MdOutlineEmail } from 'react-icons/md';
 
 import PasswordInput from '../../../components/PasswordInput';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/providers/ToastProvider';
+import { useConfirmDialog } from '../../../components/providers/ConfirmDialogProvider';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isFailed, setIsFailed] = useState(false);
   const { login, loading } = useAuth();
   const { showSuccess, showError } = useToast();
+  const { confirmAction } = useConfirmDialog();
   const navigate = useNavigate();
 
   const handleEmailKeyDown = (e) => {
@@ -43,7 +46,27 @@ export default function LoginForm() {
           return navigate('/');
       }
     } catch (err) {
-      showError('Error', err.message);
+      console.log(err.status);
+
+      if (err.status === 401 || err.status === 404) {
+        setIsFailed(true);
+        showError('Error', 'Usuario o contraseña incorrectos');
+      } else if (err.status === 423) {
+        showError('Cuenta bloqueada', 'Has superado el número máximo de intentos. Vuelve a intentarlo más tarde.');
+        confirmAction({
+          message: 'Tu cuenta ha sido bloqueada temporalmente por seguridad.',
+          header: 'Demasiados intentos fallidos',
+          icon: 'pi pi-exclamation-triangle',
+          acceptLabel: 'Aceptar',
+          rejectClassName: 'd-none',
+          acceptClassName: 'p-button-primary',
+          onAccept: () => {
+            null;
+          },
+        });
+      } else {
+        showError('Error', 'Ha ocurrido un problema inesperado. Intenta más tarde.');
+      }
     }
   };
   const isDisabled = !email.trim() || !password.trim() || loading;
@@ -54,7 +77,7 @@ export default function LoginForm() {
         <div className="form-floating position-relative mb-4">
           <input id="floatingInput" type="email" className="form-control pe-5" placeholder=" " autoComplete="off" spellCheck="false" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={handleEmailKeyDown} />
           <label htmlFor="floatingInput">Correo electrónico</label>
-          <MdOutlineEmail size={24} className="position-absolute end-0 me-3 top-50 translate-middle-y text-muted user-select-none"/>
+          <MdOutlineEmail size={24} className="position-absolute end-0 me-3 top-50 translate-middle-y text-muted user-select-none" />
         </div>
 
         <div className="mb-4">
@@ -75,6 +98,8 @@ export default function LoginForm() {
         <hr className="my-5" />
 
         <Button type="submit" label="Iniciar Sesión" className="button-blue-800 w-100 rounded-3 fs-4" loading={loading} disabled={isDisabled} />
+
+        {isFailed && <div className="text-warning fw-semibold text-center mt-2">Por seguridad, tras cinco intentos fallidos tu cuenta se bloqueará temporalmente.</div>}
 
         <div className="text-end my-3 text-muted fw-semibold">
           ¿Olvidaste tu contraseña?
