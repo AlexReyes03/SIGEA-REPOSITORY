@@ -1,9 +1,11 @@
 package com.utez.edu.sigeabackend.modules.services;
 
-import com.utez.edu.sigeabackend.config.CustomResponseEntity;
 import com.utez.edu.sigeabackend.modules.entities.CareerEntity;
 import com.utez.edu.sigeabackend.modules.entities.GroupEntity;
 import com.utez.edu.sigeabackend.modules.entities.UserEntity;
+import com.utez.edu.sigeabackend.modules.entities.WeekDays;
+import com.utez.edu.sigeabackend.modules.entities.dto.groupDtos.GroupRequestDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.groupDtos.GroupResponseDto;
 import com.utez.edu.sigeabackend.modules.repositories.CareerRepository;
 import com.utez.edu.sigeabackend.modules.repositories.GroupRepository;
 import com.utez.edu.sigeabackend.modules.repositories.UserRepository;
@@ -14,139 +16,148 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class GroupService {
-    private final GroupRepository     repository;
-    private final UserRepository      userRepository;
-    private final CareerRepository    careerRepository;
-    private final CustomResponseEntity responseService;
 
-    public GroupService(GroupRepository repository,
-                        UserRepository userRepository,
-                        CareerRepository careerRepository,
-                        CustomResponseEntity responseService) {
-        this.repository       = repository;
-        this.userRepository   = userRepository;
+    private final GroupRepository    repository;
+    private final UserRepository     userRepository;
+    private final CareerRepository   careerRepository;
+
+    public GroupService(
+            GroupRepository repository,
+            UserRepository userRepository,
+            CareerRepository careerRepository
+    ) {
+        this.repository = repository;
+        this.userRepository = userRepository;
         this.careerRepository = careerRepository;
-        this.responseService  = responseService;
     }
 
-    //Trae todos los grupos
-    public ResponseEntity<?> findAllGroups() {
+    // ───────── Helper: pasar de entidad a DTO de respuesta ─────────
+    private GroupResponseDto toResponseDto(GroupEntity g) {
+        return new GroupResponseDto(
+                g.getId(),
+                g.getName(),
+                g.getWeekDay().name(),
+                g.getStartTime().toString(),
+                g.getEndTime().toString(),
+                g.getTeacher().getId(),
+                g.getTeacher().getName() + " " + g.getTeacher().getPaternalSurname(),
+                g.getCareer().getId(),
+                g.getCareer().getName()
+        );
+    }
+
+    // ───────── Helper: llenar campos comunes de GroupEntity desde GroupRequestDto ─────────
+    private void populateFromDto(
+            GroupEntity target,
+            GroupRequestDto dto,
+            UserEntity teacher,
+            CareerEntity careerEntity
+    ) {
+        target.setName(dto.name());
+        target.setStartTime(java.time.LocalTime.parse(dto.startTime()));
+        target.setEndTime(java.time.LocalTime.parse(dto.endTime()));
+        target.setWeekDay(WeekDays.valueOf(dto.weekDay())); // usa tu enum LUN, MAR, etc.
+        target.setTeacher(teacher);
+        target.setCareer(careerEntity);
+    }
+
+    // ───────── LISTAR TODOS ─────────
+    public ResponseEntity<List<GroupResponseDto>> findAllGroups() {
         List<GroupEntity> groups = repository.findAll();
         if (groups.isEmpty()) {
-            return responseService.getOkResponse("No hay grupos registrados", null);
-        }
-        return responseService.getOkResponse("Grupos encontrados", groups);
-    }
-
-    //Trae los grupos del docente
-    public ResponseEntity<?> findGroupsByTeacher(long teacherId) {
-        List<GroupEntity> groups = repository.findByTeacherId(teacherId);
-        if (groups.isEmpty()) {
-            return responseService.getOkResponse("No hay grupos registrados", null);
-        }
-        return responseService.getOkResponse("Grupos del docente encontrados", groups);
-    }
-
-    //Trae los grupos por carrera
-    public ResponseEntity<?> findGroupsByCareer(long careerId) {
-        List<GroupEntity> groups = repository.findByCareerId(careerId);
-        if (groups.isEmpty()) {
-            return responseService.getOkResponse("No hay grupos registrados", null);
-        }
-        return responseService.getOkResponse("Grupos por carrera encontrados", groups);
-    }
-
-    //Grupo por ID
-    public ResponseEntity<?> findById(long id) {
-        Optional<GroupEntity> groupOpt = repository.findById(id);
-        if (groupOpt.isPresent()) {
-            return responseService.getOkResponse("Grupo encontrado", groupOpt.get());
-        } else {
-            return responseService.get404Response();
-        }
-    }
-
-    //Agregar grupo
-    @Transactional
-    public ResponseEntity<GroupEntity> create(GroupEntity group) {
-        // 1) Validar que venga un teacher.id
-        if (group.getTeacher() == null || group.getTeacher().getId() == 0) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "Falta el campo teacher.id"
-            );
-        }
-        // 2) Obtener UserEntity (docente)
-        UserEntity teacher = userRepository.findById(group.getTeacher().getId())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "Docente no encontrado con id " + group.getTeacher().getId()
-                ));
-        // 3) Validar que venga un career.id
-        if (group.getCareer() == null || group.getCareer().getId() == 0) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "Falta el campo career.id"
-            );
-        }
-        // 4) Obtener CareerEntity
-        CareerEntity career = careerRepository.findById(group.getCareer().getId())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "Carrera no encontrada con id " + group.getCareer().getId()
-                ));
-
-        // 5) Asignar relaciones antes de guardar
-        group.setTeacher(teacher);
-        group.setCareer(career);
-
-        GroupEntity saved = repository.save(group);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(saved);
-    }
-
-    //Actualizar grupo
-    @Transactional
-    public ResponseEntity<GroupEntity> update(long id, GroupEntity groupData) {
-        Optional<GroupEntity> groupOpt = repository.findById(id);
-        if (groupOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
-
-        GroupEntity group = groupOpt.get();
-
-        // Actualizar sólo campos permitidos
-        group.setName(groupData.getName());
-        group.setStartTime(groupData.getStartTime());
-        group.setEndTime(groupData.getEndTime());
-        group.setWeekDay(groupData.getWeekDay());
-
-        // Si vienen relaciones de teacher o career en el JSON, validarlas:
-        if (groupData.getTeacher() != null && groupData.getTeacher().getId() != 0) {
-            UserEntity teacher = userRepository.findById(groupData.getTeacher().getId())
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.BAD_REQUEST,
-                            "Docente no encontrado con id " + groupData.getTeacher().getId()
-                    ));
-            group.setTeacher(teacher);
-        }
-        if (groupData.getCareer() != null && groupData.getCareer().getId() != 0) {
-            CareerEntity careerEntity = careerRepository.findById(groupData.getCareer().getId())
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.BAD_REQUEST,
-                            "Carrera no encontrada con id " + groupData.getCareer().getId()
-                    ));
-            group.setCareer(careerEntity);
-        }
-
-        GroupEntity updated = repository.save(group);
-        return ResponseEntity.ok(updated);
+        List<GroupResponseDto> dtos = groups.stream()
+                .map(this::toResponseDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
-    // Eliminar grupo
+    // ───────── LISTAR POR DOCENTE ─────────
+    public ResponseEntity<List<GroupResponseDto>> findGroupsByTeacher(long teacherId) {
+        List<GroupEntity> groups = repository.findByTeacherId(teacherId);
+        if (groups.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+        List<GroupResponseDto> dtos = groups.stream()
+                .map(this::toResponseDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
+    }
+
+    // ───────── LISTAR POR CARRERA ─────────
+    public ResponseEntity<List<GroupResponseDto>> findGroupsByCareer(long careerId) {
+        List<GroupEntity> groups = repository.findByCareerId(careerId);
+        if (groups.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+        List<GroupResponseDto> dtos = groups.stream()
+                .map(this::toResponseDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
+    }
+
+    // ───────── OBTENER UNO POR ID ─────────
+    public ResponseEntity<GroupResponseDto> findById(long id) {
+        return repository.findById(id)
+                .map(this::toResponseDto)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    }
+
+    // ───────── CREAR NUEVO GRUPO ─────────
+    @Transactional
+    public ResponseEntity<GroupResponseDto> create(GroupRequestDto dto) {
+        // 1) Verificar que exista el teacher
+        UserEntity teacher = userRepository.findById(dto.teacherId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Docente no encontrado con id " + dto.teacherId()
+                ));
+        // 2) Verificar que exista la carrera
+        CareerEntity careerEntity = careerRepository.findById(dto.careerId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Carrera no encontrada con id " + dto.careerId()
+                ));
+
+        // 3) Construir la entidad y poblarla vía helper
+        GroupEntity g = new GroupEntity();
+        populateFromDto(g, dto, teacher, careerEntity);
+
+        GroupEntity saved = repository.save(g);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponseDto(saved));
+    }
+
+    // ───────── ACTUALIZAR GRUPO ─────────
+    @Transactional
+    public ResponseEntity<GroupResponseDto> update(long id, GroupRequestDto dto) {
+        GroupEntity existing = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Grupo no encontrado con id " + id
+                ));
+
+        // 1) Validar y obtener teacher
+        UserEntity teacher = userRepository.findById(dto.teacherId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Docente no encontrado con id " + dto.teacherId()
+                ));
+        // 2) Validar y obtener career
+        CareerEntity careerEntity = careerRepository.findById(dto.careerId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Carrera no encontrada con id " + dto.careerId()
+                ));
+
+        // 3) Actualizar campos usando el mismo helper
+        populateFromDto(existing, dto, teacher, careerEntity);
+
+        GroupEntity updated = repository.save(existing);
+        return ResponseEntity.ok(toResponseDto(updated));
+    }
+
+    // ───────── ELIMINAR ─────────
     @Transactional
     public ResponseEntity<Void> delete(long id) {
         if (!repository.existsById(id)) {
