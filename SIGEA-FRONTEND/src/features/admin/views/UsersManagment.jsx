@@ -1,4 +1,4 @@
-import React, {useRef} from 'react'
+import React, { useRef } from 'react'
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Dropdown } from "primereact/dropdown";
@@ -72,22 +72,43 @@ export default function UsersManagment() {
             </div>
             <div className="shadow-sm p-3 bg-white rounded mt-3">
                 <div className="mb-3">
-                    <div className='mb-3 d-flex align-items-center'>
-                        <div className="flex-grow-1" >
-                            <div className='d-flex align-items-center'>
-                                <div className='title-icon p-1 rounded-circle'>
-                                    <MdOutlineGroup className='p-1' size={38} />
-                                </div>
-                                <h5 className="title-text ms-2 me-2">Estudiantes</h5>
-                                <span className="badge pill bg-blue-500 p-2 me-3">{users.length}</span>
-                                <Dropdown value={selectedTipoUsuario} options={tiposUsuario} onChange={(e) => setSelectedTipoUsuario(e.value)} placeholder="Tipo de Usuario" className="me-2" />
-                                <Dropdown value={selectedCarrera} options={carreras} onChange={(e) => setSelectedCarrera(e.value)} placeholder="Carrera" className="me-2" />
+                    <div className="mb-3 row align-items-center flex-wrap gy-2 gx-3">
+                        
+                        <div className="col-12 col-md d-flex align-items-center flex-wrap gap-2">
+                            <div className='title-icon p-1 rounded-circle'>
+                                <MdOutlineGroup className='p-1' size={38} />
                             </div>
+                            <h5 className="title-text ms-2 me-2 mb-0">Estudiantes</h5>
+                            <span className="badge bg-blue-500 p-2 me-2">{users.length}</span>
+                            <Dropdown
+                                value={selectedTipoUsuario}
+                                options={tiposUsuario}
+                                onChange={(e) => setSelectedTipoUsuario(e.value)}
+                                placeholder="Tipo de Usuario"
+                                className="me-2 mb-2 mb-md-0"
+                                style={{ minWidth: 160 }}
+                            />
+                            <Dropdown
+                                value={selectedCarrera}
+                                options={carreras}
+                                onChange={(e) => setSelectedCarrera(e.value)}
+                                placeholder="Carrera"
+                                className="me-2 mb-2 mb-md-0"
+                                style={{ minWidth: 140 }}
+                            />
                         </div>
-                        <div className="flex-shrink-0">
-                            <Button icon="pi pi-user-plus" className="p-button btn-rounded-circle bg-blue-500 me-2" />
-                            <InputText value={globalFilter} onChange={(e) => setGlobalFilter(e.target.value)} placeholder="Buscar..." className="me-2" />
-
+                    
+                        <div className="col-12 col-md-auto d-flex align-items-center flex-wrap gap-2 justify-content-md-end justify-content-start mt-2 mt-md-0">
+                            <Button
+                                icon="pi pi-user-plus"
+                                className="p-button btn-rounded-circle bg-blue-500 me-2 mb-2 mb-md-0"
+                            />
+                            <InputText
+                                value={globalFilter}
+                                onChange={(e) => setGlobalFilter(e.target.value)}
+                                placeholder="Buscar..."
+                                className="me-2 mb-2 mb-md-0"
+                            />
                         </div>
                     </div>
 
@@ -104,7 +125,7 @@ export default function UsersManagment() {
                             <div className='flex justify-content-center'>
                                 <Toast ref={toast}></Toast>
                                 <Menu model={items} popup ref={menuRight} id="popup_menu_right" popupAlignment="right" />
-                                <Button icon="pi pi-align-right"  className="bg-gray-800 rounded" onClick={(event) => menuRight.current.toggle(event)} aria-controls="popup_menu_right" aria-haspopup />
+                                <Button icon="pi pi-align-right" className="bg-blue-800 rounded" onClick={(event) => menuRight.current.toggle(event)} aria-controls="popup_menu_right" aria-haspopup />
                             </div>
                         )} />
                     </DataTable>
@@ -113,3 +134,6 @@ export default function UsersManagment() {
         </div>
     )
 }
+
+
+
