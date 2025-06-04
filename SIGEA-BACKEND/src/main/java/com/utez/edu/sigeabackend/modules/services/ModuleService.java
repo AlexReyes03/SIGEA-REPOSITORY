@@ -5,6 +5,7 @@ import com.utez.edu.sigeabackend.modules.entities.CareerEntity;
 import com.utez.edu.sigeabackend.modules.entities.ModuleEntity;
 import com.utez.edu.sigeabackend.modules.repositories.CareerRepository;
 import com.utez.edu.sigeabackend.modules.repositories.ModuleRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -25,58 +26,63 @@ public class ModuleService {
     public ResponseEntity<?> findAll() {
         List<ModuleEntity> list = moduleRepository.findAll();
         if (list.isEmpty()) {
-            return responseService.get404Response();
+            return responseService.createResponse("No se encontraron módulos", HttpStatus.NOT_FOUND, null);
         }
-        return responseService.getOkResponse("Módulos encontrados", list);
+        return responseService.createResponse("Módulos encontrados", HttpStatus.OK, list);
     }
 
     public ResponseEntity<?> findById(long id) {
         ModuleEntity entity = moduleRepository.findById(id).orElse(null);
         if (entity == null) {
-            return responseService.get404Response();
+            return responseService.createResponse("Módulo no encontrado", HttpStatus.NOT_FOUND, null);
         }
-        return responseService.getOkResponse("Módulo encontrado", entity);
+        return responseService.createResponse("Módulo encontrado", HttpStatus.OK, entity);
     }
 
     public ResponseEntity<?> findByCareerId(long careerId) {
         List<ModuleEntity> modules = moduleRepository.findByCareerId(careerId);
         if (modules.isEmpty()) {
-            return responseService.get404Response();
+            return responseService.createResponse("No se encontraron módulos para la carrera", HttpStatus.NOT_FOUND, null);
         }
-        return responseService.getOkResponse("Módulos encontrados para la carrera", modules);
+        return responseService.createResponse("Módulos encontrados para la carrera", HttpStatus.OK, modules);
     }
+
 
     public ResponseEntity<?> create(ModuleEntity module, long careerId) {
-        CareerEntity career = careerRepository.findById(careerId).orElse(null);
-        if (career == null) {
-            return responseService.get404Response();
+        try {
+            CareerEntity career = careerRepository.findById(careerId).orElse(null);
+            if (career == null) {
+                return responseService.get404Response();
+            }
+            module.setCareer(career);
+            ModuleEntity saved = moduleRepository.save(module);
+            return responseService.createResponse("Módulo creado exitosamente", HttpStatus.CREATED, saved);
+        } catch (Exception e) {
+            return responseService.get400Response();
         }
-        module.setCareer(career);
-        moduleRepository.save(module);
-        return responseService.get201Response("Módulo creado");
     }
-
     public ResponseEntity<?> update(long id, ModuleEntity module, long careerId) {
         ModuleEntity existing = moduleRepository.findById(id).orElse(null);
         if (existing == null) {
-            return responseService.get404Response();
+            return responseService.createResponse("Módulo no encontrado", HttpStatus.NOT_FOUND, null);
         }
         CareerEntity career = careerRepository.findById(careerId).orElse(null);
         if (career == null) {
-            return responseService.get404Response();
+            return responseService.createResponse("Carrera no encontrada", HttpStatus.NOT_FOUND, null);
         }
         existing.setName(module.getName());
         existing.setCareer(career);
         moduleRepository.save(existing);
-        return responseService.getOkResponse("Módulo actualizado", existing);
+        return responseService.createResponse("Módulo actualizado", HttpStatus.OK, existing);
     }
 
     public ResponseEntity<?> delete(long id) {
         ModuleEntity existing = moduleRepository.findById(id).orElse(null);
         if (existing == null) {
-            return responseService.get404Response();
+            return responseService.createResponse("Módulo no encontrado", HttpStatus.NOT_FOUND, null);
         }
         moduleRepository.deleteById(id);
-        return responseService.getOkResponse("Módulo eliminado", null);
+        return responseService.createResponse("Módulo eliminado", HttpStatus.OK, null);
     }
 }
+
