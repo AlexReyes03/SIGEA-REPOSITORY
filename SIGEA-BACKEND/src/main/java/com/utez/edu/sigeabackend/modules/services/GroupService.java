@@ -1,24 +1,22 @@
 package com.utez.edu.sigeabackend.modules.services;
 
 import com.utez.edu.sigeabackend.config.CustomResponseEntity;
+import com.utez.edu.sigeabackend.modules.entities.CareerEntity;
 import com.utez.edu.sigeabackend.modules.entities.GroupEntity;
+import com.utez.edu.sigeabackend.modules.entities.UserEntity;
+import com.utez.edu.sigeabackend.modules.repositories.CareerRepository;
 import com.utez.edu.sigeabackend.modules.repositories.GroupRepository;
+import com.utez.edu.sigeabackend.modules.repositories.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
 
-@Service
-public class GroupService {
-    private final GroupRepository repository;
-    private final CustomResponseEntity responseService;
 
-    public GroupService(GroupRepository repository, CustomResponseEntity responseService) {
-        this.repository = repository;
-        this.responseService = responseService;
-    }
 
     //Trae todos los grupos
     public ResponseEntity<?> findAllGroups() {
@@ -56,11 +54,48 @@ public class GroupService {
         }
     }
     //Agregar grupo
-    public ResponseEntity<?> create(GroupEntity group){
-        try{
+    @Transactional
+    public ResponseEntity<?> create(GroupEntity group) {
+        try {
+            // 1) Verificar que el JSON haya traído un objeto `teacher` con al menos un `userId`.
+            if (group.getTeacher() == null || group.getTeacher().getUserId() == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Falta el campo teacher.userId"
+                );
+            }
+            // 2) Buscar UserEntity (docente) en BD
+            UserEntity teacher = userRepository.findById(group.getTeacher().getUserId())
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST, "Docente no encontrado con id " + group.getTeacher().getUserId()
+                    ));
+            // 3) Verificar que el JSON haya traído un objeto `career` con al menos un `careerId`.
+            if (group.getCareer() == null || group.getCareer().getCareerId() == 0) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Falta el campo career.careerId"
+                );
+            }
+            // 4) Buscar CareerEntity en BD
+            CareerEntity career = careerRepository.findById(group.getCareer().getCareerId())
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST, "Carrera no encontrada con id " + group.getCareer().getCareerId()
+                    ));
+
+            // 5) Asignar las entidades recuperadas a la entidad `group` antes de guardar
+            group.setTeacher(teacher);
+            group.setCareer(career);
+
+            // 6) Persistir en BD
             GroupEntity saved = repository.save(group);
-            return responseService.createResponse("Grupo creado exitosamente", HttpStatus.CREATED, saved);
-        }catch(Exception e){
+            return responseService.createResponse(
+                    "Grupo creado exitosamente", HttpStatus.CREATED, saved
+            );
+        } catch (ResponseStatusException ex) {
+            // Si fue lanzado por faltantes o IDs inválidos
+            return responseService.getCustomResponse(
+                    ex.getReason(), HttpStatus.BAD_REQUEST
+            );
+        } catch (Exception e) {
+            // Cualquier otro error inesperado devuelve 400
             return responseService.get400Response();
         }
     }

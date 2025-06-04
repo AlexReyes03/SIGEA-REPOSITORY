@@ -21,6 +21,4 @@ public interface GroupRepository extends JpaRepository<GroupEntity, Long> {
     @Query("SELECT g FROM GroupEntity g JOIN g.students gs WHERE gs.student.id = :student_id")
     List<GroupEntity> findByStudent(@Param("student_id") Integer student_id);
 
-
-
 }
