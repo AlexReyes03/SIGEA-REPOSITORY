@@ -35,6 +35,9 @@ public class GroupService {
         this.careerRepository = careerRepository;
     }
 
+    /**
+     * Transforma una entidad GroupEntity en su DTO de respuesta.
+     */
     private GroupResponseDto toResponseDto(GroupEntity g) {
         return new GroupResponseDto(
                 g.getId(),
@@ -49,6 +52,10 @@ public class GroupService {
         );
     }
 
+    /**
+     * Rellena (o actualiza) un GroupEntity a partir de un GroupRequestDto validado,
+     * junto con las entidades ya recuperadas de Teacher y Career.
+     */
     private void populateFromDto(
             GroupEntity target,
             GroupRequestDto dto,
@@ -58,16 +65,17 @@ public class GroupService {
         target.setName(dto.name());
         target.setStartTime(java.time.LocalTime.parse(dto.startTime()));
         target.setEndTime(java.time.LocalTime.parse(dto.endTime()));
-        target.setWeekDay(WeekDays.valueOf(dto.weekDay())); // usa enum LUN, MAR, etc.
+        target.setWeekDay(WeekDays.valueOf(dto.weekDay())); // El enum WeekDays (LUN, MAR, …)
         target.setTeacher(teacher);
         target.setCareer(careerEntity);
     }
 
     // LISTAR TODOS
+    @Transactional(readOnly = true)
     public ResponseEntity<List<GroupResponseDto>> findAllGroups() {
         List<GroupEntity> groups = repository.findAll();
         if (groups.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return ResponseEntity.ok(null);
         }
         List<GroupResponseDto> dtos = groups.stream()
                 .map(this::toResponseDto)
@@ -76,10 +84,11 @@ public class GroupService {
     }
 
     // LISTAR POR DOCENTE
+    @Transactional(readOnly = true)
     public ResponseEntity<List<GroupResponseDto>> findGroupsByTeacher(long teacherId) {
         List<GroupEntity> groups = repository.findByTeacherId(teacherId);
         if (groups.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return ResponseEntity.ok(null);
         }
         List<GroupResponseDto> dtos = groups.stream()
                 .map(this::toResponseDto)
@@ -88,10 +97,11 @@ public class GroupService {
     }
 
     // LISTAR POR CARRERA
+    @Transactional(readOnly = true)
     public ResponseEntity<List<GroupResponseDto>> findGroupsByCareer(long careerId) {
         List<GroupEntity> groups = repository.findByCareerId(careerId);
         if (groups.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return ResponseEntity.ok(null);
         }
         List<GroupResponseDto> dtos = groups.stream()
                 .map(this::toResponseDto)
@@ -100,11 +110,12 @@ public class GroupService {
     }
 
     // OBTENER UNO POR ID
+    @Transactional(readOnly = true)
     public ResponseEntity<GroupResponseDto> findById(long id) {
         return repository.findById(id)
                 .map(this::toResponseDto)
                 .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.OK).build());
     }
 
     // CREAR NUEVO GRUPO

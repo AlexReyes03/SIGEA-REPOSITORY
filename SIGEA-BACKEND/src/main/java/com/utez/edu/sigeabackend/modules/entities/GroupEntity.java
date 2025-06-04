@@ -1,15 +1,13 @@
 package com.utez.edu.sigeabackend.modules.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-
 import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.Set;
 
 @Entity
 @Table(name = "group_table")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class GroupEntity {
 
     @Id
@@ -30,37 +28,24 @@ public class GroupEntity {
     @Column(name = "week_day", nullable = false)
     private WeekDays weekDay;
 
+    // Relación Many-To-One hacia UserEntity (rol=TEACHER)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @JsonIgnore
     private UserEntity teacher;
 
+    // Relación Many-To-One hacia CareerEntity
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "career_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @JsonIgnore
     private CareerEntity career;
 
+    // Relación One-To-Many hacia la tabla intermedia GroupStudentEntity
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @JsonIgnore
     private Set<GroupStudentEntity> students = new HashSet<>();
 
     public GroupEntity() { }
-
-    public GroupEntity(
-            String name,
-            LocalTime startTime,
-            LocalTime endTime,
-            WeekDays weekDay,
-            UserEntity teacher,
-            CareerEntity career
-    ) {
-        this.name = name;
-        this.startTime = startTime;
-        this.endTime = endTime;
-        this.weekDay = weekDay;
-        this.teacher = teacher;
-        this.career = career;
-    }
 
     public Long getId() {
         return groupId;
