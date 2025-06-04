@@ -35,7 +35,6 @@ public class GroupService {
         this.careerRepository = careerRepository;
     }
 
-    // ───────── Helper: pasar de entidad a DTO de respuesta ─────────
     private GroupResponseDto toResponseDto(GroupEntity g) {
         return new GroupResponseDto(
                 g.getId(),
@@ -50,7 +49,6 @@ public class GroupService {
         );
     }
 
-    // ───────── Helper: llenar campos comunes de GroupEntity desde GroupRequestDto ─────────
     private void populateFromDto(
             GroupEntity target,
             GroupRequestDto dto,
@@ -60,12 +58,12 @@ public class GroupService {
         target.setName(dto.name());
         target.setStartTime(java.time.LocalTime.parse(dto.startTime()));
         target.setEndTime(java.time.LocalTime.parse(dto.endTime()));
-        target.setWeekDay(WeekDays.valueOf(dto.weekDay())); // usa tu enum LUN, MAR, etc.
+        target.setWeekDay(WeekDays.valueOf(dto.weekDay())); // usa enum LUN, MAR, etc.
         target.setTeacher(teacher);
         target.setCareer(careerEntity);
     }
 
-    // ───────── LISTAR TODOS ─────────
+    // LISTAR TODOS
     public ResponseEntity<List<GroupResponseDto>> findAllGroups() {
         List<GroupEntity> groups = repository.findAll();
         if (groups.isEmpty()) {
@@ -77,7 +75,7 @@ public class GroupService {
         return ResponseEntity.ok(dtos);
     }
 
-    // ───────── LISTAR POR DOCENTE ─────────
+    // LISTAR POR DOCENTE
     public ResponseEntity<List<GroupResponseDto>> findGroupsByTeacher(long teacherId) {
         List<GroupEntity> groups = repository.findByTeacherId(teacherId);
         if (groups.isEmpty()) {
@@ -89,7 +87,7 @@ public class GroupService {
         return ResponseEntity.ok(dtos);
     }
 
-    // ───────── LISTAR POR CARRERA ─────────
+    // LISTAR POR CARRERA
     public ResponseEntity<List<GroupResponseDto>> findGroupsByCareer(long careerId) {
         List<GroupEntity> groups = repository.findByCareerId(careerId);
         if (groups.isEmpty()) {
@@ -101,7 +99,7 @@ public class GroupService {
         return ResponseEntity.ok(dtos);
     }
 
-    // ───────── OBTENER UNO POR ID ─────────
+    // OBTENER UNO POR ID
     public ResponseEntity<GroupResponseDto> findById(long id) {
         return repository.findById(id)
                 .map(this::toResponseDto)
@@ -109,7 +107,7 @@ public class GroupService {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
-    // ───────── CREAR NUEVO GRUPO ─────────
+    // CREAR NUEVO GRUPO
     @Transactional
     public ResponseEntity<GroupResponseDto> create(GroupRequestDto dto) {
         // 1) Verificar que exista el teacher
@@ -123,7 +121,7 @@ public class GroupService {
                         HttpStatus.BAD_REQUEST, "Carrera no encontrada con id " + dto.careerId()
                 ));
 
-        // 3) Construir la entidad y poblarla vía helper
+        // 3) Construir la entidad y poblarla en el helper
         GroupEntity g = new GroupEntity();
         populateFromDto(g, dto, teacher, careerEntity);
 
@@ -131,7 +129,7 @@ public class GroupService {
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponseDto(saved));
     }
 
-    // ───────── ACTUALIZAR GRUPO ─────────
+    // ACTUALIZAR GRUPO
     @Transactional
     public ResponseEntity<GroupResponseDto> update(long id, GroupRequestDto dto) {
         GroupEntity existing = repository.findById(id)
@@ -157,7 +155,7 @@ public class GroupService {
         return ResponseEntity.ok(toResponseDto(updated));
     }
 
-    // ───────── ELIMINAR ─────────
+    // ELIMINAR
     @Transactional
     public ResponseEntity<Void> delete(long id) {
         if (!repository.existsById(id)) {
