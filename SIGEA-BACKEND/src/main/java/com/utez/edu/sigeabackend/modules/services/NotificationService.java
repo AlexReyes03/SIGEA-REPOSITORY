@@ -7,6 +7,7 @@ import com.utez.edu.sigeabackend.modules.entities.UserEntity;
 import com.utez.edu.sigeabackend.modules.repositories.ModuleRepository;
 import com.utez.edu.sigeabackend.modules.repositories.NotificationRepository;
 import com.utez.edu.sigeabackend.modules.repositories.UserRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -30,45 +31,58 @@ public class NotificationService {
     // Crear notificación
     public ResponseEntity<?> create(NotificationEntity notification, long userId, long moduleId) {
         UserEntity user = userRepo.findById(userId).orElse(null);
+        if (user == null) {
+            return responseService.createResponse("Usuario no encontrado", HttpStatus.NOT_FOUND, null);
+        }
         ModuleEntity module = moduleRepo.findById(moduleId).orElse(null);
-
-        if (user == null) return responseService.get404Response();
-        if (module == null) return responseService.get404Response();
+        if (module == null) {
+            return responseService.createResponse("Módulo no encontrado", HttpStatus.NOT_FOUND, null);
+        }
 
         notification.setUser(user);
         notification.setModuleEntity(module);
         notification.setSendDate(LocalDateTime.now());
         notification.setSeen(false);
 
-        notificationRepo.save(notification);
-        return responseService.get201Response("Notificación creada");
+        NotificationEntity saved = notificationRepo.save(notification);
+        return responseService.createResponse("Notificación creada", HttpStatus.CREATED, saved);
     }
 
     // Listar notificaciones por usuario
     public ResponseEntity<?> findByUser(long userId) {
         List<NotificationEntity> list = notificationRepo.findByUserId(userId);
-        return responseService.getOkResponse("Notificaciones encontradas", list);
+        if (list.isEmpty()) {
+            return responseService.createResponse("No se encontraron notificaciones para el usuario", HttpStatus.NOT_FOUND, null);
+        }
+        return responseService.createResponse("Notificaciones encontradas", HttpStatus.OK, list);
     }
 
     // Listar notificaciones por módulo
     public ResponseEntity<?> findByModule(long moduleId) {
         List<NotificationEntity> list = notificationRepo.findByModuleEntityId(moduleId);
-        return responseService.getOkResponse("Notificaciones encontradas por módulo", list);
+        if (list.isEmpty()) {
+            return responseService.createResponse("No se encontraron notificaciones para el módulo", HttpStatus.NOT_FOUND, null);
+        }
+        return responseService.createResponse("Notificaciones encontradas por módulo", HttpStatus.OK, list);
     }
 
     // Marcar notificación como vista
     public ResponseEntity<?> markAsSeen(long id) {
         NotificationEntity notification = notificationRepo.findById(id).orElse(null);
-        if (notification == null) return responseService.get404Response();
+        if (notification == null) {
+            return responseService.createResponse("Notificación no encontrada", HttpStatus.NOT_FOUND, null);
+        }
         notification.setSeen(true);
         notificationRepo.save(notification);
-        return responseService.getOkResponse("Notificación marcada como vista", notification);
+        return responseService.createResponse("Notificación marcada como vista", HttpStatus.OK, notification);
     }
 
     // Eliminar notificación
     public ResponseEntity<?> delete(long id) {
-        if (!notificationRepo.existsById(id)) return responseService.get404Response();
+        if (!notificationRepo.existsById(id)) {
+            return responseService.createResponse("Notificación no encontrada", HttpStatus.NOT_FOUND, null);
+        }
         notificationRepo.deleteById(id);
-        return responseService.getOkResponse("Notificación eliminada", null);
+        return responseService.createResponse("Notificación eliminada", HttpStatus.OK, null);
     }
 }
