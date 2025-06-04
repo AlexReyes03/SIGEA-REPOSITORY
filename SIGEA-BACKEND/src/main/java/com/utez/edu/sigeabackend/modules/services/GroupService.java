@@ -37,7 +37,7 @@ public class GroupService {
     public ResponseEntity<?> findAllGroups() {
         List<GroupEntity> groups = repository.findAll();
         if (groups.isEmpty()) {
-            return responseService.get404Response();
+            return responseService.getOkResponse("No hay grupos registrados", null);
         }
         return responseService.getOkResponse("Grupos encontrados", groups);
     }
@@ -46,7 +46,7 @@ public class GroupService {
     public ResponseEntity<?> findGroupsByTeacher(long teacherId) {
         List<GroupEntity> groups = repository.findByTeacherId(teacherId);
         if (groups.isEmpty()) {
-            return responseService.get404Response();
+            return responseService.getOkResponse("No hay grupos registrados", null);
         }
         return responseService.getOkResponse("Grupos del docente encontrados", groups);
     }
@@ -55,7 +55,7 @@ public class GroupService {
     public ResponseEntity<?> findGroupsByCareer(long careerId) {
         List<GroupEntity> groups = repository.findByCareerId(careerId);
         if (groups.isEmpty()) {
-            return responseService.get404Response();
+            return responseService.getOkResponse("No hay grupos registrados", null);
         }
         return responseService.getOkResponse("Grupos por carrera encontrados", groups);
     }
@@ -102,9 +102,7 @@ public class GroupService {
         group.setTeacher(teacher);
         group.setCareer(career);
 
-        // 6) Guardar en BD
         GroupEntity saved = repository.save(group);
-        // 7) Retornar 201 con el objeto guardado
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(saved);
