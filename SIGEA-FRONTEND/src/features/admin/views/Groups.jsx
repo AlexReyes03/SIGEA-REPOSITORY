@@ -1,262 +1,245 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { BreadCrumb } from 'primereact/breadcrumb';
+import { Toolbar } from 'primereact/toolbar';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
-import { Toolbar } from 'primereact/toolbar';
 import { InputText } from 'primereact/inputtext';
-import { Toast } from 'primereact/toast';
+import { Dropdown } from 'primereact/dropdown';
+import { Calendar } from 'primereact/calendar';
 import { Button } from 'primereact/button';
+import { Toast } from 'primereact/toast';
 import { Modal } from 'bootstrap';
 
-import { getGroupByCareer, deleteGroup, createGroup } from '../../../api/academics/groupService';
+import { getGroupByCareer, createGroup, deleteGroup } from '../../../api/academics/groupService';
 import { getAllUsers } from '../../../api/userService';
 import { useToast } from '../../../components/providers/ToastProvider';
 import { useConfirmDialog } from '../../../components/providers/ConfirmDialogProvider';
 
+/* ───────── helpers ──────── */
+const weekDayOptions = [
+  { label: 'Lunes', value: 'LUN' },
+  { label: 'Martes', value: 'MAR' },
+  { label: 'Miércoles', value: 'MIE' },
+  { label: 'Jueves', value: 'JUE' },
+  { label: 'Viernes', value: 'VIE' },
+  { label: 'Sábado', value: 'SAB' },
+];
+
+const weekLabel = (code) => weekDayOptions.find((o) => o.value === code)?.label || code;
+
+const fmtTime = (d) => d?.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+const midnight = new Date();
+midnight.setHours(0, 0, 0, 0);
+
 export default function Groups() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { career } = location.state || {};
+  const career = useLocation().state?.career;
 
+  /* context */
   const { showSuccess, showError } = useToast();
   const { confirmAction } = useConfirmDialog();
-  const createModalRef = useRef(null);
-  const toast = useRef(null);
+
+  /* refs */
+  const modalRef = useRef(null);
   const dt = useRef(null);
 
-  const [groups, setGroups] = useState([]);
+  /* state */
+  const [data, setData] = useState([]);
   const [teachers, setTeachers] = useState([]);
-  const [selectedGroups, setSelectedGroups] = useState(null);
-  const [globalFilter, setGlobalFilter] = useState('');
+  const [selected, setSelected] = useState(null);
+  const [search, setSearch] = useState('');
+  const [form, setForm] = useState({ name: '', weekDay: null, startTime: midnight, endTime: midnight, teacher: null });
 
-  // Breadcrumb items
-  const items = [{ label: 'Carreras', command: () => navigate('/admin/careers') }, { label: career?.name || '--', command: () => navigate('/admin/careers') }, { label: 'Grupos' }];
-  const home = { icon: 'pi pi-home', command: () => navigate('/') };
+  /* ───────── data load ──────── */
+  const loadGroups = async () => {
+    const res = await getGroupByCareer(career.id);
+    setData(Array.isArray(res) ? res : res?.data ?? []);
+  };
 
-  // Cargar Grupos
   useEffect(() => {
-    if (!career?.id) return;
-    let ignore = false;
-    getGroupByCareer(career.id)
-      .then(({ data }) => {
-        if (!ignore) setGroups(data);
-      })
-      .catch((err) => {
-        showError('Error', err.message || 'No se pudieron cargar los grupos');
-      });
-    return () => {
-      ignore = true;
-    };
+    if (career?.id) loadGroups().catch((e) => showError('Error', e.message));
   }, [career?.id]);
 
-  // Cargar docentes
   useEffect(() => {
     getAllUsers()
-      .then((list) => {
-        console.log(list);
-        const onlyTeachers = list.filter((u) => u.roleName === 'TEACHER');
-        setTeachers(onlyTeachers);
-        console.log(onlyTeachers);
-      })
-      .catch((err) => {
-        showError('Error', err.message || 'No se pudieron cargar docentes');
-      });
+      .then((u) => setTeachers(u.filter((x) => x.roleName === 'TEACHER')))
+      .catch((e) => showError('Error', e.message));
   }, []);
 
-  const openModal = (ref) => ref.current && new Modal(ref.current).show();
-
-  const handleCreate = async (e) => {
+  /* ───────── CRUD ──────── */
+  const saveGroup = async (e) => {
     e.preventDefault();
-    const form = e.target;
+
     const payload = {
-      name: form.name.value,
-      weekDay: form.weekDay.value,
-      startTime: form.startTime.value,
-      endTime: form.endTime.value,
-      teacherId: form.teacherId.value,
-      careerId: career.id,
+      name: form.name,
+      weekDay: form.weekDay,
+      startTime: fmtTime(form.startTime),
+      endTime: fmtTime(form.endTime),
+
+      teacher: { userId: form.teacher?.id },
+      career: { careerId: career.id },
     };
+
     try {
       await createGroup(payload);
-      const { data } = await getGroupByCareer(career.id);
-      setGroups(data);
+      await loadGroups();
       showSuccess('Grupo creado');
-      Modal.getInstance(createModalRef.current).hide();
-      form.reset();
-    } catch (err) {
-      showError(err.message || 'No se pudo crear');
+      Modal.getInstance(modalRef.current).hide();
+      setForm({ name: '', weekDay: null, startTime: null, endTime: null, teacher: null });
+    } catch (e) {
+      showError('Error', e.message || 'No se pudo crear');
     }
   };
 
-  const askDeleteGroup = (group) => {
+  const removeGroup = (row) =>
     confirmAction({
+      message: `¿Eliminar el grupo "${row.name}"?`,
       header: 'Eliminar grupo',
-      message: `¿Eliminar el grupo "${group.name}"?`,
       icon: 'pi pi-exclamation-triangle',
       acceptClassName: 'p-button-danger',
-      acceptLabel: 'Sí, eliminar',
-      rejectLabel: 'Cancelar',
-      onAccept: () => doDeleteGroup(group),
-    });
-  };
-
-  const doDeleteGroup = (group) => {
-    deleteGroup(group.groupId)
-      .then(() => {
-        setGroups((prev) => prev.filter((g) => g.groupId !== group.groupId));
-        showSuccess('Grupo eliminado');
-      })
-      .catch((err) => showError(err.message || 'No se pudo eliminar'));
-  };
-
-  const askDeleteSelected = () => {
-    confirmAction({
-      header: 'Eliminar grupos',
-      message: `¿Eliminar ${selectedGroups.length} grupos seleccionados?`,
-      icon: 'pi pi-exclamation-triangle',
-      acceptClassName: 'p-button-danger',
-      acceptLabel: 'Sí, eliminar',
-      rejectLabel: 'Cancelar',
-      onAccept: () => {
-        const promises = selectedGroups.map((g) => deleteGroup(g.groupId));
-        Promise.all(promises)
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
+      onAccept: () =>
+        deleteGroup(row.groupId)
           .then(() => {
-            const ids = selectedGroups.map((g) => g.groupId);
-            setGroups((prev) => prev.filter((g) => !ids.includes(g.groupId)));
-            setSelectedGroups(null);
-            showSuccess('Grupos eliminados');
+            setData((g) => g.filter((x) => x.groupId !== row.groupId));
+            showSuccess('Grupo eliminado');
           })
-          .catch((err) => showError(err.message || 'Error al eliminar'));
+          .catch((e) => showError('Error', e.message)),
+    });
+
+  const removeSelected = () =>
+    confirmAction({
+      message: `¿Eliminar ${selected.length} grupos seleccionados?`,
+      header: 'Eliminar grupos',
+      icon: 'pi pi-exclamation-triangle',
+      acceptClassName: 'p-button-danger',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
+      onAccept: async () => {
+        await Promise.all(selected.map((g) => deleteGroup(g.groupId)));
+        await loadGroups();
+        setSelected(null);
+        showSuccess('Grupos eliminados');
       },
     });
-  };
 
-  // TOOLBAR
-  const leftToolbarTemplate = () => (
-    <div className="flex flex-wrap">
-      <Button icon="pi pi-plus" severity="success" className="me-2" onClick={() => openModal(createModalRef)}>
-        <span className="ms-1 d-none d-sm-block">Crear grupo</span>
-      </Button>
-      <Button icon="pi pi-trash" severity="danger" onClick={askDeleteSelected} disabled={!selectedGroups || !selectedGroups.length}>
-        <span className="ms-1 d-none d-sm-block">Eliminar</span>
-      </Button>
-    </div>
-  );
-
-  const rightToolbarTemplate = () => (
-    <Button icon="pi pi-upload" className="p-button-help" onClick={() => dt.current.exportCSV()}>
-      <span className="ms-1 d-none d-sm-block">Exportar</span>
-    </Button>
-  );
-
-  // ACTION COLUMN
-  const actionBodyTemplate = (row) => (
-    <>
-      <Button icon="pi pi-pencil" rounded outlined className="me-2" onClick={() => navigate('/admin/careers/groups/edit', { state: { career, group: row } })} />
-      <Button icon="pi pi-trash" rounded outlined severity="danger" onClick={() => askDeleteGroup(row)} />
-    </>
-  );
-
-  // TABLE HEADER
-  const tableHeader = useMemo(
+  /* ───────── UI blocks ──────── */
+  const header = useMemo(
     () => (
       <div className="d-flex flex-wrap gap-2 align-items-center justify-content-between w-100">
         <h4 className="m-0">Grupos de la carrera</h4>
         <span className="p-input-icon-left">
-          <InputText type="search" value={globalFilter} onChange={(e) => setGlobalFilter(e.target.value)} placeholder="Buscar..." />
+          <InputText placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </span>
       </div>
     ),
-    [career?.name, globalFilter]
+    [search]
   );
 
-  // RENDER
+  const toolbarLeft = () => (
+    <div className="flex flex-wrap">
+      <Button icon="pi pi-plus" severity="success" className="me-2" onClick={() => new Modal(modalRef.current).show()}>
+        <span className="d-none d-sm-inline ms-1">Crear grupo</span>
+      </Button>
+      <Button icon="pi pi-trash" severity="danger" disabled={!selected?.length} onClick={removeSelected}>
+        <span className="d-none d-sm-inline ms-1">Eliminar</span>
+      </Button>
+    </div>
+  );
+
+  const toolbarRight = () => (
+    <Button icon="pi pi-upload" className="p-button-help" onClick={() => dt.current.exportCSV()}>
+      <span className="d-none d-sm-inline ms-1">Exportar</span>
+    </Button>
+  );
+
+  const actions = (row) => (
+    <>
+      <Button icon="pi pi-pencil" rounded outlined className="me-2" onClick={() => navigate('/admin/careers/groups/edit', { state: { career, group: row } })} />
+      <Button icon="pi pi-trash" rounded outlined severity="danger" onClick={() => removeGroup(row)} />
+    </>
+  );
+
+  /* ───────── render ──────── */
   return (
     <>
-      <Toast ref={toast} />
+      <Toast />
 
       <div className="bg-white rounded-top p-2">
         <h3 className="text-blue-500 fw-semibold m-0">Grupos</h3>
       </div>
 
-      <BreadCrumb model={items} home={home} className="mt-2 pb-0 ps-0" />
+      <BreadCrumb
+        model={[{ label: 'Carreras', command: () => navigate('/admin/careers') }, { label: career?.name || '--', command: () => navigate('/admin/careers') }, { label: 'Grupos' }]}
+        home={{ icon: 'pi pi-home', command: () => navigate('/') }}
+        className="mt-2 pb-0 ps-0"
+      />
 
-      <Toolbar className="mb-1 mt-2" left={leftToolbarTemplate} right={rightToolbarTemplate} />
+      <Toolbar className="my-2" left={toolbarLeft} right={toolbarRight} />
 
-      <div className="card border-0 mt-2">
+      <div className="card border-0">
         <DataTable
           ref={dt}
-          value={groups}
-          selection={selectedGroups}
-          onSelectionChange={(e) => setSelectedGroups(e.value)}
+          value={data}
+          selection={selected}
+          onSelectionChange={(e) => setSelected(e.value)}
           dataKey="groupId"
           paginator
           rows={10}
           rowsPerPageOptions={[5, 10, 25]}
-          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-          currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} grupos"
-          globalFilter={globalFilter}
-          header={tableHeader}
+          globalFilter={search}
+          header={header}
+          emptyMessage={<p className="text-center my-5">Aún no hay registros</p>}
           responsiveLayout="scroll"
         >
           <Column selectionMode="multiple" headerStyle={{ width: '3rem' }} />
-          <Column field="name" header="Nombre" sortable style={{ minWidth: '12rem' }} />
-          <Column field="weekDay" header="Día" sortable style={{ minWidth: '8rem' }} />
-          <Column field="startTime" header="Inicio" sortable style={{ minWidth: '8rem' }} />
-          <Column field="endTime" header="Fin" sortable style={{ minWidth: '8rem' }} />
-          <Column field="teacher.name" header="Docente" sortable style={{ minWidth: '12rem' }} />
-          <Column body={actionBodyTemplate} header="Acciones" exportable={false} style={{ minWidth: '10rem' }} />
+          <Column field="name" header="Nombre" sortable />
+          <Column field="weekDay" header="Día" body={(row) => weekLabel(row.weekDay)} sortable />
+          <Column field="startTime" header="Inicio" sortable />
+          <Column field="endTime" header="Fin" sortable />
+          <Column field="teacher.name" header="Docente" sortable />
+          <Column body={actions} header="Acciones" exportable={false} />
         </DataTable>
       </div>
 
-      {/* MODAL CREAR GRUPO */}
-      <div className="modal fade" ref={createModalRef} tabIndex="-1">
+      {/* ───────── modal ───────── */}
+      <div className="modal fade" ref={modalRef} tabIndex={-1}>
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
-            <div className="modal-header">
-              <h5 className="modal-title">Crear grupo</h5>
-              <button type="button" className="btn-close" data-bs-dismiss="modal" />
-            </div>
+            <form onSubmit={saveGroup}>
+              <div className="modal-header">
+                <h5 className="modal-title">Crear grupo</h5>
+                <button type="button" className="btn-close" data-bs-dismiss="modal" />
+              </div>
 
-            <form onSubmit={handleCreate}>
               <div className="modal-body">
                 <div className="mb-3">
                   <label className="form-label">Nombre</label>
-                  <input name="name" className="form-control" required />
+                  <InputText className="w-100" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
                 </div>
+
                 <div className="mb-3">
                   <label className="form-label">Día</label>
-                  <select name="weekDay" className="form-select" required>
-                    <option value="">Seleccione…</option>
-                    <option value="MONDAY">Lunes</option>
-                    <option value="TUESDAY">Martes</option>
-                    <option value="WEDNESDAY">Miércoles</option>
-                    <option value="THURSDAY">Jueves</option>
-                    <option value="FRIDAY">Viernes</option>
-                    <option value="SATURDAY">Sábado</option>
-                  </select>
+                  <Dropdown value={form.weekDay} options={weekDayOptions} placeholder="Seleccione…" onChange={(e) => setForm({ ...form, weekDay: e.value })} className="w-100" required />
                 </div>
+
                 <div className="row">
                   <div className="col mb-3">
                     <label className="form-label">Hora inicio</label>
-                    <input type="time" name="startTime" className="form-control" required />
+                    <Calendar className="w-100" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.value })} timeOnly hourFormat="12" showIcon required />
                   </div>
                   <div className="col mb-3">
                     <label className="form-label">Hora fin</label>
-                    <input type="time" name="endTime" className="form-control" required />
+                    <Calendar className="w-100" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.value })} timeOnly hourFormat="12" showIcon required />
                   </div>
                 </div>
+
                 <div className="mb-3">
                   <label className="form-label">Docente</label>
-                  <select name="teacherId" className="form-select" required>
-                    <option value="">Seleccione docente…</option>
-                    {teachers.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name} {t.paternalSurname}
-                      </option>
-                    ))}
-                  </select>
+                  <Dropdown className="w-100" value={form.teacher} options={teachers} optionLabel={(t) => `${t.name} ${t.paternalSurname}`} placeholder="Seleccione docente…" filter onChange={(e) => setForm({ ...form, teacher: e.value })} required />
                 </div>
               </div>
 
@@ -264,7 +247,7 @@ export default function Groups() {
                 <button type="reset" className="btn btn-secondary" data-bs-dismiss="modal">
                   Cancelar
                 </button>
-                <button type="submit" className="btn btn-primary">
+                <button type="submit" className="btn btn-primary" data-bs-dismiss="modal">
                   Guardar
                 </button>
               </div>

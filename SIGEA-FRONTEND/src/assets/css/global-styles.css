@@ -164,3 +164,9 @@ Button {
 .p-menuitem .p-menuitem-link {
   text-decoration: none !important;
 }
+
+.p-dropdown-items-wrapper,
+.p-dropdown-items {
+  margin: 0 !important;
+  padding: 0 !important;
+}

@@ -65,8 +65,8 @@ export default function Dashboard() {
       try {
         const users = await getAllUsers();
         if (mounted) {
-          setStudentsCount(users.filter((user) => user.role === 'STUDENT').length);
-          setTeachersCount(users.filter((user) => user.role === 'TEACHER').length);
+          setStudentsCount(users.filter((user) => user.roleName === 'STUDENT').length);
+          setTeachersCount(users.filter((user) => user.roleName === 'TEACHER').length);
         }
       } catch (e) {
         console.error(e);
