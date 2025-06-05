@@ -9,7 +9,7 @@ export default function AuthLayout({ title, subtitle, children }) {
         <div className="col-12 col-md-6 d-flex flex-column justify-content-between p-4">
           <div className="d-flex justify-content-between align-items-center mb-4 user-select-none">
             <img src={Logo} alt="CETEC Logo" height={50} />
-            <span className="fw-bold fs-3 text-blue-800">SIGEA</span>
+            <h3 className="fw-bold fs-3 text-blue-800 mb-0">SIGEA</h3>
           </div>
 
           <div className="flex-grow-1 d-flex flex-column justify-content-center">

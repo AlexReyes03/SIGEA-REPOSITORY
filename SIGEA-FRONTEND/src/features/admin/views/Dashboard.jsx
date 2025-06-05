@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet';
 import { MdOutlineEmojiEvents, MdOutlinePerson, MdOutlineCoPresent, MdOutlineGroup, MdOutlineRadioButtonChecked, MdArrowDropUp, MdArrowDropDown } from 'react-icons/md';
 import { Rating } from 'primereact/rating';
 
@@ -80,6 +81,11 @@ export default function Dashboard() {
 
   return (
     <>
+      <Helmet>
+        <title>SIGEA - Administrador</title>
+        <meta name="description" content="Sistema de Gestión Académica con cuenta de Administrador." />
+      </Helmet>
+
       <div className="bg-white rounded-top p-2">
         <h3 className="text-blue-500 fw-semibold mx-3 my-1">Inicio</h3>
       </div>

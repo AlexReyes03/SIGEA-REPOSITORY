@@ -38,7 +38,7 @@ export default function AppRouter() {
           }
         />
         <Route
-          path="recover"
+          path="/security/recover"
           element={
             <AuthLayout title="Recuperación de contraseña" subtitle="Ingrese el correo electrónico asociado a su cuenta">
               <RecoverEmailForm />
@@ -46,7 +46,7 @@ export default function AppRouter() {
           }
         />
         <Route
-          path="verify-code"
+          path="/security/verify-code"
           element={
             <AuthLayout title="Código de seguridad" subtitle="Ingrese el código de verificación enviado a su correo electrónico">
               <VerifyCodeForm />
@@ -54,7 +54,7 @@ export default function AppRouter() {
           }
         />
         <Route
-          path="reset-password"
+          path="/security/reset-password"
           element={
             <AuthLayout title="Nueva contraseña" subtitle="Ingrese una nueva contraseña para su cuenta">
               <ResetPasswordForm />

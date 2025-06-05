@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
 import { Button } from 'primereact/button';
 import { MdOutlineEmail } from 'react-icons/md';
@@ -72,42 +73,50 @@ export default function LoginForm() {
   const isDisabled = !email.trim() || !password.trim() || loading;
 
   return (
-    <form onSubmit={handleSubmit} autoComplete="off" spellCheck="false">
-      <div className="px-3">
-        <div className="form-floating position-relative mb-4">
-          <input id="floatingInput" type="email" className="form-control pe-5" placeholder=" " autoComplete="off" spellCheck="false" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={handleEmailKeyDown} />
-          <label htmlFor="floatingInput">Correo electrónico</label>
-          <MdOutlineEmail size={24} className="position-absolute end-0 me-3 top-50 translate-middle-y text-muted user-select-none" />
+    <>
+      <Helmet>
+        <title>SIGEA | Iniciar Sesión</title>
+        <meta name="description" content="Sistema de Gestión Académica. Por favor, introduce tus credenciales de acceso para consultar tus calificaciones." />
+        <meta name="keywords" content="cetec, sigea, calificaciones, alumnos" />
+      </Helmet>
+
+      <form onSubmit={handleSubmit} autoComplete="off" spellCheck="false">
+        <div className="px-3">
+          <div className="form-floating position-relative mb-4">
+            <input id="floatingInput" type="email" className="form-control pe-5" placeholder=" " autoComplete="off" spellCheck="false" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={handleEmailKeyDown} />
+            <label htmlFor="floatingInput">Correo electrónico</label>
+            <MdOutlineEmail size={24} className="position-absolute end-0 me-3 top-50 translate-middle-y text-muted user-select-none" />
+          </div>
+
+          <div className="mb-4">
+            <PasswordInput
+              id="floatingPassword"
+              label="Contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !isDisabled) {
+                  e.preventDefault();
+                  handleSubmit(e);
+                }
+              }}
+            />
+          </div>
+
+          <hr className="my-5" />
+
+          <Button type="submit" label="Iniciar Sesión" className="button-blue-800 w-100 rounded-3 fs-4" loading={loading} disabled={isDisabled} />
+
+          {isFailed && <div className="text-warning fw-semibold text-center mt-2">Por seguridad, tras cinco intentos fallidos tu cuenta se bloqueará temporalmente.</div>}
+
+          <div className="text-end my-3 text-muted fw-semibold">
+            ¿Olvidaste tu contraseña?
+            <span onClick={() => navigate('/security/recover')} className="ms-2 text-primary" style={{ cursor: 'pointer' }}>
+              Haz click aquí
+            </span>
+          </div>
         </div>
-
-        <div className="mb-4">
-          <PasswordInput
-            id="floatingPassword"
-            label="Contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !isDisabled) {
-                e.preventDefault();
-                handleSubmit(e);
-              }
-            }}
-          />
-        </div>
-
-        <hr className="my-5" />
-
-        <Button type="submit" label="Iniciar Sesión" className="button-blue-800 w-100 rounded-3 fs-4" loading={loading} disabled={isDisabled} />
-
-        {isFailed && <div className="text-warning fw-semibold text-center mt-2">Por seguridad, tras cinco intentos fallidos tu cuenta se bloqueará temporalmente.</div>}
-
-        <div className="text-end my-3 text-muted fw-semibold">
-          ¿Olvidaste tu contraseña?
-          <span onClick={() => navigate('/recover')} className="ms-2 text-primary" style={{ cursor: 'pointer' }}>
-            Haz click aquí
-          </span>
-        </div>
-      </div>
-    </form>
+      </form>
+    </>
   );
 }

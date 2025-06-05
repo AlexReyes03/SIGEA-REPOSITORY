@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Helmet } from 'react-helmet';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from 'primereact/button';
 
@@ -52,33 +53,40 @@ export default function ResetPassword() {
   const isDisabled = !password.trim() || !confirmPassword.trim() || submitting;
 
   return (
-    <form onSubmit={handleSubmit} autoComplete="off" spellCheck="false">
-      <div className="px-3">
-        <div className="mb-4">
-          <PasswordInput id="newPassword" label="Nueva contraseña" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={handleKeyDown} />
+    <>
+      <Helmet>
+        <title>SIGEA | Nueva Contraseña</title>
+        <meta name="description" content="Sistema de Gestión Académica. Por favor, introduce una nueva contraseña para tu cuenta." />
+      </Helmet>
+
+      <form onSubmit={handleSubmit} autoComplete="off" spellCheck="false">
+        <div className="px-3">
+          <div className="mb-4">
+            <PasswordInput id="newPassword" label="Nueva contraseña" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={handleKeyDown} />
+          </div>
+
+          <div className="mb-4">
+            <PasswordInput
+              id="confirmPassword"
+              label="Confirmar contraseña"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !isDisabled) {
+                  e.preventDefault();
+                  handleSubmit(e);
+                }
+              }}
+            />
+          </div>
+
+          <hr className="my-5" />
+
+          <Button type="submit" label="Cambiar Contraseña" className="button-blue-800 w-100 rounded-3 fs-4" loading={submitting} disabled={isDisabled} />
+
+          <div className="text-end my-3 text-muted fw-semibold"></div>
         </div>
-
-        <div className="mb-4">
-          <PasswordInput
-            id="confirmPassword"
-            label="Confirmar contraseña"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !isDisabled) {
-                e.preventDefault();
-                handleSubmit(e);
-              }
-            }}
-          />
-        </div>
-
-        <hr className="my-5" />
-
-        <Button type="submit" label="Cambiar Contraseña" className="button-blue-800 w-100 rounded-3 fs-4" loading={submitting} disabled={isDisabled} />
-
-        <div className="text-end my-3 text-muted fw-semibold"></div>
-      </div>
-    </form>
+      </form>
+    </>
   );
 }

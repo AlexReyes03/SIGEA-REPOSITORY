@@ -10,14 +10,13 @@ export default function CareerTabs() {
 
   const tabs = useMemo(
     () => [
-      { key: 'groups', label: 'Grupos', path: '/admin/careers/groups' },
       { key: 'curriculum', label: 'Plan de estudios', path: '/admin/careers/curriculums' },
+      { key: 'groups', label: 'Grupos', path: '/admin/careers/groups' },
     ],
     []
   );
 
   const activeKey = path.includes('/curriculums') ? 'curriculum' : 'groups';
-
 
   const containerRef = useRef(null);
   const tabRefs = useRef({});
@@ -57,7 +56,7 @@ export default function CareerTabs() {
           height: 3,
           borderRadius: 9999,
           background: 'linear-gradient(90deg, #0ea5e9 0%, #0ea5e9 100%)',
-          color: '#0ea5e9 !important'
+          color: '#0ea5e9 !important',
         }}
       />
     </div>

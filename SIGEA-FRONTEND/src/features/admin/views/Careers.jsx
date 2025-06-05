@@ -111,7 +111,7 @@ export default function Careers() {
       <div className="row mt-3">
         {careers.map((career) => (
           <div key={career.id} className="col-12 col-sm-6 col-lg-4 col-xl-3 mb-3" style={{ maxWidth: '25rem' }}>
-            <div className="card border-0 h-100 hovereable" onClick={() => navigate('/admin/careers/groups', { state: { career } })}>
+            <div className="card border-0 h-100 hovereable" onClick={() => navigate('/admin/careers/curriculums', { state: { career } })}>
               <img src={career.imageUrl || 'https://placehold.co/600x400?text=Cetec-Fallback'} className="card-img-top" alt={career.name} style={{ objectFit: 'cover', height: 180 }} />
 
               <div className="card-body">
