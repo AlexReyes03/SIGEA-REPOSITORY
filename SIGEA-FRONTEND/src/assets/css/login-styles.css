@@ -1,3 +1,20 @@
 .auth-panel-right {
   box-shadow: inset 10px 0px 30px rgba(0, 0, 0, 0.363);
+  position: relative;
+  overflow: hidden;
+}
+
+.dots-bg {
+  position: relative;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.15) 1.5px, transparent 1.5px), radial-gradient(rgba(255, 255, 255, 0.08) 1.5px, transparent 1.5px);
+  background-size: 32px 32px, 32px 32px;
+  background-position: 0 0, 16px 16px;
+}
+
+.dots-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0) 20%, #002e5d 100%);
 }
