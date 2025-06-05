@@ -16,7 +16,9 @@ import AdminDashboard from '../features/admin/views/Dashboard';
 import AdminProfile from '../features/admin/views/Profile';
 import AdminUsersManagement from '../features/admin/views/UsersManagment';
 import AdminCareers from '../features/admin/views/Careers';
-import CareerGroups from '../features/admin/views/Groups';
+import AdminCareerGroups from '../features/admin/views/Groups';
+import AdminCareerCurriculums from '../features/admin/views/Curriculums'
+import AdminModules from '../features/admin/views/Modules'
 
 import TeacherDashboard from '../features/teacher/views/Dashboard';
 
@@ -69,7 +71,8 @@ export default function AppRouter() {
           <Route path="admin/profile" element={<AdminProfile />} />
           <Route path="admin/users" element={<AdminUsersManagement />} />
           <Route path="admin/careers" element={<AdminCareers />} />
-          <Route path="admin/careers/groups" element={<CareerGroups />} />
+          <Route path="admin/careers/groups" element={<AdminCareerGroups />} />
+          <Route path="admin/careers/curriculums" element={<AdminCareerCurriculums />} />
 
           {/* DOCENTE */}
           <Route path="teacher" element={<TeacherDashboard />} />

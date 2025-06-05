@@ -8,13 +8,14 @@ import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
 import { Calendar } from 'primereact/calendar';
 import { Button } from 'primereact/button';
-import { Toast } from 'primereact/toast';
 import { Modal } from 'bootstrap';
 
 import { getGroupByCareer, createGroup, deleteGroup } from '../../../api/academics/groupService';
 import { getAllUsers } from '../../../api/userService';
 import { useToast } from '../../../components/providers/ToastProvider';
 import { useConfirmDialog } from '../../../components/providers/ConfirmDialogProvider';
+import useBootstrapModalFocus from '../../../utils/hooks/useBootstrapModalFocus';
+import CareerTabs from '../components/CareerTabs';
 
 /* ───────── helpers ──────── */
 const weekDayOptions = [
@@ -44,7 +45,9 @@ export default function Groups() {
 
   /* refs */
   const modalRef = useRef(null);
+  const createButtonRef = useRef(null);
   const dt = useRef(null);
+  useBootstrapModalFocus(modalRef, createButtonRef);
 
   /* state */
   const [data, setData] = useState([]);
@@ -141,7 +144,7 @@ export default function Groups() {
 
   const toolbarLeft = () => (
     <div className="flex flex-wrap">
-      <Button icon="pi pi-plus" severity="success" className="me-2" onClick={() => new Modal(modalRef.current).show()}>
+      <Button ref={createButtonRef} icon="pi pi-plus" severity="success" className="me-2" onClick={() => new Modal(modalRef.current).show()}>
         <span className="d-none d-sm-inline ms-1">Crear grupo</span>
       </Button>
       <Button icon="pi pi-trash" severity="danger" disabled={!selected?.length} onClick={removeSelected}>
@@ -166,10 +169,8 @@ export default function Groups() {
   /* ───────── render ──────── */
   return (
     <>
-      <Toast />
-
       <div className="bg-white rounded-top p-2">
-        <h3 className="text-blue-500 fw-semibold mx-3 my-1">Grupos</h3>
+        <CareerTabs />
       </div>
 
       <BreadCrumb

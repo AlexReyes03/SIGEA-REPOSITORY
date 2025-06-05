@@ -35,7 +35,7 @@ export default function Careers() {
       const list = await getAllCareers();
       setCareers(list);
     } catch (err) {
-      showError(err.message || 'Error al cargar carreras');
+      showError('Error', 'Error al cargar carreras');
     }
   };
 
@@ -56,7 +56,7 @@ export default function Careers() {
       Modal.getInstance(createModalRef.current).hide();
       form.reset();
     } catch (err) {
-      showError(err.message || 'No se pudo crear');
+      showError('Error', 'Error crear la carrera');
     }
   };
 
