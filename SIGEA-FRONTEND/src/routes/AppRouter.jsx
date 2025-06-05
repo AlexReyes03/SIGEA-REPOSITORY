@@ -14,13 +14,9 @@ import NotFound from '../components/404';
 
 import AdminDashboard from '../features/admin/views/Dashboard';
 import AdminProfile from '../features/admin/views/Profile';
-<<<<<<< HEAD
 import AdminUsersManagement from '../features/admin/views/UsersManagment';
-
-=======
 import AdminCareers from '../features/admin/views/Careers';
 import CareerGroups from '../features/admin/views/Groups';
->>>>>>> 426ebf6feeb2290e00966dce14cb9ce1e00041e8
 
 import TeacherDashboard from '../features/teacher/views/Dashboard';
 
@@ -71,12 +67,9 @@ export default function AppRouter() {
           {/* ADMIN */}
           <Route path="admin" element={<AdminDashboard />} />
           <Route path="admin/profile" element={<AdminProfile />} />
-<<<<<<< HEAD
           <Route path="admin/users" element={<AdminUsersManagement />} />
-=======
           <Route path="admin/careers" element={<AdminCareers />} />
           <Route path="admin/careers/groups" element={<CareerGroups />} />
->>>>>>> 426ebf6feeb2290e00966dce14cb9ce1e00041e8
 
           {/* DOCENTE */}
           <Route path="teacher" element={<TeacherDashboard />} />

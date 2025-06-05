@@ -166,6 +166,19 @@ Button {
   padding-left: 0 !important;
 }
 
+.p-overlaypanel-content {
+  padding: 1rem 0.5rem 1rem 0.5rem !important;
+}
+
+.p-overlaypanel-content .dropdown-item {
+  padding: 5px 10px 5px 10px;
+  border-radius: 10px;
+}
+
+.p-overlaypanel-content .dropdown-item:hover {
+  background-color: var(--bg-gray-800);
+}
+
 .p-menuitem,
 .p-menuitem .p-menuitem-link {
   text-decoration: none !important;

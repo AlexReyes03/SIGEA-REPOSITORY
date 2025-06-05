@@ -24,6 +24,7 @@ const weekDayOptions = [
   { label: 'Jueves', value: 'JUE' },
   { label: 'Viernes', value: 'VIE' },
   { label: 'Sábado', value: 'SAB' },
+  { label: 'Domingo', value: 'DOM' },
 ];
 
 const weekLabel = (code) => weekDayOptions.find((o) => o.value === code)?.label || code;
@@ -59,13 +60,13 @@ export default function Groups() {
   };
 
   useEffect(() => {
-    if (career?.id) loadGroups().catch((e) => showError('Error', e.message));
+    if (career?.id) loadGroups().catch((e) => showError('Error', 'Ha ocurrido un error al cargar los grupos'));
   }, [career?.id]);
 
   useEffect(() => {
     getAllUsers()
       .then((u) => setTeachers(u.filter((x) => x.roleName === 'TEACHER')))
-      .catch((e) => showError('Error', e.message));
+      .catch((e) => showError('Error', 'Ha ocurrido un error al cargar los docentes'));
   }, []);
 
   /* ───────── CRUD ──────── */
@@ -77,9 +78,8 @@ export default function Groups() {
       weekDay: form.weekDay,
       startTime: fmtTime(form.startTime),
       endTime: fmtTime(form.endTime),
-
-      teacher: { userId: form.teacher?.id },
-      career: { careerId: career.id },
+      teacherId: form.teacher?.id,
+      careerId: career.id,
     };
 
     try {
@@ -169,16 +169,16 @@ export default function Groups() {
       <Toast />
 
       <div className="bg-white rounded-top p-2">
-        <h3 className="text-blue-500 fw-semibold m-0">Grupos</h3>
+        <h3 className="text-blue-500 fw-semibold mx-3 my-1">Grupos</h3>
       </div>
 
       <BreadCrumb
         model={[{ label: 'Carreras', command: () => navigate('/admin/careers') }, { label: career?.name || '--', command: () => navigate('/admin/careers') }, { label: 'Grupos' }]}
         home={{ icon: 'pi pi-home', command: () => navigate('/') }}
-        className="mt-2 pb-0 ps-0"
+        className="mt-2 pb-0 ps-0 text-nowrap"
       />
 
-      <Toolbar className="my-2" left={toolbarLeft} right={toolbarRight} />
+      <Toolbar className="my-2 py-2" start={toolbarLeft} end={toolbarRight} />
 
       <div className="card border-0">
         <DataTable
@@ -193,14 +193,13 @@ export default function Groups() {
           globalFilter={search}
           header={header}
           emptyMessage={<p className="text-center my-5">Aún no hay registros</p>}
-          responsiveLayout="scroll"
         >
           <Column selectionMode="multiple" headerStyle={{ width: '3rem' }} />
           <Column field="name" header="Nombre" sortable />
           <Column field="weekDay" header="Día" body={(row) => weekLabel(row.weekDay)} sortable />
           <Column field="startTime" header="Inicio" sortable />
           <Column field="endTime" header="Fin" sortable />
-          <Column field="teacher.name" header="Docente" sortable />
+          <Column field="teacherName" header="Docente" sortable />
           <Column body={actions} header="Acciones" exportable={false} />
         </DataTable>
       </div>
@@ -229,11 +228,11 @@ export default function Groups() {
                 <div className="row">
                   <div className="col mb-3">
                     <label className="form-label">Hora inicio</label>
-                    <Calendar className="w-100" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.value })} timeOnly hourFormat="12" showIcon required />
+                    <Calendar className="w-100 gap-1" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.value })} timeOnly hourFormat="12" showIcon required />
                   </div>
                   <div className="col mb-3">
                     <label className="form-label">Hora fin</label>
-                    <Calendar className="w-100" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.value })} timeOnly hourFormat="12" showIcon required />
+                    <Calendar className="w-100 gap-1" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.value })} timeOnly hourFormat="12" showIcon required />
                   </div>
                 </div>
 
