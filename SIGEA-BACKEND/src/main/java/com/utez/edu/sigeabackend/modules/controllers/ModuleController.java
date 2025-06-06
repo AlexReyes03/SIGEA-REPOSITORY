@@ -1,6 +1,8 @@
 package com.utez.edu.sigeabackend.modules.controllers;
 
 import com.utez.edu.sigeabackend.modules.entities.ModuleEntity;
+import com.utez.edu.sigeabackend.modules.entities.dto.modulesDto.ModuleRequestDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.modulesDto.ModuleResponseDto;
 import com.utez.edu.sigeabackend.modules.services.ModuleService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,25 +25,24 @@ public class ModuleController {
     public ResponseEntity<?> getById(@PathVariable long id) {
         return service.findById(id);
     }
-
-    @GetMapping("/career/{careerId}")
+    /** GET   /sigea/api/careers/careerId */
+    @GetMapping("/careers/{careerId}")
     public ResponseEntity<?> getByCareer(@PathVariable long careerId) {
         return service.findByCareerId(careerId);
     }
-
-    @PostMapping("/{careerId}")
-    public ResponseEntity<?> create(@RequestBody ModuleEntity module, @PathVariable Long careerId) {
-        return service.create(module, careerId);
+    /** POST   /sigea/api/modules */
+    @PostMapping
+    public ResponseEntity<ModuleResponseDto> create(@RequestBody ModuleRequestDto dto) {
+        return service.create(dto);
     }
-
-    @PutMapping("/{id}/career/{careerId}")
-    public ResponseEntity<?> update(@PathVariable long id, @RequestBody ModuleEntity module, @PathVariable Long careerId) {
-        return service.update(id, module, careerId);
+    /** PUT   /sigea/api/module/{careerId} */
+    @PutMapping("/{id}")
+    public ResponseEntity<ModuleResponseDto> update(@PathVariable long id, @RequestBody ModuleRequestDto dto) {
+        return service.update(id, dto);
     }
-
+    /** DELETE   /sigea/api/module/{id} */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable long id) {
         return service.delete(id);
     }
-
 }

@@ -3,6 +3,7 @@ package com.utez.edu.sigeabackend.modules.services;
 import com.utez.edu.sigeabackend.config.CustomResponseEntity;
 import com.utez.edu.sigeabackend.modules.entities.PlantelEntity;
 import com.utez.edu.sigeabackend.modules.repositories.PlantelRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -42,7 +43,7 @@ public class PlantelService {
             return responseService.get400Response();
         }
         repository.save(plantel);
-        return responseService.get201Response("Plantel creado");
+        return ResponseEntity.ok(HttpStatus.CREATED);
     }
 
     public ResponseEntity<?> update(long id, PlantelEntity plantel) {
@@ -51,7 +52,7 @@ public class PlantelService {
             PlantelEntity existing = optionalPlantel.get();
             existing.setName(plantel.getName());
             repository.save(existing);
-            return responseService.getOkResponse("Plantel actualizado", existing);
+            return ResponseEntity.ok(existing);
         } else {
             return responseService.get404Response();
         }

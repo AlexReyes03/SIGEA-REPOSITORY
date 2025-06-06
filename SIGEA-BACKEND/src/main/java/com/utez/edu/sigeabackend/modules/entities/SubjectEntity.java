@@ -38,24 +38,16 @@ public class SubjectEntity {
     @JoinColumn(name = "teacher_id")
     private UserEntity teacher;
 
-    /**
-     * Relación uno-a-muchos con QualificationEntity
-     * mappedBy = "subject" porque en QualificationEntity la propiedad se llama subject.
-     * JsonIgnore para no exponer la lista de calificaciones al serializar.
-     * Coleccion Hash
-     */
-    @OneToMany( mappedBy = "subject",
-                fetch = FetchType.EAGER,
-                cascade = CascadeType.ALL
-    )
+    /**UNO A UNO con QualificationEntity*/
+    @OneToOne(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JsonIgnore
-    private Set<QualificationEntity> qualification = new HashSet<>();
+    private QualificationEntity qualification;
 
 
     public SubjectEntity() {
     }
 
-    public SubjectEntity(long id, String name, int weeks, ModuleEntity module, UserEntity teacher, Set<QualificationEntity> qualification) {
+    public SubjectEntity(long id, String name, int weeks, ModuleEntity module, UserEntity teacher, QualificationEntity qualification) {
         this.id = id;
         this.name = name;
         this.weeks = weeks;
@@ -104,11 +96,11 @@ public class SubjectEntity {
         this.teacher = teacher;
     }
 
-    public Set<QualificationEntity> getQualification() {
+    public QualificationEntity getQualification() {
         return qualification;
     }
 
-    public void setQualification(Set<QualificationEntity> qualification) {
+    public void setQualification(QualificationEntity qualification) {
         this.qualification = qualification;
     }
 }

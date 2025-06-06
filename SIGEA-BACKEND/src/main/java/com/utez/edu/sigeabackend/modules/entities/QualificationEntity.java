@@ -20,19 +20,17 @@ public class QualificationEntity {
     private Date date;
 
     // ******* RELACIONES ********
-    /**
-     * Relación muchos-a-uno con SubjectEntity
-     * Nueva columna relacionada "subject_id"
-     */
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "subject_id")
+
+    /**UNO A UNO con SubjectEntity */
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "subject_id", unique = true)
     private SubjectEntity subject;
 
     /**
      * Relación muchos-a-uno con UserEntity
      * Nueva columna relacionada "student_id"
      */
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id")
     private UserEntity student;
 

@@ -1,5 +1,6 @@
 package com.utez.edu.sigeabackend.modules.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.util.HashSet;
@@ -24,6 +25,7 @@ public class ModuleEntity {
      */
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "career_id")
+    @JsonIgnore
     private CareerEntity career;
 
     /**

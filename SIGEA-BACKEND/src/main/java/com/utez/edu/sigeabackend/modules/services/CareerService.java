@@ -5,6 +5,7 @@ import com.utez.edu.sigeabackend.modules.entities.CareerEntity;
 import com.utez.edu.sigeabackend.modules.entities.PlantelEntity;
 import com.utez.edu.sigeabackend.modules.repositories.CareerRepository;
 import com.utez.edu.sigeabackend.modules.repositories.PlantelRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -14,70 +15,72 @@ import java.util.List;
 public class CareerService {
     private final CareerRepository repository;
     private final PlantelRepository plantelRepository;
-    private final CustomResponseEntity responseService;
 
-    public CareerService(CareerRepository repository, PlantelRepository plantelRepository, CustomResponseEntity responseService) {
+    public CareerService(CareerRepository repository, PlantelRepository plantelRepository) {
         this.repository = repository;
         this.plantelRepository = plantelRepository;
-        this.responseService = responseService;
     }
 
-    public ResponseEntity<?> findAll() {
+    public ResponseEntity<List<CareerEntity>> findAll() {
         List<CareerEntity> careers = repository.findAll();
         if (careers.isEmpty()) {
-            return responseService.get404Response();
+            return ResponseEntity.ok(careers);
         }
-        return responseService.getOkResponse("Lista de carreras", careers);
+        return ResponseEntity.ok(careers);
     }
 
-    public ResponseEntity<?> findById(long id) {
+    public ResponseEntity<CareerEntity> findById(long id) {
         CareerEntity career = repository.findById(id).orElse(null);
         if (career != null) {
-            return responseService.getOkResponse("Carrera encontrada", career);
+            return ResponseEntity.ok(career);
         } else {
-            return responseService.get404Response();
+            return ResponseEntity.notFound().build();
         }
     }
 
+    public ResponseEntity<List<CareerEntity>> findByCampus(long plantelId) {
+        List<CareerEntity> careers = repository.findByPlantelId(plantelId);
+        if (careers.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(careers);
+    }
 
-    public ResponseEntity<?> save(CareerEntity career, long plantelId) {
-        PlantelEntity plantel = plantelRepository.findById(plantelId)
-                .orElse(null);
+
+    public ResponseEntity<CareerEntity> save(CareerEntity career, long plantelId) {
+        PlantelEntity plantel = plantelRepository.findById(plantelId).orElse(null);
         if (plantel == null) {
-            return responseService.get404Response();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         }
         career.setPlantel(plantel);
-        repository.save(career);
-        return responseService.get201Response("Carrera registrada correctamente");
+        CareerEntity saved = repository.save(career);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
-    public ResponseEntity<?> update(long id, CareerEntity career, long plantelId) {
+    public ResponseEntity<CareerEntity> update(long id, CareerEntity career, long plantelId) {
         var optional = repository.findById(id);
         if (optional.isPresent()) {
             CareerEntity existing = optional.get();
             existing.setName(career.getName());
-
-            PlantelEntity plantel = plantelRepository.findById(plantelId)
-                    .orElse(null);
+            PlantelEntity plantel = plantelRepository.findById(plantelId).orElse(null);
             if (plantel == null) {
-                return responseService.get404Response();
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
             }
             existing.setPlantel(plantel);
-
-            repository.save(existing);
-            return responseService.getOkResponse("Carrera actualizada", existing);
+            CareerEntity updated = repository.save(existing);
+            return ResponseEntity.ok(updated);
         } else {
-            return responseService.get404Response();
+            return ResponseEntity.notFound().build();
         }
     }
 
-    public ResponseEntity<?> delete(long id) {
+    public ResponseEntity<Void> delete(long id) {
         var optional = repository.findById(id);
         if (optional.isPresent()) {
             repository.deleteById(id);
-            return responseService.getOkResponse("Carrera eliminada", null);
+            return ResponseEntity.noContent().build();
         } else {
-            return responseService.get404Response();
+            return ResponseEntity.notFound().build();
         }
     }
 }

@@ -1,88 +1,108 @@
 package com.utez.edu.sigeabackend.modules.services;
 
-import com.utez.edu.sigeabackend.config.CustomResponseEntity;
+
 import com.utez.edu.sigeabackend.modules.entities.CareerEntity;
 import com.utez.edu.sigeabackend.modules.entities.ModuleEntity;
+import com.utez.edu.sigeabackend.modules.entities.dto.modulesDto.ModuleRequestDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.modulesDto.ModuleResponseDto;
 import com.utez.edu.sigeabackend.modules.repositories.CareerRepository;
 import com.utez.edu.sigeabackend.modules.repositories.ModuleRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.annotation.Transactional;
+
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ModuleService {
     private final ModuleRepository moduleRepository;
     private final CareerRepository careerRepository;
-    private final CustomResponseEntity responseService;
 
-    public ModuleService(ModuleRepository moduleRepository, CareerRepository careerRepository, CustomResponseEntity responseService) {
+
+    public ModuleService(ModuleRepository moduleRepository, CareerRepository careerRepository) {
         this.moduleRepository = moduleRepository;
         this.careerRepository = careerRepository;
-        this.responseService = responseService;
     }
 
-    public ResponseEntity<?> findAll() {
+    private ModuleResponseDto toResponseDto(ModuleEntity entity) {
+        return new ModuleResponseDto(
+                entity.getId(),
+                entity.getName(),
+                entity.getCareer() != null ? entity.getCareer().getId() : null,
+                entity.getCareer() != null ? entity.getCareer().getName() : null
+        );
+    }
+
+    // Listar todos
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<ModuleResponseDto>> findAll() {
         List<ModuleEntity> list = moduleRepository.findAll();
         if (list.isEmpty()) {
-            return responseService.createResponse("No se encontraron módulos", HttpStatus.NOT_FOUND, null);
+            return ResponseEntity.ok().body(null);
         }
-        return responseService.createResponse("Módulos encontrados", HttpStatus.OK, list);
+        List<ModuleResponseDto> dtoList = list.stream().map(this::toResponseDto).collect(Collectors.toList());
+        return ResponseEntity.ok(dtoList);
     }
 
-    public ResponseEntity<?> findById(long id) {
-        ModuleEntity entity = moduleRepository.findById(id).orElse(null);
-        if (entity == null) {
-            return responseService.createResponse("Módulo no encontrado", HttpStatus.NOT_FOUND, null);
-        }
-        return responseService.createResponse("Módulo encontrado", HttpStatus.OK, entity);
+    // Buscar por id
+    @Transactional(readOnly = true)
+    public ResponseEntity<ModuleResponseDto> findById(long id) {
+        return moduleRepository.findById(id)
+                .map(this::toResponseDto)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    public ResponseEntity<?> findByCareerId(long careerId) {
+    // Buscar por carrera
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<ModuleResponseDto>> findByCareerId(long careerId) {
         List<ModuleEntity> modules = moduleRepository.findByCareerId(careerId);
         if (modules.isEmpty()) {
-            return responseService.createResponse("No se encontraron módulos para la carrera", HttpStatus.NOT_FOUND, null);
+            return ResponseEntity.ok().body(null);
         }
-        return responseService.createResponse("Módulos encontrados para la carrera", HttpStatus.OK, modules);
+        List<ModuleResponseDto> dtoList = modules.stream().map(this::toResponseDto).collect(Collectors.toList());
+        return ResponseEntity.ok(dtoList);
     }
 
 
-    public ResponseEntity<?> create(ModuleEntity module, long careerId) {
-        try {
-            CareerEntity career = careerRepository.findById(careerId).orElse(null);
-            if (career == null) {
-                return responseService.get404Response();
-            }
-            module.setCareer(career);
-            ModuleEntity saved = moduleRepository.save(module);
-            return responseService.createResponse("Módulo creado exitosamente", HttpStatus.CREATED, saved);
-        } catch (Exception e) {
-            return responseService.get400Response();
-        }
+    @Transactional
+    public ResponseEntity<ModuleResponseDto> create(ModuleRequestDto dto) {
+        CareerEntity career = careerRepository.findById(dto.careerId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Carrera no encontrada"));
+
+        ModuleEntity module = new ModuleEntity();
+        module.setName(dto.name());
+        module.setCareer(career);
+
+        ModuleEntity saved = moduleRepository.save(module);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponseDto(saved));
     }
-    public ResponseEntity<?> update(long id, ModuleEntity module, long careerId) {
-        ModuleEntity existing = moduleRepository.findById(id).orElse(null);
-        if (existing == null) {
-            return responseService.createResponse("Módulo no encontrado", HttpStatus.NOT_FOUND, null);
-        }
-        CareerEntity career = careerRepository.findById(careerId).orElse(null);
-        if (career == null) {
-            return responseService.createResponse("Carrera no encontrada", HttpStatus.NOT_FOUND, null);
-        }
-        existing.setName(module.getName());
+
+    @Transactional
+    public ResponseEntity<ModuleResponseDto> update(long id, ModuleRequestDto dto) {
+        ModuleEntity existing = moduleRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Módulo no encontrado"));
+        CareerEntity career = careerRepository.findById(dto.careerId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Carrera no encontrada"));
+
+        existing.setName(dto.name());
         existing.setCareer(career);
-        moduleRepository.save(existing);
-        return responseService.createResponse("Módulo actualizado", HttpStatus.OK, existing);
+
+        ModuleEntity updated = moduleRepository.save(existing);
+        return ResponseEntity.ok(toResponseDto(updated));
     }
 
-    public ResponseEntity<?> delete(long id) {
-        ModuleEntity existing = moduleRepository.findById(id).orElse(null);
-        if (existing == null) {
-            return responseService.createResponse("Módulo no encontrado", HttpStatus.NOT_FOUND, null);
+
+    @Transactional
+    public ResponseEntity<Void> delete(long id) {
+        if (!moduleRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
         }
         moduleRepository.deleteById(id);
-        return responseService.createResponse("Módulo eliminado", HttpStatus.OK, null);
+        return ResponseEntity.noContent().build();
     }
 }
-

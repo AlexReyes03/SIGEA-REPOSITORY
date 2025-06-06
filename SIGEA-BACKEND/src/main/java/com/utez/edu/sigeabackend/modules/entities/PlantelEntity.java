@@ -12,7 +12,7 @@ public class PlantelEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private Long id;
+    private long plantelId;
 
     @Column(name = "name", nullable = false, length = 100)
     private String name;
@@ -33,19 +33,19 @@ public class PlantelEntity {
 
     public PlantelEntity() {}
 
-    public PlantelEntity(Long id, String name) {
-        this.id = id;
+    public PlantelEntity(long id, String name) {
+        this.plantelId = id;
         this.name = name;
     }
 
     // Getters & setters
 
-    public Long getId() {
-        return id;
+    public long getId() {
+        return plantelId;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setId(long id) {
+        this.plantelId = id;
     }
 
     public String getName() {
