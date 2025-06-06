@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
 import { Button } from 'primereact/button';
+import { Message } from 'primereact/message';
 import { MdOutlineEmail } from 'react-icons/md';
 
 import PasswordInput from '../../../components/PasswordInput';
@@ -12,7 +13,7 @@ import { useConfirmDialog } from '../../../components/providers/ConfirmDialogPro
 export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isFailed, setIsFailed] = useState(false);
+  const [authState, setAuthState] = useState('');
   const { login, loading } = useAuth();
   const { showSuccess, showError } = useToast();
   const { confirmAction } = useConfirmDialog();
@@ -31,9 +32,7 @@ export default function LoginForm() {
 
     try {
       const user = await login({ email, password });
-
-      console.log(user);
-
+      setAuthState('');
       showSuccess('Bienvenido', `¡Qué gusto verte, ${user.name}!`);
 
       switch (user.role.name) {
@@ -47,29 +46,31 @@ export default function LoginForm() {
           return navigate('/');
       }
     } catch (err) {
-      console.log(err.status);
+      switch (err.status) {
+        case 401:
+        case 404:
+          setAuthState('warn');
+          showError('Error al iniciar sesión', 'Usuario o contraseña incorrectos');
+          break;
 
-      if (err.status === 401 || err.status === 404) {
-        setIsFailed(true);
-        showError('Error', 'Usuario o contraseña incorrectos');
-      } else if (err.status === 423) {
-        showError('Cuenta bloqueada', 'Has superado el número máximo de intentos. Vuelve a intentarlo más tarde.');
-        confirmAction({
-          message: 'Tu cuenta ha sido bloqueada temporalmente por seguridad.',
-          header: 'Demasiados intentos fallidos',
-          icon: 'pi pi-exclamation-triangle',
-          acceptLabel: 'Aceptar',
-          rejectClassName: 'd-none',
-          acceptClassName: 'p-button-primary',
-          onAccept: () => {
-            null;
-          },
-        });
-      } else {
-        showError('Error', 'Ha ocurrido un problema inesperado. Intenta más tarde.');
+        case 423:
+          setAuthState('locked');
+          confirmAction({
+            header: 'Demasiados intentos fallidos',
+            message: 'Tu cuenta está bloqueada temporalmente por seguridad.',
+            icon: 'pi pi-exclamation-triangle',
+            acceptLabel: 'Aceptar',
+            rejectClassName: 'd-none',
+            acceptClassName: 'p-button-primary',
+          });
+          break;
+
+        default:
+          showError('Error al iniciar sesión', 'Ha ocurrido un problema inesperado. Intenta de nuevo o vuelve a intentarlo más tarde.');
       }
     }
   };
+
   const isDisabled = !email.trim() || !password.trim() || loading;
 
   return (
@@ -107,7 +108,9 @@ export default function LoginForm() {
 
           <Button type="submit" label="Iniciar Sesión" className="button-blue-800 w-100 rounded-3 fs-4" loading={loading} disabled={isDisabled} />
 
-          {isFailed && <div className="text-warning fw-semibold text-center mt-2">Por seguridad, tras cinco intentos fallidos tu cuenta se bloqueará temporalmente.</div>}
+          {authState === 'warn' && <Message className="mt-2" severity="warn" text="Cuidado. Cinco intentos fallidos bloquearán tu cuenta temporalmente." />}
+
+          {authState === 'locked' && <Message className="mt-2" severity="error" text="Cuenta bloqueada temporalmente por demasiados intentos fallidos. Espera o restablece tu contraseña." />}
 
           <div className="text-end my-3 text-muted fw-semibold">
             ¿Olvidaste tu contraseña?
