@@ -27,7 +27,7 @@ public class CareerController {
     }
 
     /** GET   /sigea/api/careers/{plantelId} */
-    @GetMapping("/careers/{plantelId}")
+    @GetMapping("/{plantelId}")
     public ResponseEntity<List<CareerEntity>> findByCampus(@PathVariable long plantelId) {
         return service.findByCampus(plantelId);
     }

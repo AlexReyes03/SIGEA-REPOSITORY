@@ -3,9 +3,6 @@ package com.utez.edu.sigeabackend.modules.entities;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
-import java.util.HashSet;
-import java.util.Set;
-
 @Entity
 @Table(name = "subject")
 public class SubjectEntity {
@@ -22,12 +19,10 @@ public class SubjectEntity {
 
     // ******* RELACIONES ********
 
-    /**
-     * Relación muchos-a-uno con ModuleEntity
-     * Nueva columna relacionada "module_id"
-     */
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "module_id")
+    /** Relación UNO A UNO con ModuleEntity */
+    @OneToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "module_id", unique = true)
+    @JsonIgnore
     private ModuleEntity module;
 
     /**

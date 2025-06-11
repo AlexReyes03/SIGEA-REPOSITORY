@@ -34,12 +34,12 @@ public class SubjectController {
         return service.findByTeacherId(teacherId);
     }
 
-    @PostMapping("/module/{moduleId}/teacher/{teacherId}")
-    public ResponseEntity<?> create(@RequestBody SubjectEntity subject, @PathVariable long moduleId, @PathVariable long teacherId) {
-        return service.create(subject, moduleId, teacherId);
+    @PostMapping
+    public ResponseEntity<?> create(@RequestBody SubjectEntity subject) {
+        return service.save(subject);
     }
 
-    @PutMapping("/{id}/module/{moduleId}/teacher/{teacherId}")
+    @PutMapping("/{id}/{moduleId}/{teacherId}")
     public ResponseEntity<?> update(
             @PathVariable long id,
             @RequestBody SubjectEntity subject,

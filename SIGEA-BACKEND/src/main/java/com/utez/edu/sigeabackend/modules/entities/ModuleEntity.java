@@ -28,21 +28,18 @@ public class ModuleEntity {
     @JsonIgnore
     private CareerEntity career;
 
-    /**
-     * Relación uno-a-muchos con SubjectEntity.
-     * mappedBy = "module"
-     */
-    @OneToMany(mappedBy = "module", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-    private Set<SubjectEntity> subjects = new HashSet<>();
+    /*UNO A UNO con subject*/
+    @OneToOne(mappedBy = "module", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private SubjectEntity subject;
 
     public ModuleEntity() {
     }
 
-    public ModuleEntity(long moduleId, String name, CareerEntity career, Set<SubjectEntity> subjects) {
+    public ModuleEntity(long moduleId, String name, CareerEntity career, SubjectEntity subject) {
         this.moduleId = moduleId;
         this.name = name;
         this.career = career;
-        this.subjects = subjects;
+        this.subject = subject;
     }
 
     public long getId() {
@@ -69,11 +66,19 @@ public class ModuleEntity {
         this.career = career;
     }
 
-    public Set<SubjectEntity> getSubjects() {
-        return subjects;
+    public long getModuleId() {
+        return moduleId;
     }
 
-    public void setSubjects(Set<SubjectEntity> subjects) {
-        this.subjects = subjects;
+    public void setModuleId(long moduleId) {
+        this.moduleId = moduleId;
+    }
+
+    public SubjectEntity getSubject() {
+        return subject;
+    }
+
+    public void setSubject(SubjectEntity subject) {
+        this.subject = subject;
     }
 }
