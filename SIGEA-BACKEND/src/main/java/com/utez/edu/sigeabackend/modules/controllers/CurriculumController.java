@@ -28,19 +28,31 @@ public class CurriculumController {
 
     // POST /sigea/api/curriculums
     @PostMapping
-    public ResponseEntity<CurriculumDto> create(@RequestParam String name, @RequestParam Long careerId) {
-        return curriculumService.create(name, careerId);
+    public ResponseEntity<CurriculumDto> create(@RequestBody CurriculumEntity curriculumEntity) {
+        try {
+            return curriculumService.create(curriculumEntity);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     // PUT /sigea/api/curriculums/{id}
     @PutMapping("/{id}")
-    public ResponseEntity<CurriculumDto> update(@PathVariable Long id, @RequestParam String name) {
-        return curriculumService.update(id, name);
+    public ResponseEntity<CurriculumDto> update(@PathVariable Long id, @RequestBody CurriculumEntity curriculumEntity) {
+        try {
+            return curriculumService.update(id, curriculumEntity);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     // DELETE /sigea/api/curriculums/{id}
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        return curriculumService.delete(id);
+    public ResponseEntity<Object> delete(@PathVariable Long id) {
+        try {
+            return curriculumService.delete(id);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }

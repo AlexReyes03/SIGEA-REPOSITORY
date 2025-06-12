@@ -36,40 +36,55 @@ public class CurriculumService {
     }
 
     @Transactional
-    public ResponseEntity<CurriculumDto> create(String name, Long careerId) {
-        CareerEntity career = careerRepository.findById(careerId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Carrera no encontrada"));
+    public ResponseEntity<CurriculumDto> create(CurriculumEntity curriculumEntity) {
+        try {
+            CareerEntity career = careerRepository.findById(curriculumEntity.getCareer().getId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Carrera no encontrada"));
 
-        CurriculumEntity entity = new CurriculumEntity();
-        entity.setName(name);
-        entity.setCareer(career);
-
-        var saved = curriculumRepository.save(entity);
-        return ResponseEntity.status(HttpStatus.CREATED).body(toDto(saved));
+            curriculumEntity.setCareer(career);
+            var saved = curriculumRepository.save(curriculumEntity);
+            return ResponseEntity.status(HttpStatus.CREATED).body(toDto(saved));
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al crear el curriculum", e);
+        }
     }
 
     @Transactional
-    public ResponseEntity<CurriculumDto> update(Long id, String newName) {
-        return curriculumRepository.findById(id)
-                .map(curriculum -> {
-                    curriculum.setName(newName);
-                    var updated = curriculumRepository.save(curriculum);
-                    return ResponseEntity.ok(toDto(updated));
-                })
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    public ResponseEntity<CurriculumDto> update(Long id, CurriculumEntity curriculumEntity) {
+        try {
+            return curriculumRepository.findById(id)
+                    .map(curriculum -> {
+                        curriculum.setName(curriculumEntity.getName());
+                        var updated = curriculumRepository.save(curriculum);
+                        return ResponseEntity.ok(toDto(updated));
+                    })
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Curriculum no encontrado"));
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al actualizar el curriculum", e);
+        }
     }
 
-    @Transactional
+   @Transactional
     public ResponseEntity<Object> delete(Long id) {
-        return curriculumRepository.findById(id)
-                .map(curriculum -> {
-                    if (curriculum.getModules() != null && !curriculum.getModules().isEmpty()) {
-                        return ResponseEntity.status(HttpStatus.CONFLICT).build();
-                    }
-                    curriculumRepository.delete(curriculum);
-                    return ResponseEntity.noContent().build();
-                })
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+        try {
+            return curriculumRepository.findById(id)
+                    .map(curriculum -> {
+                        if (curriculum.getModules() != null && !curriculum.getModules().isEmpty()) {
+                            throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede eliminar un curriculum con módulos");
+                        }
+                        curriculumRepository.delete(curriculum);
+                        return ResponseEntity.noContent().build();
+                    })
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Curriculum no encontrado"));
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al eliminar el curriculum", e);
+        }
     }
 
     // Mapper DTO
