@@ -10,6 +10,11 @@ export const getUserById = async (id) => {
   return res.data;
 };
 
+export const getUserByRole = async (roleId) =>{
+  const res = await request(`/api/users/role/${roleId}`);
+  return res;
+}
+
 export const createUser = async (userDto) => {
   return await request('/api/users', {
     method: 'POST',
