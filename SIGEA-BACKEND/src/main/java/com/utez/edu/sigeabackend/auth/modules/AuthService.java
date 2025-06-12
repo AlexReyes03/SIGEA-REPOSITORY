@@ -112,7 +112,7 @@ public class AuthService {
         // Construir respuesta (user + token + status)
         Map<String, Object> payload = new HashMap<>();
 
-        String avatarUrl = null;
+        String avatarUrl = "";
         if (user.getAvatar() != null) {
             avatarUrl = "/sigea/api/media/raw/" + user.getAvatar().getCode();
         }

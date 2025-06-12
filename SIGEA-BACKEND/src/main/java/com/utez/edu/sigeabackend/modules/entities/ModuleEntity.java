@@ -20,33 +20,33 @@ public class ModuleEntity {
     // ******* RELACIONES ********
 
     /**
-     * Relación muchos-a-uno con CareerEntity
+     * Relación muchos-a-uno con CurriculumEntity
      * Nueva columna relacionada "career_id"
      */
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "career_id")
-    @JsonIgnore
-    private CareerEntity career;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "curriculum_id")
+    private CurriculumEntity curriculum;
 
     /*UNO A UNO con subject*/
-    @OneToOne(mappedBy = "module", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "subject_id")
     private SubjectEntity subject;
 
     public ModuleEntity() {
     }
 
-    public ModuleEntity(long moduleId, String name, CareerEntity career, SubjectEntity subject) {
+    public ModuleEntity(long moduleId, String name, CurriculumEntity curriculum, SubjectEntity subject) {
         this.moduleId = moduleId;
         this.name = name;
-        this.career = career;
+        this.curriculum = curriculum;
         this.subject = subject;
     }
 
-    public long getId() {
+    public long getModuleId() {
         return moduleId;
     }
 
-    public void setId(long moduleId) {
+    public void setModuleId(long moduleId) {
         this.moduleId = moduleId;
     }
 
@@ -58,20 +58,12 @@ public class ModuleEntity {
         this.name = name;
     }
 
-    public CareerEntity getCareer() {
-        return career;
+    public CurriculumEntity getCurriculum() {
+        return curriculum;
     }
 
-    public void setCareer(CareerEntity career) {
-        this.career = career;
-    }
-
-    public long getModuleId() {
-        return moduleId;
-    }
-
-    public void setModuleId(long moduleId) {
-        this.moduleId = moduleId;
+    public void setCurriculum(CurriculumEntity curriculum) {
+        this.curriculum = curriculum;
     }
 
     public SubjectEntity getSubject() {
