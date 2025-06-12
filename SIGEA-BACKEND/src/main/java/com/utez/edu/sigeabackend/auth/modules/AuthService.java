@@ -111,6 +111,11 @@ public class AuthService {
 
         // Construir respuesta (user + token + status)
         Map<String, Object> payload = new HashMap<>();
+
+        String avatarUrl = null;
+        if (user.getAvatar() != null) {
+            avatarUrl = "/sigea/api/media/raw/" + user.getAvatar().getCode();
+        }
         payload.put("statusCode", HttpStatus.OK.value());
         payload.put("token", jwt);
         payload.put("user", Map.of(
@@ -128,7 +133,8 @@ public class AuthService {
                 "campus", Map.of(
                         "id",   user.getPlantel().getId(),
                         "name", user.getPlantel().getName()
-                )
+                ),
+                "avatarUrl", avatarUrl
         ));
         return ResponseEntity.ok(payload);
     }
@@ -220,4 +226,27 @@ public class AuthService {
 
         return ResponseEntity.ok("Contraseña actualizada correctamente");
     }
+
+    @Transactional
+    public ResponseEntity<?> changePassword(ChangePasswordDto dto, long userId) {
+        UserEntity user = userRepo.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+
+        if (!passwordEncoder.matches(dto.currentPassword(), user.getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Contraseña actual incorrecta"));
+        }
+
+        if (dto.newPassword() == null || dto.newPassword().length() < 8) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "La nueva contraseña debe tener al menos 8 caracteres"));
+        }
+
+        user.setPassword(passwordEncoder.encode(dto.newPassword()));
+        userRepo.save(user);
+
+        return ResponseEntity.ok(Map.of("message", "Contraseña actualizada correctamente"));
+    }
+
 }

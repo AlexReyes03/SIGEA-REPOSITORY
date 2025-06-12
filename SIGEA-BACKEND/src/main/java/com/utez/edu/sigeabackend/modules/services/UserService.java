@@ -4,6 +4,9 @@ import com.utez.edu.sigeabackend.modules.entities.UserEntity;
 import com.utez.edu.sigeabackend.modules.entities.dto.CreateUserDto;
 import com.utez.edu.sigeabackend.modules.entities.dto.UpdateUserDto;
 import com.utez.edu.sigeabackend.modules.entities.dto.UserResponseDto;
+import com.utez.edu.sigeabackend.modules.media.MediaEntity;
+import com.utez.edu.sigeabackend.modules.media.MediaService;
+import com.utez.edu.sigeabackend.modules.media.dto.MediaUploadResponseDto;
 import com.utez.edu.sigeabackend.modules.repositories.PlantelRepository;
 import com.utez.edu.sigeabackend.modules.repositories.RoleRepository;
 import com.utez.edu.sigeabackend.modules.repositories.UserRepository;
@@ -12,31 +15,40 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
 public class UserService {
 
-    private final UserRepository        userRepo;
-    private final PlantelRepository     plantelRepo;
-    private final RoleRepository        roleRepo;
+    private final UserRepository    userRepo;
+    private final PlantelRepository plantelRepo;
+    private final RoleRepository    roleRepo;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final MediaService mediaService;
 
     public UserService(UserRepository userRepo,
                        PlantelRepository plantelRepo,
                        RoleRepository roleRepo,
-                       BCryptPasswordEncoder passwordEncoder) {
+                       BCryptPasswordEncoder passwordEncoder,
+                       MediaService mediaService) {
         this.userRepo = userRepo;
         this.plantelRepo = plantelRepo;
         this.roleRepo = roleRepo;
         this.passwordEncoder = passwordEncoder;
+        this.mediaService = mediaService;
     }
 
     // Helper
     private UserResponseDto toDto(UserEntity u) {
+        String avatarUrl = (u.getAvatar() != null)
+                ? "/sigea/api/media/raw/" + u.getAvatar().getCode()
+                : null;
+
         return new UserResponseDto(
                 u.getId(),
                 u.getName(),
@@ -49,7 +61,8 @@ public class UserService {
                 u.getPlantel().getName(),
                 u.getRole().getId(),
                 u.getRole().getRoleName(),
-                u.getCreatedAt()
+                u.getCreatedAt(),
+                avatarUrl
         );
     }
 
@@ -133,6 +146,21 @@ public class UserService {
                     return ResponseEntity.ok(toDto(updated));
                 })
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    }
+
+    @Transactional
+    public MediaUploadResponseDto uploadAvatar(Long userId, MultipartFile file) throws IOException {
+        MediaUploadResponseDto dto = mediaService.storeAndReturnDto(file, MediaEntity.Purpose.AVATAR);
+
+        UserEntity user = userRepo.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+        MediaEntity avatarEntity = mediaService.getByCode(
+                dto.url().substring(dto.url().lastIndexOf('/') + 1));
+        user.setAvatar(avatarEntity);
+        userRepo.save(user);
+
+        return dto;
     }
 
     @Transactional

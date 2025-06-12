@@ -5,8 +5,10 @@ import com.utez.edu.sigeabackend.auth.DTO.*;
 import com.utez.edu.sigeabackend.modules.repositories.UserRepository;
 import com.utez.edu.sigeabackend.utils.security.JWTUtil;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 
@@ -56,6 +58,21 @@ public class AuthController {
     ) {
         return service.resetPassword(dto);
     }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @RequestBody ChangePasswordDto dto,
+            @RequestHeader("Authorization") String authHeader
+    ) {
+        String token = authHeader.substring(7);
+        String email = jwtUtil.extractUsername(token);
+        long userId = userRepo.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND))
+                .getId();
+
+        return service.changePassword(dto, userId);
+    }
+
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {

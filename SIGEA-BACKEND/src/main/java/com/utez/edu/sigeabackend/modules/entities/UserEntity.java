@@ -1,6 +1,7 @@
 package com.utez.edu.sigeabackend.modules.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.utez.edu.sigeabackend.modules.media.MediaEntity;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -78,6 +79,10 @@ public class UserEntity {
         this.createdAt = LocalDateTime.now();
     }
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "avatar_id", foreignKey = @ForeignKey(name = "fk_user_avatar"))
+    private MediaEntity avatar;
+
     // -- Constructors --
     public UserEntity() {}
 
@@ -87,6 +92,15 @@ public class UserEntity {
         this.maternalSurname = maternalSurname;
         this.email = email;
         this.password = password;
+    }
+
+    public UserEntity(String name, String paternalSurname, String maternalSurname, String email, String password, MediaEntity avatar) {
+        this.name = name;
+        this.paternalSurname = paternalSurname;
+        this.maternalSurname = maternalSurname;
+        this.email = email;
+        this.password = password;
+        this.avatar = avatar;
     }
 
     public long getId() {
@@ -176,6 +190,14 @@ public class UserEntity {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public MediaEntity getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(MediaEntity avatar) {
+        this.avatar = avatar;
     }
 
     // -- ENUM --

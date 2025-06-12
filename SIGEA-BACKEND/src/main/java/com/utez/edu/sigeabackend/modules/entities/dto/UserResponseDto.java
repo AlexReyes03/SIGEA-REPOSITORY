@@ -14,5 +14,6 @@ public record UserResponseDto(
         String plantelName,
         Long roleId,
         String roleName,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        String avatarUrl
 ) {}

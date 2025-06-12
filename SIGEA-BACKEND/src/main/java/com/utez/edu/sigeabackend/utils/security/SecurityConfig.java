@@ -2,6 +2,7 @@ package com.utez.edu.sigeabackend.utils.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import static org.springframework.security.config.Customizer.withDefaults;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -52,6 +53,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth ->
                         auth
                                 .requestMatchers("/sigea/auth/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/sigea/api/media/raw/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .sessionManagement(sess ->
