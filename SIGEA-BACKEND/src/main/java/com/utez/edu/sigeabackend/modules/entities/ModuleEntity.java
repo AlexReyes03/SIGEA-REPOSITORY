@@ -1,10 +1,7 @@
 package com.utez.edu.sigeabackend.modules.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 
 @Entity
 @Table(name = "module")
@@ -17,29 +14,22 @@ public class ModuleEntity {
     @Column(name = "name", nullable = false)
     private String name;
 
-    // ******* RELACIONES ********
-
-    /**
-     * Relación muchos-a-uno con CurriculumEntity
-     * Nueva columna relacionada "career_id"
-     */
+    // Relación muchos-a-uno con CurriculumEntity
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "curriculum_id")
+    @JoinColumn(name = "curriculum_id", nullable = false)
     private CurriculumEntity curriculum;
 
-    /*UNO A UNO con subject*/
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "subject_id")
-    private SubjectEntity subject;
+    // Relación uno-a-muchos con SubjectEntity
+    @OneToMany(mappedBy = "module", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SubjectEntity> subjects;
 
-    public ModuleEntity() {
-    }
+    public ModuleEntity() {}
 
-    public ModuleEntity(long moduleId, String name, CurriculumEntity curriculum, SubjectEntity subject) {
+    public ModuleEntity(long moduleId, String name, CurriculumEntity curriculum, List<SubjectEntity> subjects) {
         this.moduleId = moduleId;
         this.name = name;
         this.curriculum = curriculum;
-        this.subject = subject;
+        this.subjects = subjects;
     }
 
     public long getModuleId() {
@@ -66,11 +56,11 @@ public class ModuleEntity {
         this.curriculum = curriculum;
     }
 
-    public SubjectEntity getSubject() {
-        return subject;
+    public List<SubjectEntity> getSubjects() {
+        return subjects;
     }
 
-    public void setSubject(SubjectEntity subject) {
-        this.subject = subject;
+    public void setSubjects(List<SubjectEntity> subjects) {
+        this.subjects = subjects;
     }
 }
