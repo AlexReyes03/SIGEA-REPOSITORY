@@ -34,7 +34,7 @@ public class SubjectService {
     @Transactional
     public ResponseEntity<SubjectDto> create(SubjectEntity subjectEntity) {
         try {
-            ModuleEntity module = moduleRepository.findById(subjectEntity.getModule().getModuleId())
+            ModuleEntity module = moduleRepository.findById(subjectEntity.getModule().getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Módulo no encontrado"));
             subjectEntity.setModule(module);
             var saved = subjectRepository.save(subjectEntity);

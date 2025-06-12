@@ -87,7 +87,7 @@ public class ModuleService {
     private ModuleDto toModuleDto(ModuleEntity entity) {
         List<SubjectDto> subjects = entity.getSubjects() == null ? List.of() :
                 entity.getSubjects().stream().map(this::toSubjectDto).toList();
-        return new ModuleDto(entity.getModuleId(), entity.getName(), subjects);
+        return new ModuleDto(entity.getId(), entity.getName(), subjects);
     }
 
     private SubjectDto toSubjectDto(SubjectEntity entity) {

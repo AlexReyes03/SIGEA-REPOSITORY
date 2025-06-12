@@ -9,7 +9,7 @@ public class ModuleEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private long moduleId;
+    private long id;
 
     @Column(name = "name", nullable = false)
     private String name;
@@ -25,19 +25,19 @@ public class ModuleEntity {
 
     public ModuleEntity() {}
 
-    public ModuleEntity(long moduleId, String name, CurriculumEntity curriculum, List<SubjectEntity> subjects) {
-        this.moduleId = moduleId;
+    public ModuleEntity(long id, String name, CurriculumEntity curriculum, List<SubjectEntity> subjects) {
+        this.id = id;
         this.name = name;
         this.curriculum = curriculum;
         this.subjects = subjects;
     }
 
-    public long getModuleId() {
-        return moduleId;
+    public long getId() {
+        return id;
     }
 
-    public void setModuleId(long moduleId) {
-        this.moduleId = moduleId;
+    public void setId(long id) {
+        this.id = id;
     }
 
     public String getName() {
