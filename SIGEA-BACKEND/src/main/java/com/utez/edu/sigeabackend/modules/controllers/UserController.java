@@ -36,6 +36,11 @@ public class UserController {
         return service.findById(id);
     }
 
+    @GetMapping("/role/{roleId}")
+    public ResponseEntity<List<UserResponseDto>> getUsersByRoleId(@PathVariable long roleId) {
+        return service.findByRoleId(roleId);
+    }
+
     @PostMapping
     public ResponseEntity<UserResponseDto> create(
             @Valid @RequestBody CreateUserDto dto

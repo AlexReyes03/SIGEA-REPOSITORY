@@ -34,7 +34,7 @@ public class SubjectEntity {
     private UserEntity teacher;
 
     /**UNO A UNO con QualificationEntity*/
-    @OneToOne(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OneToOne(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval=true)
     @JsonIgnore
     private QualificationEntity qualification;
 

@@ -10,11 +10,11 @@ import com.utez.edu.sigeabackend.modules.repositories.ModuleRepository;
 import com.utez.edu.sigeabackend.modules.repositories.SubjectRepository;
 import com.utez.edu.sigeabackend.modules.repositories.UserRepository;
 import org.hibernate.Hibernate;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -36,7 +36,6 @@ public class SubjectService {
         try {
             List<SubjectEntity> subjects = subjectRepository.findAll();
 
-            // Forzar la inicialización de las relaciones lazy
             subjects.forEach(this::initializeSubjectRelations);
 
             return subjects.stream()
@@ -163,7 +162,6 @@ public class SubjectService {
             }
 
             SubjectEntity existing = optional.get();
-
             Optional<ModuleEntity> moduleOpt = moduleRepository.findById(dto.moduleId());
             Optional<UserEntity> teacherOpt = userRepository.findById(dto.teacherId());
 
@@ -177,10 +175,7 @@ public class SubjectService {
             existing.setTeacher(teacherOpt.get());
 
             SubjectEntity updated = subjectRepository.save(existing);
-
-
             initializeSubjectRelations(updated);
-
             SubjectDTO dtoResponse = mapToDto(updated);
             return ResponseEntity.ok(dtoResponse);
 
@@ -198,11 +193,18 @@ public class SubjectService {
 
             Optional<SubjectEntity> optional = subjectRepository.findById(id);
             if (optional.isPresent()) {
-                subjectRepository.deleteById(id);
+                SubjectEntity subject = optional.get();
+
+                // Con CASCADE.ALL y orphanRemoval=true, esto debería eliminar ambos
+                subjectRepository.delete(subject); // Usar delete(entity) en lugar de deleteById
+                //subjectRepository.flush(); // Fuerza la ejecución
+
                 return ResponseEntity.noContent().build();
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
+        } catch (DataIntegrityViolationException e) {
+            throw new RuntimeException("No se puede eliminar: existen referencias a este registro", e);
         } catch (Exception e) {
             throw new RuntimeException("Error al eliminar la materia con ID " + id + ": " + e.getMessage(), e);
         }

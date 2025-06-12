@@ -28,13 +28,13 @@ public class SubjectController {
         return service.findById(id);
     }
 
-    @GetMapping("/{moduleId}")
+    @GetMapping("/module/{moduleId}")
     public ResponseEntity<List<SubjectDTO>>  getByModule(@PathVariable long moduleId) {
         return service.findByModuleId(moduleId);
     }
 
-    @GetMapping("/{teacherId}")
-    public ResponseEntity<List<SubjectDTO>>  getByTeacher(@PathVariable Long teacherId) {
+    @GetMapping("/teacher/{teacherId}")
+    public ResponseEntity<List<SubjectDTO>>  getByTeacher(@PathVariable long teacherId) {
         return service.findByTeacherId(teacherId);
     }
 

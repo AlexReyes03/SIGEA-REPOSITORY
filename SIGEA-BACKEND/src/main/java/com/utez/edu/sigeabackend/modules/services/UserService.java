@@ -19,7 +19,9 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -80,7 +82,24 @@ public class UserService {
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
+    public ResponseEntity<List<UserResponseDto>> findByRoleId(long roleId) {
+        try {
+            List<UserEntity> users = userRepo.findByRoleId(roleId);
 
+            if (users.isEmpty()) {
+                return ResponseEntity.ok(null);
+            }
+
+            List<UserResponseDto> usersDto = users.stream()
+                    .map(this::toDto)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(usersDto);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error al consultar usuarios por rol " + e.getMessage(), e);
+        }
+    }
     @Transactional
     public ResponseEntity<UserResponseDto> create(CreateUserDto dto) {
         if (userRepo.existsByEmail(dto.email()) ||
