@@ -2,262 +2,85 @@ package com.utez.edu.sigeabackend.modules.services;
 
 import com.utez.edu.sigeabackend.modules.entities.ModuleEntity;
 import com.utez.edu.sigeabackend.modules.entities.SubjectEntity;
-import com.utez.edu.sigeabackend.modules.entities.UserEntity;
-import com.utez.edu.sigeabackend.modules.entities.dto.SubjectCreateDto;
-import com.utez.edu.sigeabackend.modules.entities.dto.SubjectDTO;
-import com.utez.edu.sigeabackend.modules.entities.dto.TeacherDTO;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.SubjectDto;
 import com.utez.edu.sigeabackend.modules.repositories.ModuleRepository;
 import com.utez.edu.sigeabackend.modules.repositories.SubjectRepository;
-import com.utez.edu.sigeabackend.modules.repositories.UserRepository;
-import org.hibernate.Hibernate;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 public class SubjectService {
     private final SubjectRepository subjectRepository;
     private final ModuleRepository moduleRepository;
-    private final UserRepository userRepository;
 
-    public SubjectService(SubjectRepository subjectRepository, ModuleRepository moduleRepository, UserRepository userRepository) {
+
+    public SubjectService(SubjectRepository subjectRepository, ModuleRepository moduleRepository) {
         this.subjectRepository = subjectRepository;
         this.moduleRepository = moduleRepository;
-        this.userRepository = userRepository;
     }
 
-    @Transactional(readOnly = true)
-    public List<SubjectDTO> findAll() {
-        try {
-            List<SubjectEntity> subjects = subjectRepository.findAll();
-
-            subjects.forEach(this::initializeSubjectRelations);
-
-            return subjects.stream()
-                    .map(this::mapToDto)
-                    .collect(Collectors.toList());
-        } catch (Exception e) {
-            throw new RuntimeException("Error al obtener todas las materias: " + e.getMessage(), e);
-        }
+    public ResponseEntity<List<SubjectDto>> findByModuleId(Long moduleId) {
+        List<SubjectEntity> subjects = subjectRepository.findByModuleId(moduleId);
+        var dtos = subjects.stream().map(this::toDto).toList();
+        return ResponseEntity.ok(dtos);
     }
 
-    @Transactional(readOnly = true)
-    public ResponseEntity<SubjectDTO> findById(long id) {
+    @Transactional
+    public ResponseEntity<SubjectDto> create(SubjectEntity subjectEntity) {
         try {
-            if (id <= 0) {
-                return ResponseEntity.badRequest().build();
-            }
-
-            Optional<SubjectEntity> optional = subjectRepository.findById(id);
-            return optional
-                    .map(subject -> {
-                        initializeSubjectRelations(subject);
-                        SubjectDTO dto = mapToDto(subject);
-                        return ResponseEntity.ok(dto);
-                    })
-                    .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+            ModuleEntity module = moduleRepository.findById(subjectEntity.getModule().getModuleId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Módulo no encontrado"));
+            subjectEntity.setModule(module);
+            var saved = subjectRepository.save(subjectEntity);
+            return ResponseEntity.status(HttpStatus.CREATED).body(toDto(saved));
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Error al buscar materia por ID " + id + ": " + e.getMessage(), e);
-        }
-    }
-
-    @Transactional(readOnly = true)
-    public ResponseEntity<List<SubjectDTO>> findByModuleId(long moduleId) {
-        try {
-            if (moduleId <= 0) {
-                return ResponseEntity.badRequest().build();
-            }
-
-            List<SubjectEntity> subjects = subjectRepository.findByModuleId(moduleId);
-            if (subjects.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-            }
-
-
-            subjects.forEach(this::initializeSubjectRelations);
-
-            List<SubjectDTO> subjectDTOS = subjects.stream()
-                    .map(this::mapToDto)
-                    .collect(Collectors.toList());
-            return ResponseEntity.ok(subjectDTOS);
-        } catch (Exception e) {
-            throw new RuntimeException("Error al buscar materias por módulo " + moduleId + ": " + e.getMessage(), e);
-        }
-    }
-
-    @Transactional(readOnly = true)
-    public ResponseEntity<List<SubjectDTO>> findByTeacherId(long teacherId) {
-        try {
-            if (teacherId <= 0) {
-                return ResponseEntity.badRequest().build();
-            }
-
-            List<SubjectEntity> subjects = subjectRepository.findByTeacherId(teacherId);
-            if (subjects.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-            }
-
-
-            subjects.forEach(this::initializeSubjectRelations);
-
-            List<SubjectDTO> subjectDTOS = subjects.stream()
-                    .map(this::mapToDto)
-                    .collect(Collectors.toList());
-            return ResponseEntity.ok(subjectDTOS);
-        } catch (Exception e) {
-            throw new RuntimeException("Error al buscar materias por docente " + teacherId + ": " + e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al crear la materia", e);
         }
     }
 
     @Transactional
-    public ResponseEntity<SubjectDTO> save(SubjectCreateDto dto) {
+    public ResponseEntity<SubjectDto> update(Long id, SubjectEntity subjectEntity) {
         try {
-            if (dto == null || dto.name() == null || dto.name().trim().isEmpty() ||
-                    dto.weeks() <= 0 || dto.moduleId() <= 0 || dto.teacherId() <= 0) {
-                return ResponseEntity.badRequest().build();
-            }
-
-            Optional<ModuleEntity> moduleOpt = moduleRepository.findById(dto.moduleId());
-            Optional<UserEntity> teacherOpt = userRepository.findById(dto.teacherId());
-
-            if (moduleOpt.isEmpty() || teacherOpt.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-            }
-
-            SubjectEntity subject = new SubjectEntity();
-            subject.setName(dto.name().trim());
-            subject.setWeeks(dto.weeks());
-            subject.setModule(moduleOpt.get());
-            subject.setTeacher(teacherOpt.get());
-
-            SubjectEntity saved = subjectRepository.save(subject);
-
-
-            initializeSubjectRelations(saved);
-
-            SubjectDTO dtoResponse = mapToDto(saved);
-            return ResponseEntity.status(HttpStatus.CREATED).body(dtoResponse);
-
+            return subjectRepository.findById(id)
+                .map(subject -> {
+                    subject.setName(subjectEntity.getName());
+                    subject.setWeeks(subjectEntity.getWeeks());
+                    var updated = subjectRepository.save(subject);
+                    return ResponseEntity.ok(toDto(updated));
+                })
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Materia no encontrada"));
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Error al guardar la materia: " + e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al actualizar la materia", e);
         }
     }
 
     @Transactional
-    public ResponseEntity<SubjectDTO> update(long id, SubjectCreateDto dto) {
+    public ResponseEntity<Object> delete(Long id) {
         try {
-            if (id <= 0 || dto == null || dto.name() == null || dto.name().trim().isEmpty() ||
-                    dto.weeks() <= 0 || dto.moduleId() <= 0 || dto.teacherId() <= 0) {
-                return ResponseEntity.badRequest().build();
-            }
-
-            Optional<SubjectEntity> optional = subjectRepository.findById(id);
-            if (optional.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-
-            SubjectEntity existing = optional.get();
-            Optional<ModuleEntity> moduleOpt = moduleRepository.findById(dto.moduleId());
-            Optional<UserEntity> teacherOpt = userRepository.findById(dto.teacherId());
-
-            if (moduleOpt.isEmpty() || teacherOpt.isEmpty()) {
-                return ResponseEntity.badRequest().build();
-            }
-
-            existing.setName(dto.name().trim());
-            existing.setWeeks(dto.weeks());
-            existing.setModule(moduleOpt.get());
-            existing.setTeacher(teacherOpt.get());
-
-            SubjectEntity updated = subjectRepository.save(existing);
-            initializeSubjectRelations(updated);
-            SubjectDTO dtoResponse = mapToDto(updated);
-            return ResponseEntity.ok(dtoResponse);
-
+            return subjectRepository.findById(id)
+                .map(subject -> {
+                    subjectRepository.delete(subject);
+                    return ResponseEntity.noContent().build();
+                })
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Materia no encontrada"));
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Error al actualizar la materia con ID " + id + ": " + e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al eliminar la materia", e);
         }
     }
 
-    @Transactional
-    public ResponseEntity<Void> delete(long id) {
-        try {
-            if (id <= 0) {
-                return ResponseEntity.badRequest().build();
-            }
-
-            Optional<SubjectEntity> optional = subjectRepository.findById(id);
-            if (optional.isPresent()) {
-                SubjectEntity subject = optional.get();
-
-                // Con CASCADE.ALL y orphanRemoval=true, esto debería eliminar ambos
-                subjectRepository.delete(subject); // Usar delete(entity) en lugar de deleteById
-                //subjectRepository.flush(); // Fuerza la ejecución
-
-                return ResponseEntity.noContent().build();
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-            }
-        } catch (DataIntegrityViolationException e) {
-            throw new RuntimeException("No se puede eliminar: existen referencias a este registro", e);
-        } catch (Exception e) {
-            throw new RuntimeException("Error al eliminar la materia con ID " + id + ": " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Método privado para forzar la inicialización de relaciones lazy
-     */
-    private void initializeSubjectRelations(SubjectEntity subject) {
-        if (subject != null) {
-            // Inicializar teacher
-            Hibernate.initialize(subject.getTeacher());
-
-            // Inicializar role del teacher
-            if (subject.getTeacher() != null) {
-                Hibernate.initialize(subject.getTeacher().getRole());
-            }
-
-            // Inicializar module si es necesario
-            Hibernate.initialize(subject.getModule());
-        }
-    }
-
-    private SubjectDTO mapToDto(SubjectEntity subject) {
-        try {
-            if (subject == null) {
-                throw new IllegalArgumentException("La entidad Subject no puede ser null");
-            }
-
-            UserEntity teacher = subject.getTeacher();
-            if (teacher == null) {
-                throw new IllegalArgumentException("El docente de la materia no puede ser null");
-            }
-
-            if (teacher.getRole() == null) {
-                throw new IllegalArgumentException("El rol del docente no puede ser null");
-            }
-
-            TeacherDTO teacherDTO = new TeacherDTO(
-                    teacher.getId(),
-                    teacher.getName(),
-                    teacher.getEmail(),
-                    teacher.getRole().getRoleName()
-            );
-
-            return new SubjectDTO(
-                    subject.getId(),
-                    subject.getName(),
-                    subject.getWeeks(),
-                    teacherDTO
-            );
-        } catch (Exception e) {
-            throw new RuntimeException("Error al mapear SubjectEntity a SubjectDTO: " + e.getMessage(), e);
-        }
+    private SubjectDto toDto(SubjectEntity entity) {
+        return new SubjectDto(entity.getId(), entity.getName(), entity.getWeeks());
     }
 }

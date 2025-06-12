@@ -1,10 +1,7 @@
 package com.utez.edu.sigeabackend.modules.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 
 @Entity
 @Table(name = "module")
@@ -12,42 +9,35 @@ public class ModuleEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private long id;
+    private long moduleId;
 
     @Column(name = "name", nullable = false)
     private String name;
 
-    // ******* RELACIONES ********
+    // Relación muchos-a-uno con CurriculumEntity
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "curriculum_id", nullable = false)
+    private CurriculumEntity curriculum;
 
-    /**
-     * Relación muchos-a-uno con CareerEntity
-     * Nueva columna relacionada "career_id"
-     */
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "career_id")
-    @JsonIgnore
-    private CareerEntity career;
+    // Relación uno-a-muchos con SubjectEntity
+    @OneToMany(mappedBy = "module", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SubjectEntity> subjects;
 
-    /*UNO A UNO con subject*/
-    @OneToOne(mappedBy = "module", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    private SubjectEntity subject;
+    public ModuleEntity() {}
 
-    public ModuleEntity() {
-    }
-
-    public ModuleEntity(long id, String name, CareerEntity career, SubjectEntity subject) {
-        this.id = id;
+    public ModuleEntity(long moduleId, String name, CurriculumEntity curriculum, List<SubjectEntity> subjects) {
+        this.moduleId = moduleId;
         this.name = name;
-        this.career = career;
-        this.subject = subject;
+        this.curriculum = curriculum;
+        this.subjects = subjects;
     }
 
-    public long getId() {
-        return id;
+    public long getModuleId() {
+        return moduleId;
     }
 
-    public void setId(long moduleId) {
-        this.id = moduleId;
+    public void setModuleId(long moduleId) {
+        this.moduleId = moduleId;
     }
 
     public String getName() {
@@ -58,27 +48,19 @@ public class ModuleEntity {
         this.name = name;
     }
 
-    public CareerEntity getCareer() {
-        return career;
+    public CurriculumEntity getCurriculum() {
+        return curriculum;
     }
 
-    public void setCareer(CareerEntity career) {
-        this.career = career;
+    public void setCurriculum(CurriculumEntity curriculum) {
+        this.curriculum = curriculum;
     }
 
-    public long getModuleId() {
-        return id;
+    public List<SubjectEntity> getSubjects() {
+        return subjects;
     }
 
-    public void setModuleId(long moduleId) {
-        this.id = moduleId;
-    }
-
-    public SubjectEntity getSubject() {
-        return subject;
-    }
-
-    public void setSubject(SubjectEntity subject) {
-        this.subject = subject;
+    public void setSubjects(List<SubjectEntity> subjects) {
+        this.subjects = subjects;
     }
 }

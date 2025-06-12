@@ -1,6 +1,5 @@
 package com.utez.edu.sigeabackend.modules.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
@@ -8,47 +7,28 @@ import jakarta.persistence.*;
 public class SubjectEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false)
     private long id;
 
-    @Column(name = "name", nullable = false)
+    @Column(nullable = false)
     private String name;
 
-    @Column(name = "weeks", nullable = false)
+    @Column(nullable = false)
     private int weeks;
 
-    // ******* RELACIONES ********
-
-    /** Relación UNO A UNO con ModuleEntity */
-    @OneToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "module_id", unique = true)
-    @JsonIgnore
+    // Relación muchos-a-uno con ModuleEntity
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "module_id", nullable = false)
     private ModuleEntity module;
 
-    /**
-     * Relación muchos-a-uno con UserEntity
-     * Nueva columna relacionada "teacher_id"
-     */
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "teacher_id")
-    private UserEntity teacher;
+    // Constructor vacío
+    public SubjectEntity() {}
 
-    /**UNO A UNO con QualificationEntity*/
-    @OneToOne(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval=true)
-    @JsonIgnore
-    private QualificationEntity qualification;
-
-
-    public SubjectEntity() {
-    }
-
-    public SubjectEntity(long id, String name, int weeks, ModuleEntity module, UserEntity teacher, QualificationEntity qualification) {
+    // Constructor con parámetros
+    public SubjectEntity(long id, String name, int weeks, ModuleEntity module) {
         this.id = id;
         this.name = name;
         this.weeks = weeks;
         this.module = module;
-        this.teacher = teacher;
-        this.qualification = qualification;
     }
 
     public long getId() {
@@ -81,21 +61,5 @@ public class SubjectEntity {
 
     public void setModule(ModuleEntity module) {
         this.module = module;
-    }
-
-    public UserEntity getTeacher() {
-        return teacher;
-    }
-
-    public void setTeacher(UserEntity teacher) {
-        this.teacher = teacher;
-    }
-
-    public QualificationEntity getQualification() {
-        return qualification;
-    }
-
-    public void setQualification(QualificationEntity qualification) {
-        this.qualification = qualification;
     }
 }

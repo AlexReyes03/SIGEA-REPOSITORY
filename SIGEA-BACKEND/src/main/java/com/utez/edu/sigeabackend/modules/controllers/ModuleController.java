@@ -1,48 +1,58 @@
 package com.utez.edu.sigeabackend.modules.controllers;
 
 import com.utez.edu.sigeabackend.modules.entities.ModuleEntity;
-import com.utez.edu.sigeabackend.modules.entities.dto.modulesDto.ModuleRequestDto;
-import com.utez.edu.sigeabackend.modules.entities.dto.modulesDto.ModuleResponseDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.ModuleDto;
 import com.utez.edu.sigeabackend.modules.services.ModuleService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/sigea/api/modules")
 public class ModuleController {
-    private final ModuleService service;
 
-    public ModuleController(ModuleService service) {
-        this.service = service;
-    }
+    private final ModuleService moduleService;
 
-    @GetMapping
-    public ResponseEntity<?> getAll() {
-        return service.findAll();
+    public ModuleController(ModuleService moduleService) {
+        this.moduleService = moduleService;
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getById(@PathVariable long id) {
-        return service.findById(id);
+    // GET 
+    @GetMapping("/curriculum/{curriculumId}")
+    public ResponseEntity<List<ModuleDto>> findByCurriculumId(@PathVariable Long curriculumId) {
+        return moduleService.findByCurriculumId(curriculumId);
     }
-    /** GET   /sigea/api/careers/careerId */
-    @GetMapping("/careers/{careerId}")
-    public ResponseEntity<?> getByCareer(@PathVariable long careerId) {
-        return service.findByCareerId(careerId);
-    }
-    /** POST   /sigea/api/modules */
+
+    // POST
     @PostMapping
-    public ResponseEntity<ModuleResponseDto> create(@RequestBody ModuleRequestDto dto) {
-        return service.create(dto);
+    public ResponseEntity<ModuleDto> create(@RequestBody ModuleEntity moduleEntity) {
+        try {
+            return moduleService.create(moduleEntity);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
-    /** PUT   /sigea/api/module/{careerId} */
+
+    // PUT
     @PutMapping("/{id}")
-    public ResponseEntity<ModuleResponseDto> update(@PathVariable long id, @RequestBody ModuleRequestDto dto) {
-        return service.update(id, dto);
+    public ResponseEntity<ModuleDto> update(@PathVariable Long id, @RequestBody ModuleEntity moduleEntity) {
+        try {
+            return moduleService.update(id, moduleEntity);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
-    /** DELETE   /sigea/api/module/{id} */
+
+    // DELETE 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable long id) {
-        return service.delete(id);
+    public ResponseEntity<Object> delete(@PathVariable Long id) {
+        try {
+            return moduleService.delete(id);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
+
 }

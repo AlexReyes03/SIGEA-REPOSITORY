@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface ModuleRepository extends JpaRepository<ModuleEntity, Long> {
-    List<ModuleEntity> findByCareerId(long careerId);
+    List<ModuleEntity> findByCurriculumId(Long curriculumId);
 }

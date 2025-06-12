@@ -1,73 +1,77 @@
 package com.utez.edu.sigeabackend.modules.entities;
 
 import jakarta.persistence.*;
-
 import java.util.Date;
 
 @Entity
 @Table(name = "qualification")
 public class QualificationEntity {
-    //Atributes
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false)
-    private long qualificationId;
+    private Long id;
 
-    @Column(name = "value")
-    private int value;
-
-    @Column(name = "date", nullable = false)
-    private Date date;
-
-    // ******* RELACIONES ********
-
-    /**UNO A UNO con SubjectEntity */
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "subject_id", unique = true)
-    private SubjectEntity subject;
-
-    /**
-     * Relación muchos-a-uno con UserEntity
-     * Nueva columna relacionada "student_id"
-     */
+    // Estudiante evaluado
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "student_id")
+    @JoinColumn(name = "student_id", nullable = false)
     private UserEntity student;
 
+    // Grupo en el que cursó la materia
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "group_id", nullable = false)
+    private GroupEntity group;
+
+    // Materia evaluada (SubjectEntity -> ligado a módulo y currículum)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "subject_id", nullable = false)
+    private SubjectEntity subject;
+
+    // Docente que calificó
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "teacher_id")
+    private UserEntity teacher;
+
+    @Column(name = "grade", nullable = false)
+    private Integer grade;
+
+    @Column(name = "date", nullable = false)
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date date;
 
     public QualificationEntity() {
     }
 
-    public QualificationEntity(long qualificationId, int value, Date date, SubjectEntity subject, UserEntity student) {
-        this.qualificationId = qualificationId;
-        this.value = value;
-        this.date = date;
+    public QualificationEntity(Long id, UserEntity student, GroupEntity group, SubjectEntity subject, UserEntity teacher, Integer grade, Date date) {
+        this.id = id;
+        this.student = student;
+        this.group = group;
         this.subject = subject;
+        this.teacher = teacher;
+        this.grade = grade;
+        this.date = date;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public UserEntity getStudent() {
+        return student;
+    }
+
+    public void setStudent(UserEntity student) {
         this.student = student;
     }
 
-    public long getQualificationId() {
-        return qualificationId;
+    public GroupEntity getGroup() {
+        return group;
     }
 
-    public void setQualificationId(long qualificationId) {
-        this.qualificationId = qualificationId;
-    }
-
-    public int getValue() {
-        return value;
-    }
-
-    public void setValue(int value) {
-        this.value = value;
-    }
-
-    public Date getDate() {
-        return date;
-    }
-
-    public void setDate(Date date) {
-        this.date = date;
+    public void setGroup(GroupEntity group) {
+        this.group = group;
     }
 
     public SubjectEntity getSubject() {
@@ -78,11 +82,27 @@ public class QualificationEntity {
         this.subject = subject;
     }
 
-    public UserEntity getStudent() {
-        return student;
+    public UserEntity getTeacher() {
+        return teacher;
     }
 
-    public void setStudent(UserEntity student) {
-        this.student = student;
+    public void setTeacher(UserEntity teacher) {
+        this.teacher = teacher;
+    }
+
+    public Integer getGrade() {
+        return grade;
+    }
+
+    public void setGrade(Integer grade) {
+        this.grade = grade;
+    }
+
+    public Date getDate() {
+        return date;
+    }
+
+    public void setDate(Date date) {
+        this.date = date;
     }
 }
