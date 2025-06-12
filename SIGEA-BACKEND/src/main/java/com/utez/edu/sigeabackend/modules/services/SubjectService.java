@@ -1,23 +1,17 @@
 package com.utez.edu.sigeabackend.modules.services;
 
-import com.utez.edu.sigeabackend.config.CustomResponseEntity;
 import com.utez.edu.sigeabackend.modules.entities.ModuleEntity;
-import com.utez.edu.sigeabackend.modules.entities.QualificationEntity;
 import com.utez.edu.sigeabackend.modules.entities.SubjectEntity;
-import com.utez.edu.sigeabackend.modules.entities.UserEntity;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.SubjectDto;
 import com.utez.edu.sigeabackend.modules.repositories.ModuleRepository;
 import com.utez.edu.sigeabackend.modules.repositories.SubjectRepository;
-import com.utez.edu.sigeabackend.modules.repositories.UserRepository;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @Transactional(readOnly = true)

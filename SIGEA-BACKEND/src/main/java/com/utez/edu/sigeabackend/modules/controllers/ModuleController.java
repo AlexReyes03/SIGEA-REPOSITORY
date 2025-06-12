@@ -2,8 +2,6 @@ package com.utez.edu.sigeabackend.modules.controllers;
 
 import com.utez.edu.sigeabackend.modules.entities.ModuleEntity;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.ModuleDto;
-import com.utez.edu.sigeabackend.modules.entities.dto.modulesDto.ModuleRequestDto;
-import com.utez.edu.sigeabackend.modules.entities.dto.modulesDto.ModuleResponseDto;
 import com.utez.edu.sigeabackend.modules.services.ModuleService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
