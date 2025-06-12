@@ -1,0 +1,4 @@
+package com.utez.edu.sigeabackend.auth.DTO;
+
+public record ChangePasswordDto() {
+}
