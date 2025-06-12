@@ -34,13 +34,13 @@ export default function CareerTabs() {
 
   const go = (t) => navigate(t.path, { state: { career } });
 
-  const baseBtn = 'bg-transparent border-0 px-3 py-2 fw-medium text-muted position-relative';
+  const baseBtn = 'bg-transparent border-0 px-3 py-1 h5 text-gray-600 fw-semibold position-relative';
   const activeColor = '#276ba5';
 
   return (
     <div ref={containerRef} className="d-inline-flex position-relative">
       {tabs.map((t) => (
-        <button key={t.key} ref={(el) => (tabRefs.current[t.key] = el)} className={baseBtn} style={{ color: activeKey === t.key ? activeColor : '#276ba5' }} role="tab" aria-selected={activeKey === t.key} onClick={() => go(t)}>
+        <button key={t.key} ref={(el) => (tabRefs.current[t.key] = el)} className={baseBtn} style={{ color: activeKey === t.key ? activeColor : '#707070' }} role="tab" aria-selected={activeKey === t.key} onClick={() => go(t)}>
           {t.label}
         </button>
       ))}
@@ -55,7 +55,7 @@ export default function CareerTabs() {
           bottom: 0,
           height: 3,
           borderRadius: 9999,
-          background: 'linear-gradient(90deg, #0ea5e9 0%, #0ea5e9 100%)',
+          background: 'linear-gradient(90deg, #276ba5 0%, #276ba5 100%)',
           color: '#0ea5e9 !important',
         }}
       />

@@ -17,6 +17,13 @@ const Navbar = forwardRef(function Navbar({ toggleSidebar }, toggleRef) {
   const { user, logout } = useAuth();
   const { confirmAction } = useConfirmDialog();
 
+  const BACKEND_BASE_URL = 'http://localhost:8080';
+  function getAvatarUrl(url) {
+    if (!url) return avatarFallback;
+    if (/^https?:\/\//.test(url)) return url;
+    return `${BACKEND_BASE_URL}${url}`;
+  }
+
   useEffect(() => {
     const handler = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
@@ -78,7 +85,7 @@ const Navbar = forwardRef(function Navbar({ toggleSidebar }, toggleRef) {
 
             {/* derecha: imagen fija */}
             <div style={{ flexShrink: 0 }}>
-              <img src={user.profileImage ? `data:image/jpeg;base64,${user.profileImage}` : avatarFallback} className="rounded-circle" width={36} height={36} style={{ objectFit: 'cover' }} alt="avatar" />
+              <img src={getAvatarUrl(user.avatarUrl) ?? avatarFallback} className="rounded-circle" width={36} height={36} style={{ objectFit: 'cover' }} alt="avatar" />
             </div>
           </motion.div>
 

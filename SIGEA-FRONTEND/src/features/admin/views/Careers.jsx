@@ -34,6 +34,8 @@ export default function Careers() {
     try {
       const list = await getAllCareers();
       setCareers(list);
+      console.log(careers);
+      
     } catch (err) {
       showError('Error', 'Error al cargar carreras');
     }

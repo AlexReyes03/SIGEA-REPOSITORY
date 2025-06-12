@@ -270,3 +270,19 @@ Button {
   margin: 0 !important;
   padding: 0 !important;
 }
+
+.p-fileupload-buttonbar .p-button-label {
+  display: none;
+}
+.p-fileupload-buttonbar .p-button .p-button-icon-left {
+  margin-right: 0 !important;
+}
+
+@media (min-width: 992px) {
+  .p-fileupload-buttonbar .p-button-label {
+    display: inline;
+  }
+  .p-fileupload-buttonbar .p-button .p-button-icon-left {
+    margin-right: 0.5rem !important;
+  }
+}

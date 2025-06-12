@@ -2,12 +2,12 @@ import request from '../fetchWrapper';
 
 export const getAllCareers = async () => {
   const res = await request('/api/careers');
-  return res.data;
+  return res;
 };
 
 export const getCareerById = async (id) => {
   const res = await request(`/api/careers/${id}`);
-  return res.data;
+  return res;
 };
 
 export const createCareer = async (careerDto, plantelId) => {
