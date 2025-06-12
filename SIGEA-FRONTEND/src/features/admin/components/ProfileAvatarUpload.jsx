@@ -20,7 +20,7 @@ export default function ProfileAvatarUpload() {
   const fileUploadRef = useRef(null);
   const modalRef = useRef(null);
 
-  const BACKEND_BASE_URL = 'http://localhost:8080';
+  const BACKEND_BASE_URL = 'http://192.168.1.38:8080';
 
   function getAvatarUrl(url) {
     if (!url) return avatarFallback;
@@ -110,7 +110,7 @@ export default function ProfileAvatarUpload() {
   const itemTemplate = () =>
     file && (
       <div className="d-flex align-items-center justify-content-center text-center justify-content-lg-start text-lg-start flex-wrap my-3 w-100">
-        <img alt={file.name} src={file.objectURL || URL.createObjectURL(file)} className="rounded-circle me-3 shadow-sm" width={80} />
+        <img alt={file.name} src={file.objectURL || URL.createObjectURL(file)} className="rounded-circle me-3 shadow-sm" width={80} height={80} />
         <div className="me-auto text-truncate">
           <div className="fw-semibold">{file.name}</div>
           <small className="text-muted">{new Date().toLocaleDateString()}</small>

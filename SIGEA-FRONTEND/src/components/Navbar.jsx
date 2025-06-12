@@ -17,7 +17,7 @@ const Navbar = forwardRef(function Navbar({ toggleSidebar }, toggleRef) {
   const { user, logout } = useAuth();
   const { confirmAction } = useConfirmDialog();
 
-  const BACKEND_BASE_URL = 'http://localhost:8080';
+  const BACKEND_BASE_URL = 'http://192.168.1.38:8080';
   function getAvatarUrl(url) {
     if (!url) return avatarFallback;
     if (/^https?:\/\//.test(url)) return url;
