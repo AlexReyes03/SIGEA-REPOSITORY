@@ -20,7 +20,7 @@ export default function ProfileAvatarUpload() {
   const fileUploadRef = useRef(null);
   const modalRef = useRef(null);
 
-  const BACKEND_BASE_URL = 'http://192.168.1.38:8080';
+  const BACKEND_BASE_URL = 'http://localhost:8080';
 
   function getAvatarUrl(url) {
     if (!url) return avatarFallback;
