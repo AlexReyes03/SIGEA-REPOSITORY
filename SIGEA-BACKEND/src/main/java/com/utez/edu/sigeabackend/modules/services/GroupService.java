@@ -24,7 +24,6 @@ public class GroupService {
     private final CareerRepository careerRepository;
     private final CurriculumRepository curriculumRepository;
 
-
     public GroupService(GroupRepository repository, UserRepository userRepository, CareerRepository careerRepository, CurriculumRepository curriculumRepository) {
         this.repository = repository;
         this.userRepository = userRepository;

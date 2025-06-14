@@ -1,6 +1,7 @@
 package com.utez.edu.sigeabackend.modules.controllers;
 
 import com.utez.edu.sigeabackend.modules.entities.CareerEntity;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.CareerDto;
 import com.utez.edu.sigeabackend.modules.services.CareerService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +18,7 @@ public class CareerController {
     }
     /** GET   /sigea/api/careers */
     @GetMapping
-    public ResponseEntity<?> findAll() {
+    public ResponseEntity<List<CareerDto>> findAll() {
         return service.findAll();
     }
     /** GET   /sigea/api/careers/{id} */
@@ -27,8 +28,8 @@ public class CareerController {
     }
 
     /** GET   /sigea/api/careers/{plantelId} */
-    @GetMapping("/{plantelId}")
-    public ResponseEntity<List<CareerEntity>> findByCampus(@PathVariable long plantelId) {
+    @GetMapping("/plantel/{plantelId}")
+    public ResponseEntity<List<CareerDto>> findByCampus(@PathVariable long plantelId) {
         return service.findByCampus(plantelId);
     }
     /** POST   /sigea/api/careers*/

@@ -1,17 +1,19 @@
 package com.utez.edu.sigeabackend.modules.services;
 
-import com.utez.edu.sigeabackend.config.CustomResponseEntity;
 import com.utez.edu.sigeabackend.modules.entities.CareerEntity;
 import com.utez.edu.sigeabackend.modules.entities.PlantelEntity;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.CareerDto;
 import com.utez.edu.sigeabackend.modules.repositories.CareerRepository;
 import com.utez.edu.sigeabackend.modules.repositories.PlantelRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@Transactional(readOnly = true)
 public class CareerService {
     private final CareerRepository repository;
     private final PlantelRepository plantelRepository;
@@ -21,31 +23,32 @@ public class CareerService {
         this.plantelRepository = plantelRepository;
     }
 
-    public ResponseEntity<List<CareerEntity>> findAll() {
-        List<CareerEntity> careers = repository.findAll();
-        if (careers.isEmpty()) {
-            return ResponseEntity.ok(careers);
-        }
-        return ResponseEntity.ok(careers);
+    private CareerDto toDto(CareerEntity entity) {
+        int groupsCount = entity.getGroups() != null ? entity.getGroups().size() : 0;
+        return new CareerDto(entity.getId(), entity.getName(), groupsCount);
     }
 
-    public ResponseEntity<CareerEntity> findById(long id) {
-        CareerEntity career = repository.findById(id).orElse(null);
-        if (career != null) {
-            return ResponseEntity.ok(career);
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+    @Transactional
+    public ResponseEntity<List<CareerDto>> findAll() {
+        List<CareerDto> dtos = repository.findAll().stream()
+                .map(this::toDto)
+                .toList();
+        return ResponseEntity.ok(dtos);
     }
 
-    public ResponseEntity<List<CareerEntity>> findByCampus(long plantelId) {
-        List<CareerEntity> careers = repository.findByPlantelId(plantelId);
-        if (careers.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.ok(careers);
+    @Transactional
+    public ResponseEntity<CareerDto> findById(long id) {
+        return repository.findById(id)
+                .map(this::toDto)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @Transactional
+    public ResponseEntity<List<CareerDto>> findByCampus(long plantelId) {
+        List<CareerDto> dtos = repository.findAllWithGroupCountByPlantel(plantelId);
+        return ResponseEntity.ok(dtos);
+    }
 
     public ResponseEntity<CareerEntity> save(CareerEntity career, long plantelId) {
         PlantelEntity plantel = plantelRepository.findById(plantelId).orElse(null);

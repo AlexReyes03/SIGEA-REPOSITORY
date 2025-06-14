@@ -29,7 +29,7 @@ public class CareerEntity {
      * Relación uno-a-muchos con GroupEntity.
      * mappedBy = "career" porque en GroupEntity la Lista se llama career
      */
-    @OneToMany(mappedBy = "career", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "career", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private Set<GroupEntity> groups = new HashSet<>();
 
     public CareerEntity() {
