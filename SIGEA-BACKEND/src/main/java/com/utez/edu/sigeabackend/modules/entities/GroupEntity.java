@@ -13,7 +13,7 @@ public class GroupEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "group_id")
-    private long groupId;
+    private long id;
 
     @Column(name = "name", nullable = false, length = 100)
     private String name;
@@ -40,6 +40,10 @@ public class GroupEntity {
     @JsonIgnore
     private CareerEntity career;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "curriculum_id", nullable = false)
+    private CurriculumEntity curriculum;
+
     // Relación One-To-Many hacia la tabla intermedia GroupStudentEntity
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
@@ -47,12 +51,24 @@ public class GroupEntity {
 
     public GroupEntity() { }
 
-    public Long getId() {
-        return groupId;
+    public GroupEntity(long id, String name, LocalTime startTime, LocalTime endTime, WeekDays weekDay, UserEntity teacher, CareerEntity career, CurriculumEntity curriculum, Set<GroupStudentEntity> students) {
+        this.id = id;
+        this.name = name;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.weekDay = weekDay;
+        this.teacher = teacher;
+        this.career = career;
+        this.curriculum = curriculum;
+        this.students = students;
     }
 
-    public void setId(Long id) {
-        this.groupId = id;
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
     }
 
     public String getName() {
@@ -101,6 +117,14 @@ public class GroupEntity {
 
     public void setCareer(CareerEntity career) {
         this.career = career;
+    }
+
+    public CurriculumEntity getCurriculum() {
+        return curriculum;
+    }
+
+    public void setCurriculum(CurriculumEntity curriculum) {
+        this.curriculum = curriculum;
     }
 
     public Set<GroupStudentEntity> getStudents() {

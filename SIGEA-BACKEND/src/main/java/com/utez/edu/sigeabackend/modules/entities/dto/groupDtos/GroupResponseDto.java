@@ -9,5 +9,7 @@ public record GroupResponseDto(
         Long teacherId,
         String teacherName,
         Long careerId,
-        String careerName
+        String careerName,
+        Long curriculumId,
+        String curriculumName
 ) { }

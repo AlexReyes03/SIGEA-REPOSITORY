@@ -1,12 +1,10 @@
 package com.utez.edu.sigeabackend.modules.services;
 
-import com.utez.edu.sigeabackend.modules.entities.CareerEntity;
-import com.utez.edu.sigeabackend.modules.entities.GroupEntity;
-import com.utez.edu.sigeabackend.modules.entities.UserEntity;
-import com.utez.edu.sigeabackend.modules.entities.WeekDays;
+import com.utez.edu.sigeabackend.modules.entities.*;
 import com.utez.edu.sigeabackend.modules.entities.dto.groupDtos.GroupRequestDto;
 import com.utez.edu.sigeabackend.modules.entities.dto.groupDtos.GroupResponseDto;
 import com.utez.edu.sigeabackend.modules.repositories.CareerRepository;
+import com.utez.edu.sigeabackend.modules.repositories.CurriculumRepository;
 import com.utez.edu.sigeabackend.modules.repositories.GroupRepository;
 import com.utez.edu.sigeabackend.modules.repositories.UserRepository;
 import org.springframework.http.HttpStatus;
@@ -21,18 +19,17 @@ import java.util.stream.Collectors;
 @Service
 public class GroupService {
 
-    private final GroupRepository    repository;
-    private final UserRepository     userRepository;
-    private final CareerRepository   careerRepository;
+    private final GroupRepository repository;
+    private final UserRepository userRepository;
+    private final CareerRepository careerRepository;
+    private final CurriculumRepository curriculumRepository;
 
-    public GroupService(
-            GroupRepository repository,
-            UserRepository userRepository,
-            CareerRepository careerRepository
-    ) {
+
+    public GroupService(GroupRepository repository, UserRepository userRepository, CareerRepository careerRepository, CurriculumRepository curriculumRepository) {
         this.repository = repository;
         this.userRepository = userRepository;
         this.careerRepository = careerRepository;
+        this.curriculumRepository = curriculumRepository;
     }
 
     /**
@@ -48,7 +45,9 @@ public class GroupService {
                 g.getTeacher().getId(),
                 g.getTeacher().getName() + " " + g.getTeacher().getPaternalSurname(),
                 g.getCareer().getId(),
-                g.getCareer().getName()
+                g.getCareer().getName(),
+                g.getCurriculum().getId(),
+                g.getCurriculum().getName()
         );
     }
 
@@ -60,14 +59,16 @@ public class GroupService {
             GroupEntity target,
             GroupRequestDto dto,
             UserEntity teacher,
-            CareerEntity careerEntity
+            CareerEntity careerEntity,
+            CurriculumEntity curriculum
     ) {
         target.setName(dto.name());
         target.setStartTime(java.time.LocalTime.parse(dto.startTime()));
         target.setEndTime(java.time.LocalTime.parse(dto.endTime()));
-        target.setWeekDay(WeekDays.valueOf(dto.weekDay())); // El enum WeekDays (LUN, MAR, …)
+        target.setWeekDay(WeekDays.valueOf(dto.weekDay()));
         target.setTeacher(teacher);
         target.setCareer(careerEntity);
+        target.setCurriculum(curriculum);
     }
 
     // LISTAR TODOS
@@ -121,20 +122,21 @@ public class GroupService {
     // CREAR NUEVO GRUPO
     @Transactional
     public ResponseEntity<GroupResponseDto> create(GroupRequestDto dto) {
-        // 1) Verificar que exista el teacher
         UserEntity teacher = userRepository.findById(dto.teacherId())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "Docente no encontrado con id " + dto.teacherId()
                 ));
-        // 2) Verificar que exista la carrera
         CareerEntity careerEntity = careerRepository.findById(dto.careerId())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "Carrera no encontrada con id " + dto.careerId()
                 ));
+        CurriculumEntity curriculum = curriculumRepository.findById(dto.curriculumId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Plan de estudios no encontrado con id " + dto.curriculumId()
+                ));
 
-        // 3) Construir la entidad y poblarla en el helper
         GroupEntity g = new GroupEntity();
-        populateFromDto(g, dto, teacher, careerEntity);
+        populateFromDto(g, dto, teacher, careerEntity, curriculum);
 
         GroupEntity saved = repository.save(g);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponseDto(saved));
@@ -147,20 +149,22 @@ public class GroupService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Grupo no encontrado con id " + id
                 ));
-
-        // 1) Validar y obtener teacher
         UserEntity teacher = userRepository.findById(dto.teacherId())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "Docente no encontrado con id " + dto.teacherId()
                 ));
-        // 2) Validar y obtener career
         CareerEntity careerEntity = careerRepository.findById(dto.careerId())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "Carrera no encontrada con id " + dto.careerId()
                 ));
 
-        // 3) Actualizar campos usando el mismo helper
-        populateFromDto(existing, dto, teacher, careerEntity);
+        CurriculumEntity curriculum = curriculumRepository.findById(dto.curriculumId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Plan de estudios no encontrado con id " + dto.curriculumId()
+                ));
+
+        GroupEntity g = new GroupEntity();
+        populateFromDto(g, dto, teacher, careerEntity, curriculum);
 
         GroupEntity updated = repository.save(existing);
         return ResponseEntity.ok(toResponseDto(updated));

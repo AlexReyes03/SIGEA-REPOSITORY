@@ -20,5 +20,8 @@ public record GroupRequestDto(
         Long teacherId,
 
         @NotNull
-        Long careerId
+        Long careerId,
+
+        @NotNull
+        Long curriculumId
 ) { }
