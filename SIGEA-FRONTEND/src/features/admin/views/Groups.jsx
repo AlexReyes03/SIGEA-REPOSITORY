@@ -8,9 +8,11 @@ import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
 import { Calendar } from 'primereact/calendar';
 import { Button } from 'primereact/button';
+import { Message } from 'primereact/message';
 import { Modal } from 'bootstrap';
 
-import { getGroupByCareer, createGroup, deleteGroup } from '../../../api/academics/groupService';
+import { getGroupByCareer, createGroup, updateGroup, deleteGroup } from '../../../api/academics/groupService';
+import { getCurriculumByCareerId } from '../../../api/academics/curriculumService';
 import { getAllUsers } from '../../../api/userService';
 import { useToast } from '../../../components/providers/ToastProvider';
 import { useConfirmDialog } from '../../../components/providers/ConfirmDialogProvider';
@@ -26,11 +28,8 @@ const weekDayOptions = [
   { label: 'Sábado', value: 'SAB' },
   { label: 'Domingo', value: 'DOM' },
 ];
-
 const weekLabel = (code) => weekDayOptions.find((o) => o.value === code)?.label || code;
-
 const fmtTime = (d) => d?.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-
 const midnight = new Date();
 midnight.setHours(12, 0, 0, 0);
 
@@ -50,9 +49,12 @@ export default function Groups() {
 
   const [data, setData] = useState([]);
   const [teachers, setTeachers] = useState([]);
+  const [curriculums, setCurriculums] = useState([]);
+  const [loadingCurriculums, setLoadingCurriculums] = useState(false);
+  const [editingGroupId, setEditingGroupId] = useState(null);
   const [selected, setSelected] = useState(null);
   const [search, setSearch] = useState('');
-  const [form, setForm] = useState({ name: '', weekDay: null, startTime: midnight, endTime: midnight, teacher: null });
+  const [form, setForm] = useState({ name: '', weekDay: null, startTime: midnight, endTime: midnight, teacher: null, curriculum: null });
 
   const loadGroups = async () => {
     const res = await getGroupByCareer(career.id);
@@ -69,8 +71,32 @@ export default function Groups() {
       .catch((e) => showError('Error', 'Ha ocurrido un error al cargar los docentes'));
   }, []);
 
+  useEffect(() => {
+    if (career?.id) {
+      setLoadingCurriculums(true);
+      getCurriculumByCareerId(career.id)
+        .then((res) => setCurriculums(Array.isArray(res) ? res : res?.data ?? []))
+        .catch(() => setCurriculums([]))
+        .finally(() => setLoadingCurriculums(false));
+    }
+  }, [career?.id]);
+
+  const openUpdateModal = (group) => {
+    setForm({
+      name: group.name,
+      weekDay: group.weekDay,
+      startTime: new Date(`1970-01-01T${group.startTime}`),
+      endTime: new Date(`1970-01-01T${group.endTime}`),
+      teacher: teachers.find((t) => t.id === group.teacherId) || null,
+      curriculum: curriculums.find((c) => c.id === group.curriculumId) || null,
+    });
+    setEditingGroupId(group.groupId);
+    new Modal(updateModalRef.current).show();
+  };
+
   const saveGroup = async (e) => {
     e.preventDefault();
+    if (!form.curriculum) return showError('Debes seleccionar un plan de estudios');
 
     const payload = {
       name: form.name,
@@ -79,6 +105,7 @@ export default function Groups() {
       endTime: fmtTime(form.endTime),
       teacherId: form.teacher?.id,
       careerId: career.id,
+      curriculumId: form.curriculum.id,
     };
 
     try {
@@ -86,9 +113,33 @@ export default function Groups() {
       await loadGroups();
       showSuccess('Grupo creado');
       Modal.getInstance(createModalRef.current).hide();
-      setForm({ name: '', weekDay: null, startTime: null, endTime: null, teacher: null });
+      setForm({ name: '', weekDay: null, startTime: midnight, endTime: midnight, teacher: null, curriculum: null });
     } catch (e) {
-      showError('Error', e.message || 'No se pudo crear');
+      showError('Error', 'No se pudo crear');
+    }
+  };
+
+  const updateGroup = async (e) => {
+    e.preventDefault();
+    if (!form.curriculum) return showError('Debes seleccionar un plan de estudios');
+    try {
+      const payload = {
+        name: form.name,
+        weekDay: form.weekDay,
+        startTime: fmtTime(form.startTime),
+        endTime: fmtTime(form.endTime),
+        teacherId: form.teacher?.id,
+        careerId: career.id,
+        curriculumId: form.curriculum.id,
+      };
+      await updateGroup(editingGroupId, payload);
+      await loadGroups();
+      showSuccess('Grupo actualizado');
+      Modal.getInstance(updateModalRef.current).hide();
+      setEditingGroupId(null);
+      setForm({ name: '', weekDay: null, startTime: midnight, endTime: midnight, teacher: null, curriculum: null });
+    } catch (e) {
+      showError('Error', 'No se pudo actualizar');
     }
   };
 
@@ -139,7 +190,7 @@ export default function Groups() {
 
   const toolbarLeft = () => (
     <div className="flex flex-wrap">
-      <Button ref={createButtonRef} icon="pi pi-plus" severity="primary" className="me-2" onClick={() => new Modal(createModalRef.current).show()}>
+      <Button ref={createButtonRef} icon="pi pi-plus" severity="primary" disabled={curriculums.length === 0} className="me-2" onClick={() => new Modal(createModalRef.current).show()}>
         <span className="d-none d-sm-inline ms-1">Crear grupo</span>
       </Button>
       <Button icon="pi pi-trash" severity="danger" disabled={!selected?.length} onClick={removeSelected}>
@@ -149,14 +200,14 @@ export default function Groups() {
   );
 
   const toolbarRight = () => (
-    <Button icon="pi pi-upload" className="p-button-help" onClick={() => dt.current.exportCSV()}>
+    <Button icon="pi pi-upload" severity="help" disabled={data.length === 0} onClick={() => dt.current.exportCSV()}>
       <span className="d-none d-sm-inline ms-1">Exportar</span>
     </Button>
   );
 
   const actions = (row) => (
     <>
-      <Button ref={updateButtonRef} icon="pi pi-pencil" rounded outlined className="me-2" onClick={() => new Modal(updateModalRef.current).show()} />
+      <Button ref={updateButtonRef} icon="pi pi-pencil" rounded outlined className="me-2" onClick={() => openUpdateModal(row)} />
       <Button icon="pi pi-trash" rounded outlined severity="danger" onClick={() => removeGroup(row)} />
     </>
   );
@@ -175,29 +226,35 @@ export default function Groups() {
 
       <Toolbar className="my-2 py-2" start={toolbarLeft} end={toolbarRight} />
 
-      <div className="card border-0">
-        <DataTable
-          ref={dt}
-          value={data}
-          selection={selected}
-          onSelectionChange={(e) => setSelected(e.value)}
-          dataKey="groupId"
-          paginator
-          rows={5}
-          rowsPerPageOptions={[5, 10, 25]}
-          globalFilter={search}
-          header={header}
-          emptyMessage={<p className="text-center my-5">Aún no hay registros</p>}
-        >
-          <Column selectionMode="multiple" headerStyle={{ width: '3rem' }} />
-          <Column field="name" header="Nombre" sortable />
-          <Column field="weekDay" header="Día" body={(row) => weekLabel(row.weekDay)} sortable />
-          <Column field="startTime" header="Inicio" sortable />
-          <Column field="endTime" header="Fin" sortable />
-          <Column field="teacherName" header="Docente" sortable />
-          <Column body={actions} header="Acciones" exportable={false} />
-        </DataTable>
-      </div>
+      {(curriculums.length === 0 ) ? (
+        <div className="d-flex justify-content-center my-2">
+          <Message severity="warn" text="Para crear un grupo, primero debes definir un plan de estudios en la sección 'Plan de estudios'." className="py-4" />
+        </div>
+      ) : (
+        <div className="card border-0">
+          <DataTable
+            ref={dt}
+            value={data}
+            selection={selected}
+            onSelectionChange={(e) => setSelected(e.value)}
+            dataKey="groupId"
+            paginator
+            rows={5}
+            rowsPerPageOptions={[5, 10, 25]}
+            globalFilter={search}
+            header={header}
+            emptyMessage={<p className="text-center my-5">Aún no hay registros</p>}
+          >
+            <Column selectionMode="multiple" headerStyle={{ width: '3rem' }} />
+            <Column field="name" header="Nombre" sortable />
+            <Column field="weekDay" header="Día" body={(row) => weekLabel(row.weekDay)} sortable />
+            <Column field="startTime" header="Inicio" sortable />
+            <Column field="endTime" header="Fin" sortable />
+            <Column field="teacherName" header="Docente" sortable />
+            <Column body={actions} header="Acciones" exportable={false} />
+          </DataTable>
+        </div>
+      )}
 
       {/* ───────── MODAL CREAR ───────── */}
       <div className="modal fade" ref={createModalRef} tabIndex={-1}>
@@ -239,16 +296,26 @@ export default function Groups() {
 
                   <div className="col-6 mb-3">
                     <label className="form-label">Plan de estudios</label>
-                    <Dropdown className="w-100" value={null} options={null} optionLabel={null} placeholder="Seleccione plan…" filter  />
+                    <Dropdown
+                      className="w-100"
+                      value={form.curriculum}
+                      options={curriculums}
+                      optionLabel="name"
+                      placeholder="Seleccione plan…"
+                      filter
+                      onChange={(e) => setForm({ ...form, curriculum: e.value })}
+                      required
+                      disabled={loadingCurriculums || curriculums.length === 0}
+                    />
                   </div>
                 </div>
               </div>
 
               <div className="modal-footer">
-                <Button type='reset' icon="pi pi-times" severity="secondary" outlined data-bs-dismiss="modal">
+                <Button type="reset" icon="pi pi-times" severity="secondary" outlined data-bs-dismiss="modal">
                   <span className="d-none d-sm-inline ms-1">Cancelar</span>
                 </Button>
-                <Button type='submit' icon="pi pi-check" severity="primary" data-bs-dismiss="modal">
+                <Button type="submit" icon="pi pi-check" severity="primary" data-bs-dismiss="modal" disabled={curriculums.length === 0}>
                   <span className="d-none d-sm-inline ms-1">Guardar</span>
                 </Button>
               </div>
@@ -261,23 +328,20 @@ export default function Groups() {
       <div className="modal fade" ref={updateModalRef} tabIndex={-1}>
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
-            <form onSubmit={saveGroup}>
+            <form onSubmit={updateGroup}>
               <div className="modal-header">
                 <h5 className="modal-title">Modificar grupo</h5>
                 <button type="button" className="btn-close" data-bs-dismiss="modal" />
               </div>
-
               <div className="modal-body">
                 <div className="mb-3">
                   <label className="form-label">Nombre</label>
                   <InputText className="w-100" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
                 </div>
-
                 <div className="mb-3">
                   <label className="form-label">Día</label>
                   <Dropdown value={form.weekDay} options={weekDayOptions} placeholder="Seleccione…" onChange={(e) => setForm({ ...form, weekDay: e.value })} className="w-100" required />
                 </div>
-
                 <div className="row">
                   <div className="col mb-3">
                     <label className="form-label">Hora inicio</label>
@@ -288,18 +352,21 @@ export default function Groups() {
                     <Calendar className="w-100 gap-1" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.value })} timeOnly hourFormat="12" showIcon required />
                   </div>
                 </div>
-
                 <div className="mb-3">
                   <label className="form-label">Docente</label>
                   <Dropdown className="w-100" value={form.teacher} options={teachers} optionLabel={(t) => `${t.name} ${t.paternalSurname}`} placeholder="Seleccione docente…" filter onChange={(e) => setForm({ ...form, teacher: e.value })} required />
                 </div>
+                <div className="mb-3">
+                  <label className="form-label">Plan de estudios</label>
+                  <Dropdown className="w-100" value={form.curriculum} options={curriculums} optionLabel="name" placeholder="Seleccione plan…" filter onChange={(e) => setForm({ ...form, curriculum: e.value })} required disabled={curriculums.length === 0} />
+                  {curriculums.length === 0 && <Message severity="warn" text="Para crear o modificar un grupo, primero debes definir un plan de estudios en la sección 'Plan de estudios'." className="mt-2" />}
+                </div>
               </div>
-
               <div className="modal-footer">
-                <Button type='reset' icon="pi pi-times" severity="secondary" outlined data-bs-dismiss="modal">
+                <Button type="reset" icon="pi pi-times" severity="secondary" outlined data-bs-dismiss="modal" onClick={() => setEditingGroupId(null)}>
                   <span className="d-none d-sm-inline ms-1">Cancelar</span>
                 </Button>
-                <Button type='submit' icon="pi pi-check" severity="primary" data-bs-dismiss="modal">
+                <Button type="submit" icon="pi pi-check" severity="primary" data-bs-dismiss="modal" disabled={curriculums.length === 0}>
                   <span className="d-none d-sm-inline ms-1">Modificar</span>
                 </Button>
               </div>
