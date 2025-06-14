@@ -9,6 +9,7 @@ import { Dropdown } from 'primereact/dropdown';
 import { Calendar } from 'primereact/calendar';
 import { Button } from 'primereact/button';
 import { Message } from 'primereact/message';
+import { ProgressSpinner } from 'primereact/progressspinner';
 import { Modal } from 'bootstrap';
 
 import { getGroupByCareer, createGroup, updateGroup, deleteGroup } from '../../../api/academics/groupService';
@@ -38,6 +39,7 @@ export default function Groups() {
   const career = useLocation().state?.career;
   const { showSuccess, showError } = useToast();
   const { confirmAction } = useConfirmDialog();
+  const [loading, setLoading] = useState(true);
 
   const createModalRef = useRef(null);
   const createButtonRef = useRef(null);
@@ -57,8 +59,15 @@ export default function Groups() {
   const [form, setForm] = useState({ name: '', weekDay: null, startTime: midnight, endTime: midnight, teacher: null, curriculum: null });
 
   const loadGroups = async () => {
-    const res = await getGroupByCareer(career.id);
-    setData(Array.isArray(res) ? res : res?.data ?? []);
+    setLoading(true);
+    try {
+      const res = await getGroupByCareer(career.id);
+      setData(Array.isArray(res) ? res : res?.data ?? []);
+    } catch (e) {
+      showError('Error', 'Ha ocurrido un error al cargar los grupos');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -209,6 +218,7 @@ export default function Groups() {
     <>
       <Button ref={updateButtonRef} icon="pi pi-pencil" rounded outlined className="me-2" onClick={() => openUpdateModal(row)} />
       <Button icon="pi pi-trash" rounded outlined severity="danger" onClick={() => removeGroup(row)} />
+      <Button icon="pi pi-trash" rounded text tooltip="Ver detalles" className="me-2" onClick={() => navigate('/admin/careers/groups/detail', { state: { group: row, career } })} />
     </>
   );
 
@@ -226,11 +236,11 @@ export default function Groups() {
 
       <Toolbar className="my-2 py-2" start={toolbarLeft} end={toolbarRight} />
 
-      {(curriculums.length === 0 ) ? (
-        <div className="d-flex justify-content-center my-2">
-          <Message severity="warn" text="Para crear un grupo, primero debes definir un plan de estudios en la sección 'Plan de estudios'." className="py-4" />
+      {loading ? (
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 220 }}>
+          <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" />
         </div>
-      ) : (
+      ) : curriculums?.length !== 0 ? (
         <div className="card border-0">
           <DataTable
             ref={dt}
@@ -253,6 +263,10 @@ export default function Groups() {
             <Column field="teacherName" header="Docente" sortable />
             <Column body={actions} header="Acciones" exportable={false} />
           </DataTable>
+        </div>
+      ) : (
+        <div className="d-flex justify-content-center my-2">
+          <Message severity="warn" text="Para crear un grupo, primero debes definir un plan de estudios en la sección 'Plan de estudios'." className="py-4" />
         </div>
       )}
 
@@ -280,11 +294,11 @@ export default function Groups() {
                 <div className="row">
                   <div className="col mb-3">
                     <label className="form-label">Hora inicio</label>
-                    <Calendar className="w-100 gap-1" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.value })} timeOnly hourFormat="12" showIcon required />
+                    <Calendar className="w-100 gap-1" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.value })} timeOnly hourFormat="12" showIcon icon={() => <i className="pi pi-clock" />} required />
                   </div>
                   <div className="col mb-3">
                     <label className="form-label">Hora fin</label>
-                    <Calendar className="w-100 gap-1" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.value })} timeOnly hourFormat="12" showIcon required />
+                    <Calendar className="w-100 gap-1" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.value })} timeOnly hourFormat="12" showIcon icon={() => <i className="pi pi-clock" />} required />
                   </div>
                 </div>
 
@@ -345,11 +359,11 @@ export default function Groups() {
                 <div className="row">
                   <div className="col mb-3">
                     <label className="form-label">Hora inicio</label>
-                    <Calendar className="w-100 gap-1" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.value })} timeOnly hourFormat="12" showIcon required />
+                    <Calendar className="w-100 gap-1" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.value })} timeOnly hourFormat="12" showIcon icon={() => <i className="pi pi-clock" />} required />
                   </div>
                   <div className="col mb-3">
                     <label className="form-label">Hora fin</label>
-                    <Calendar className="w-100 gap-1" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.value })} timeOnly hourFormat="12" showIcon required />
+                    <Calendar className="w-100 gap-1" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.value })} timeOnly hourFormat="12" showIcon icon={() => <i className="pi pi-clock" />} required />
                   </div>
                 </div>
                 <div className="mb-3">

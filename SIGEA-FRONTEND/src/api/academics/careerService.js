@@ -10,6 +10,11 @@ export const getCareerById = async (id) => {
   return res;
 };
 
+export const getCareerByPlantelId = async (PlantelId) => {
+  const res = await request(`/api/careers/plantel/${PlantelId}`);
+  return res;
+};
+
 export const createCareer = async (careerDto, plantelId) => {
   return await request(`/api/careers?plantelId=${plantelId}`, {
     method: 'POST',

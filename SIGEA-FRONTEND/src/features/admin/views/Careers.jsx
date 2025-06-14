@@ -8,7 +8,7 @@ import { Modal } from 'bootstrap';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/providers/ToastProvider';
 import { useConfirmDialog } from '../../../components/providers/ConfirmDialogProvider';
-import { getAllCareers, createCareer, updateCareer, deleteCareer } from '../../../api/academics/careerService';
+import { getCareerByPlantelId, createCareer, updateCareer, deleteCareer } from '../../../api/academics/careerService';
 import useBootstrapModalFocus from '../../../utils/hooks/useBootstrapModalFocus';
 
 export default function Careers() {
@@ -32,10 +32,8 @@ export default function Careers() {
 
   const loadCareers = async () => {
     try {
-      const list = await getAllCareers();
+      const list = await getCareerByPlantelId(user.campus.id);
       setCareers(list);
-      console.log(careers);
-      
     } catch (err) {
       showError('Error', 'Error al cargar carreras');
     }
@@ -139,7 +137,7 @@ export default function Careers() {
                   </span>
                   <span>
                     <MdOutlineBook className="me-2 fs-4" />
-                    Grupos: <strong>{career.groups.length || 0}</strong>
+                    Grupos: <strong>{career.groupsCount || 0}</strong>
                   </span>
                 </div>
               </div>
