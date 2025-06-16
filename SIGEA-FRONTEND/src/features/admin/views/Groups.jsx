@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { MdOutlineGroup } from 'react-icons/md';
 import { BreadCrumb } from 'primereact/breadcrumb';
 import { Toolbar } from 'primereact/toolbar';
 import { DataTable } from 'primereact/datatable';
@@ -39,7 +40,6 @@ export default function Groups() {
   const career = useLocation().state?.career;
   const { showSuccess, showError } = useToast();
   const { confirmAction } = useConfirmDialog();
-  const [loading, setLoading] = useState(true);
 
   const createModalRef = useRef(null);
   const createButtonRef = useRef(null);
@@ -49,45 +49,37 @@ export default function Groups() {
   useBootstrapModalFocus(createModalRef, createButtonRef);
   useBootstrapModalFocus(updateModalRef, updateButtonRef);
 
+  const [loading, setLoading] = useState(true);
   const [data, setData] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [curriculums, setCurriculums] = useState([]);
-  const [loadingCurriculums, setLoadingCurriculums] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState(null);
   const [selected, setSelected] = useState(null);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({ name: '', weekDay: null, startTime: midnight, endTime: midnight, teacher: null, curriculum: null });
 
-  const loadGroups = async () => {
-    setLoading(true);
-    try {
-      const res = await getGroupByCareer(career.id);
-      setData(Array.isArray(res) ? res : res?.data ?? []);
-    } catch (e) {
-      showError('Error', 'Ha ocurrido un error al cargar los grupos');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    if (career?.id) loadGroups().catch((e) => showError('Error', 'Ha ocurrido un error al cargar los grupos'));
-  }, [career?.id]);
-
-  useEffect(() => {
-    getAllUsers()
-      .then((u) => setTeachers(u.filter((x) => x.roleName === 'TEACHER')))
-      .catch((e) => showError('Error', 'Ha ocurrido un error al cargar los docentes'));
-  }, []);
-
-  useEffect(() => {
-    if (career?.id) {
-      setLoadingCurriculums(true);
-      getCurriculumByCareerId(career.id)
-        .then((res) => setCurriculums(Array.isArray(res) ? res : res?.data ?? []))
-        .catch(() => setCurriculums([]))
-        .finally(() => setLoadingCurriculums(false));
-    }
+    const loadAll = async () => {
+      if (!career?.id) {
+        navigate('/admin/careers');
+        return;
+      }
+      setLoading(true);
+      try {
+        const [groupsRes, usersRes, curriculumsRes] = await Promise.all([getGroupByCareer(career.id), getAllUsers(), getCurriculumByCareerId(career.id)]);
+        setData(Array.isArray(groupsRes) ? groupsRes : groupsRes?.data ?? []);
+        setTeachers(Array.isArray(usersRes) ? usersRes.filter((x) => x.roleName === 'TEACHER') : []);
+        setCurriculums(Array.isArray(curriculumsRes) ? curriculumsRes : curriculumsRes?.data ?? []);
+      } catch (e) {
+        showError('Error', 'Ocurrió un error al cargar los datos');
+        setData([]);
+        setTeachers([]);
+        setCurriculums([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadAll();
   }, [career?.id]);
 
   const openUpdateModal = (group) => {
@@ -188,7 +180,12 @@ export default function Groups() {
   const header = useMemo(
     () => (
       <div className="d-flex flex-wrap gap-2 align-items-center justify-content-between w-100">
-        <h4 className="m-0">Grupos de la carrera</h4>
+        <div className="d-flex align-items-center">
+          <div className="title-icon p-1 rounded-circle">
+            <MdOutlineGroup size={40} className="p-1" />
+          </div>
+          <h6 className="text-blue-500 fs-5 fw-semibold ms-2 mb-0">Grupos de la carrera</h6>
+        </div>
         <span className="p-input-icon-left">
           <InputText placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </span>
@@ -215,11 +212,11 @@ export default function Groups() {
   );
 
   const actions = (row) => (
-    <>
-      <Button ref={updateButtonRef} icon="pi pi-pencil" rounded outlined className="me-2" onClick={() => openUpdateModal(row)} />
-      <Button icon="pi pi-trash" rounded outlined severity="danger" onClick={() => removeGroup(row)} />
-      <Button icon="pi pi-trash" rounded text tooltip="Ver detalles" className="me-2" onClick={() => navigate('/admin/careers/groups/detail', { state: { group: row, career } })} />
-    </>
+    <div className="d-flex align-items-center justify-content-center">
+      <Button ref={updateButtonRef} icon="pi pi-pencil" rounded outlined tooltip="Editar" onClick={() => openUpdateModal(row)} />
+      <Button icon="pi pi-trash" rounded outlined severity="danger" className="mx-2" tooltip="Eliminar este grupo" tooltipOptions={{ position: 'left' }} onClick={() => removeGroup(row)} />
+      <Button icon="pi pi-arrow-up-right" rounded outlined tooltip="Ver detalles" tooltipOptions={{ position: 'left' }} onClick={() => navigate('/admin/careers/groups/detail', { state: { group: row, career } })} />
+    </div>
   );
 
   return (
@@ -261,6 +258,7 @@ export default function Groups() {
             <Column field="startTime" header="Inicio" sortable />
             <Column field="endTime" header="Fin" sortable />
             <Column field="teacherName" header="Docente" sortable />
+            <Column field="curriculumName" header="Plan de estudios" sortable />
             <Column body={actions} header="Acciones" exportable={false} />
           </DataTable>
         </div>
@@ -310,17 +308,7 @@ export default function Groups() {
 
                   <div className="col-6 mb-3">
                     <label className="form-label">Plan de estudios</label>
-                    <Dropdown
-                      className="w-100"
-                      value={form.curriculum}
-                      options={curriculums}
-                      optionLabel="name"
-                      placeholder="Seleccione plan…"
-                      filter
-                      onChange={(e) => setForm({ ...form, curriculum: e.value })}
-                      required
-                      disabled={loadingCurriculums || curriculums.length === 0}
-                    />
+                    <Dropdown className="w-100" value={form.curriculum} options={curriculums} optionLabel="name" placeholder="Seleccione plan…" filter onChange={(e) => setForm({ ...form, curriculum: e.value })} required disabled={loading || curriculums.length === 0} />
                   </div>
                 </div>
               </div>

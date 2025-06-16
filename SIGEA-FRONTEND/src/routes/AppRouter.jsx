@@ -17,8 +17,8 @@ import AdminProfile from '../features/admin/views/Profile';
 import AdminUsersManagement from '../features/admin/views/UsersManagment';
 import AdminCareers from '../features/admin/views/Careers';
 import AdminCareerGroups from '../features/admin/views/Groups';
-import AdminCareerCurriculums from '../features/admin/views/Curriculums'
-import AdminGroupDetail from '../features/admin/views/GroupDetail'
+import AdminCareerCurriculums from '../features/admin/views/Curriculums';
+import AdminGroupDetail from '../features/admin/views/GroupDetail';
 
 import TeacherDashboard from '../features/teacher/views/Dashboard';
 
@@ -64,7 +64,7 @@ export default function AppRouter() {
       </Route>
 
       {/* PRIVADAS Y PROTEGIDAS */}
-      <Route element={<PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'STUDENT']} />}>
+      <Route element={<PrivateRoute allowedRoles={['ADMIN']} />}>
         <Route element={<AppLayout />}>
           {/* ADMIN */}
           <Route path="admin" element={<AdminDashboard />} />
@@ -74,10 +74,25 @@ export default function AppRouter() {
           <Route path="admin/careers/groups" element={<AdminCareerGroups />} />
           <Route path="admin/careers/curriculums" element={<AdminCareerCurriculums />} />
           <Route path="admin/careers/groups/detail" element={<AdminGroupDetail />} />
+        </Route>
+      </Route>
 
+      <Route element={<PrivateRoute allowedRoles={['TEACHER']} />}>
+        <Route element={<AppLayout />}>
           {/* DOCENTE */}
           <Route path="teacher" element={<TeacherDashboard />} />
+        </Route>
+      </Route>
 
+      <Route element={<PrivateRoute allowedRoles={['SUPERVISOR']} />}>
+        <Route element={<AppLayout />}>
+          {/* ESTUDIANTE */}
+          <Route path="supervisor" element={<StudentDashboard />} />
+        </Route>
+      </Route>
+
+      <Route element={<PrivateRoute allowedRoles={['STUDENT']} />}>
+        <Route element={<AppLayout />}>
           {/* ESTUDIANTE */}
           <Route path="student" element={<StudentDashboard />} />
         </Route>

@@ -4,6 +4,10 @@ export const getCurriculumByCareerId = async (careerId) => {
   return await request(`/api/curriculums/career/${careerId}`);
 };
 
+export const getCurriculumById = async (id) => {
+  return await request(`/api/curriculums/${id}`);
+};
+
 export const createCurriculum = async (curriculum) => {
   return await request(`/api/curriculums`, {
     method: 'POST',

@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useConfirmDialog } from './providers/ConfirmDialogProvider';
 import logo from '../assets/img/logo_cetec.png';
 import avatarFallback from '../assets/img/profile.png';
+import { BACKEND_BASE_URL } from '../api/common-url';
 
 const Navbar = forwardRef(function Navbar({ toggleSidebar }, toggleRef) {
   const navigate = useNavigate();
@@ -17,7 +18,6 @@ const Navbar = forwardRef(function Navbar({ toggleSidebar }, toggleRef) {
   const { user, logout } = useAuth();
   const { confirmAction } = useConfirmDialog();
 
-  const BACKEND_BASE_URL = 'http://localhost:8080';
   function getAvatarUrl(url) {
     if (!url) return avatarFallback;
     if (/^https?:\/\//.test(url)) return url;

@@ -6,6 +6,7 @@ import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { InputNumber } from 'primereact/inputnumber';
 import { OverlayPanel } from 'primereact/overlaypanel';
+import { ProgressSpinner } from 'primereact/progressspinner';
 import { Message } from 'primereact/message';
 import { Modal } from 'bootstrap';
 
@@ -56,18 +57,32 @@ export default function Curriculums() {
   const selectedModule = selectedCurriculum?.modules.find((m) => m.id === selectedModuleId) || null;
   const selectedSubject = selectedModule?.subjects.find((s) => s.id === selectedSubjectId) || null;
 
+  const [loading, setLoading] = useState(true);
   const [newCurrName, setNewCurrName] = useState('');
   const [newModName, setNewModName] = useState('');
   const [newSubName, setNewSubName] = useState('');
   const [weeksNumber, setWeeksNumber] = useState(1);
 
+  useEffect(() => {
+    if (!career?.id) {
+      navigate('/admin/careers');
+    }
+  }, [career?.id, navigate]);
+
   const loadCurriculums = async () => {
-    const res = await getCurriculumByCareerId(career.id);
-    setData(Array.isArray(res) ? res : res?.data ?? []);
+    setLoading(true);
+    try {
+      const res = await getCurriculumByCareerId(career.id);
+      setData(Array.isArray(res) ? res : res?.data ?? []);
+    } catch (e) {
+      showError('Error', 'Ha ocurrido un error al cargar los planes de estudio');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    if (career?.id) loadCurriculums().catch((e) => showError('Error', 'Ha ocurrido un error al cargar los planes de estudio'));
+    if (career?.id) loadCurriculums();
   }, [career?.id]);
 
   useEffect(() => {
@@ -276,86 +291,95 @@ export default function Curriculums() {
               {!isCurriculumsCollapsed && (
                 <>
                   <hr />
-                  <div className="d-grid gap-2 px-2 overflow-auto" style={{ maxHeight: '33rem' }}>
-                    {data.length === 0 ? (
-                      <div className="text-center">
-                        <Message severity="info" text="Aún no hay planes de estudio" />
+                  {loading ? (
+                    <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 150 }}>
+                      <div className="d-flex flex-column align-items-center">
+                        <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" />
+                        <span className="mt-3 fs-5 text-muted">Cargando...</span>
                       </div>
-                    ) : (
-                      data.map((curriculum) => (
-                        <React.Fragment key={curriculum.id}>
-                          <div
-                            className={`card p-3 hovereable d-flex flex-row align-items-center justify-content-between ${selectedCurriculumId === curriculum.id ? 'bg-blue-500 text-white' : ''}`}
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => {
-                              if (selectedCurriculumId === curriculum.id) {
-                                setSelectedCurriculumId(null);
-                                setSelectedModuleId(null);
-                                setSelectedSubjectId(null);
-                              } else {
-                                setSelectedCurriculumId(curriculum.id);
-                                setSelectedModuleId(null);
-                                setSelectedSubjectId(null);
-                                setIsModuleCollapsed(false);
-                              }
-                            }}
-                          >
-                            <span className="text-truncate flex-grow-1">{curriculum.name}</span>
-                            <button
-                              className={`btn border-0 p-1 ms-2 ${selectedCurriculumId === curriculum.id && 'text-white'}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingCurriculum(curriculum);
-                                opCurrRef.current.toggle(e);
-                              }}
-                              tabIndex={-1}
-                            >
-                              <MdOutlineMoreHoriz size={22} />
-                            </button>
-                          </div>
-
-                          <OverlayPanel ref={opCurrRef}>
-                            <button
-                              className="dropdown-item"
+                    </div>
+                  ) : (
+                    <div className="d-grid gap-2 px-2 overflow-auto" style={{ maxHeight: '33rem' }}>
+                      {data.length === 0 ? (
+                        <div className="text-center">
+                          <Message severity="info" text="Aún no hay planes de estudio" />
+                        </div>
+                      ) : (
+                        data.map((curriculum) => (
+                          <React.Fragment key={curriculum.id}>
+                            <div
+                              className={`card p-3 hovereable d-flex flex-row align-items-center justify-content-between ${selectedCurriculumId === curriculum.id ? 'bg-blue-500 text-white' : ''}`}
+                              style={{ cursor: 'pointer' }}
                               onClick={() => {
-                                openEditCurriculumModal(curriculum);
-                                opCurrRef.current.hide();
-                              }}
-                            >
-                              <i className="pi pi-pencil me-2" />
-                              Modificar
-                            </button>
-                            <button
-                              className="dropdown-item text-danger"
-                              onClick={() => {
-                                if (editingCurriculum.modules && editingCurriculum.modules.length > 0) {
-                                  showError('No se puede eliminar', 'El plan tiene módulos registrados');
-                                  opCurrRef.current.hide();
-                                  return;
+                                if (selectedCurriculumId === curriculum.id) {
+                                  setSelectedCurriculumId(null);
+                                  setSelectedModuleId(null);
+                                  setSelectedSubjectId(null);
+                                } else {
+                                  setSelectedCurriculumId(curriculum.id);
+                                  setSelectedModuleId(null);
+                                  setSelectedSubjectId(null);
+                                  setIsModuleCollapsed(false);
                                 }
-                                confirmAction({
-                                  message: '¿Estás seguro? Esta acción no se podrá deshacer',
-                                  header: `Eliminar plan "${editingCurriculum.name}"`,
-                                  icon: 'pi pi-exclamation-triangle',
-                                  acceptClassName: 'p-button-danger',
-                                  acceptLabel: 'Confirmar',
-                                  onAccept: async () => {
-                                    await deleteCurriculum(editingCurriculum.id);
-                                    showSuccess('Plan eliminado');
-                                    await loadCurriculums();
-                                  },
-                                });
-                                opCurrRef.current.hide();
                               }}
                             >
-                              <i className="pi pi-trash me-2" />
-                              Eliminar
-                            </button>
-                          </OverlayPanel>
-                        </React.Fragment>
-                      ))
-                    )}
-                  </div>
+                              <span className="text-truncate flex-grow-1">{curriculum.name}</span>
+                              <button
+                                className={`btn border-0 p-1 ms-2 ${selectedCurriculumId === curriculum.id && 'text-white'}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingCurriculum(curriculum);
+                                  opCurrRef.current.toggle(e);
+                                }}
+                                tabIndex={-1}
+                              >
+                                <MdOutlineMoreHoriz size={22} />
+                              </button>
+                            </div>
+
+                            <OverlayPanel ref={opCurrRef}>
+                              <button
+                                className="dropdown-item"
+                                onClick={() => {
+                                  openEditCurriculumModal(curriculum);
+                                  opCurrRef.current.hide();
+                                }}
+                              >
+                                <i className="pi pi-pencil me-2" />
+                                Modificar
+                              </button>
+                              <button
+                                className="dropdown-item text-danger"
+                                onClick={() => {
+                                  if (editingCurriculum.modules && editingCurriculum.modules.length > 0) {
+                                    showError('No se puede eliminar', 'El plan tiene módulos registrados');
+                                    opCurrRef.current.hide();
+                                    return;
+                                  }
+                                  confirmAction({
+                                    message: '¿Estás seguro? Esta acción no se podrá deshacer',
+                                    header: `Eliminar plan "${editingCurriculum.name}"`,
+                                    icon: 'pi pi-exclamation-triangle',
+                                    acceptClassName: 'p-button-danger',
+                                    acceptLabel: 'Confirmar',
+                                    onAccept: async () => {
+                                      await deleteCurriculum(editingCurriculum.id);
+                                      showSuccess('Plan eliminado');
+                                      await loadCurriculums();
+                                    },
+                                  });
+                                  opCurrRef.current.hide();
+                                }}
+                              >
+                                <i className="pi pi-trash me-2" />
+                                Eliminar
+                              </button>
+                            </OverlayPanel>
+                          </React.Fragment>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </>
               )}
             </div>

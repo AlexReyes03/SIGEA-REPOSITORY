@@ -4,10 +4,12 @@ import { ProgressBar } from 'primereact/progressbar';
 import { Button } from 'primereact/button';
 import { Tag } from 'primereact/tag';
 import { Modal } from 'bootstrap';
+
 import avatarFallback from '../../../assets/img/profile.png';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/providers/ToastProvider';
 import { uploadAvatar } from '../../../api/mediaService';
+import { BACKEND_BASE_URL } from '../../../api/common-url';
 
 export default function ProfileAvatarUpload() {
   const { user, updateUser } = useAuth();
@@ -19,8 +21,6 @@ export default function ProfileAvatarUpload() {
 
   const fileUploadRef = useRef(null);
   const modalRef = useRef(null);
-
-  const BACKEND_BASE_URL = 'http://localhost:8080';
 
   function getAvatarUrl(url) {
     if (!url) return avatarFallback;

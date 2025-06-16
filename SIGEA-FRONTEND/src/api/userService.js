@@ -7,7 +7,7 @@ export const getAllUsers = async () => {
 
 export const getUserById = async (id) => {
   const res = await request(`/api/users/${id}`);
-  return res.data;
+  return res;
 };
 
 export const getUserByRole = async (roleId) =>{
