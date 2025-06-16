@@ -12,8 +12,9 @@ import VerifyCodeForm from '../features/auth/views/VerifyCode';
 import ResetPasswordForm from '../features/auth/views/ResetPassword';
 import NotFound from '../components/404';
 
+import Profile from '../features/admin/views/Profile';
+
 import AdminDashboard from '../features/admin/views/Dashboard';
-import AdminProfile from '../features/admin/views/Profile';
 import AdminUsersManagement from '../features/admin/views/UsersManagment';
 import AdminCareers from '../features/admin/views/Careers';
 import AdminCareerGroups from '../features/admin/views/Groups';
@@ -21,6 +22,7 @@ import AdminCareerCurriculums from '../features/admin/views/Curriculums';
 import AdminGroupDetail from '../features/admin/views/GroupDetail';
 
 import TeacherDashboard from '../features/teacher/views/Dashboard';
+import TeacherGroups from '../features/teacher/views/Groups';
 
 import StudentDashboard from '../features/student/views/Dashboard';
 
@@ -68,7 +70,7 @@ export default function AppRouter() {
         <Route element={<AppLayout />}>
           {/* ADMIN */}
           <Route path="admin" element={<AdminDashboard />} />
-          <Route path="admin/profile" element={<AdminProfile />} />
+          <Route path="admin/profile" element={<Profile />} />
           <Route path="admin/users" element={<AdminUsersManagement />} />
           <Route path="admin/careers" element={<AdminCareers />} />
           <Route path="admin/careers/groups" element={<AdminCareerGroups />} />
@@ -81,6 +83,8 @@ export default function AppRouter() {
         <Route element={<AppLayout />}>
           {/* DOCENTE */}
           <Route path="teacher" element={<TeacherDashboard />} />
+          <Route path="teacher/groups" element={<TeacherGroups />} />
+          <Route path="teacher/profile" element={<Profile />} />
         </Route>
       </Route>
 

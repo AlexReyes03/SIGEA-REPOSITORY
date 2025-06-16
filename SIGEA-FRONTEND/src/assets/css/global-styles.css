@@ -235,6 +235,11 @@ Button {
   color: #4fb446;
 }
 
+.dashboard-rating .p-rating-icon {
+  width: 2rem !important;
+  height: 2rem !important;
+}
+
 .hovereable:hover {
   box-shadow: 0 0px 0.5rem rgba(0, 0, 0, 0.2) !important;
   transition: box-shadow 0.2s ease-in-out;

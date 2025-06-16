@@ -64,7 +64,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
       case 'TEACHER':
         return [
           { label: 'Inicio', path: '/teacher', Icon: MdHome },
-          { label: 'Mis Cursos', path: '/teacher/courses', Icon: MdSchool },
+          { label: 'Mis Cursos', path: '/teacher/groups', Icon: MdSchool },
           { label: 'Perfil', path: '/teacher/profile', Icon: MdPerson },
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },
         ];
