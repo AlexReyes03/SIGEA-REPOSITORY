@@ -29,6 +29,14 @@ public class CurriculumService {
         this.careerRepository = careerRepository;
     }
 
+    public ResponseEntity<CurriculumDto> findById(long id) {
+        return curriculumRepository.findById(id)
+                .map(entity -> ResponseEntity.ok(toDto(entity)))
+                .orElseThrow(() ->
+                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Curriculum no encontrado")
+                );
+    }
+
     public ResponseEntity<List<CurriculumDto>> findByCareerId(Long careerId) {
         List<CurriculumEntity> curriculums = curriculumRepository.findByCareerId(careerId);
         var dtos = curriculums.stream().map(this::toDto).toList();

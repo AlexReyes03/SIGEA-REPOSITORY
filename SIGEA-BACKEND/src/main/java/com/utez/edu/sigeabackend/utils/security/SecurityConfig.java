@@ -54,7 +54,7 @@ public class SecurityConfig {
                         auth
                                 .requestMatchers("/sigea/auth/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/sigea/api/media/raw/**").permitAll()
-                                .anyRequest().permitAll()
+                                .anyRequest().authenticated()
                 )
                 .sessionManagement(sess ->
                         sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS)

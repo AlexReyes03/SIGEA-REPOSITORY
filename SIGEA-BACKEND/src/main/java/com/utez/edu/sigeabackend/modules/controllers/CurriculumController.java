@@ -20,6 +20,11 @@ public class CurriculumController {
         this.curriculumService = curriculumService;
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<CurriculumDto> findById(@PathVariable Long id) {
+        return curriculumService.findById(id);
+    }
+
     // GET /sigea/api/curriculums/career/{careerId}
     @GetMapping("/career/{careerId}")
     public ResponseEntity<List<CurriculumDto>> findByCareerId(@PathVariable Long careerId) {
