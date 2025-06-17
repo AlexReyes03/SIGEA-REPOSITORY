@@ -14,7 +14,7 @@ textarea {
 /* === PALETA DE COLORES === */
 :root {
   /* SYSTEM */
-  --bg-main: #f9f9f9;
+  --bg-main: #fff;
   --bg-success: #a5dc86;
   --bg-warning: #f8bb86;
   --bg-danger: #f27474;
@@ -73,6 +73,10 @@ textarea {
   --sidebar-accent: var(--bg-blue-500);
 }
 
+body {
+  background-color: var(--bg-gray-800);
+}
+
 .btn-rounded-circle {
   border-radius: 50% !important;
 }
@@ -86,7 +90,7 @@ Button {
 }
 
 .bg-main {
-  background-color: var(--bg-gray-800);
+  background-color: var(--bg-main);
 }
 
 .bg-blue-500 {

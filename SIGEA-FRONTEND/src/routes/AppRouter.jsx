@@ -23,6 +23,7 @@ import AdminGroupDetail from '../features/admin/views/GroupDetail';
 
 import TeacherDashboard from '../features/teacher/views/Dashboard';
 import TeacherGroups from '../features/teacher/views/Groups';
+import TeacherGroupDetails from '../features/teacher/views/GroupDetails';
 
 import StudentDashboard from '../features/student/views/Dashboard';
 
@@ -84,6 +85,7 @@ export default function AppRouter() {
           {/* DOCENTE */}
           <Route path="teacher" element={<TeacherDashboard />} />
           <Route path="teacher/groups" element={<TeacherGroups />} />
+          <Route path="teacher/groups/details" element={<TeacherGroupDetails />} />
           <Route path="teacher/profile" element={<Profile />} />
         </Route>
       </Route>

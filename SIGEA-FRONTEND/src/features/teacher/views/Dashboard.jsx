@@ -100,7 +100,7 @@ export default function Dashboard() {
                         </div>
                       ) : (
                         myGroups.map((group) => (
-                          <div key={group.groupId} className="d-flex flex-column p-2 border rounded mt-2">
+                          <div key={group.groupId} className="d-flex flex-column p-2 border rounded my-2 hovereable">
                             <span className="fw-medium">{group.careerName}</span>
                             <span className="text-muted fw-medium">
                               <MdOutlineGroup size={24} className="me-2" />

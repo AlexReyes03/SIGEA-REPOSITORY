@@ -46,7 +46,7 @@ export default function AppLayout() {
       <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} onClose={closeSidebar} toggleRef={toggleRef} onLogout={logout} />
 
       {/* Contenido principal */}
-      <main className="bg-main" style={{ minHeight: '100dvh', paddingTop: '80px', paddingLeft: '4.5rem', bottom: 0, paddingRight: '1rem', zIndex: 1020 }}>
+      <main style={{ minHeight: '100dvh', paddingTop: '80px', paddingLeft: '4.5rem', bottom: 0, paddingRight: '1rem', zIndex: 1020 }}>
         <Outlet />
       </main>
 

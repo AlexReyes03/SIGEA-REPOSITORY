@@ -5,10 +5,12 @@ import { BreadCrumb } from 'primereact/breadcrumb';
 import { Rating } from 'primereact/rating';
 import { Button } from 'primereact/button';
 
+import { useToast } from '../../../components/providers/ToastProvider';
 import avatarFallback from '../../../assets/img/profile.png';
 import { getUserById } from '../../../api/userService';
-import GroupModulesTable from '../components/GroupModulesTable';
+import { getCareerById } from '../../../api/academics/careerService';
 import { BACKEND_BASE_URL } from '../../../api/common-url';
+import GroupModulesTable from '../../teacher/components/GroupModulesTable';
 
 const weekDayOptions = [
   { label: 'Lunes', value: 'LUN' },
@@ -21,18 +23,15 @@ const weekDayOptions = [
 ];
 const weekLabel = (code) => weekDayOptions.find((o) => o.value === code)?.label || code;
 
-export default function GroupDetail() {
+export default function GroupDetails() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { group, career } = location.state || {};
-  const [teacher, setTeacher] = useState(null);
+  const { showSuccess, showError } = useToast();
+  const [loading, setLoading] = useState(true);
+  const { group, user } = location.state || {};
 
-  useEffect(() => {
-    if (!group) {
-      navigate('/admin/careers/groups');
-      return null;
-    }
-  }, [group, navigate]);
+  const [career, setCareer] = useState(null);
+  const [teacher, setTeacher] = useState(null);
 
   function getAvatarUrl(url) {
     if (!url) return avatarFallback;
@@ -41,17 +40,36 @@ export default function GroupDetail() {
   }
 
   useEffect(() => {
-    if (group.teacherId) {
-      (async () => {
-        try {
-          const user = await getUserById(group.teacherId);
-          setTeacher(user);
-        } catch (err) {
-          console.error('Error al cargar docente:', err);
-        }
-      })();
+    if (!group) {
+      navigate('/teacher/groups');
+      return;
     }
-  }, [group.teacherId]);
+
+    let isMounted = true;
+    setLoading(true);
+
+    (async () => {
+      try {
+        const careerPromise = group.careerId ? getCareerById(group.careerId) : Promise.resolve(null);
+        const teacherPromise = group.teacherId ? getUserById(group.teacherId) : Promise.resolve(null);
+
+        const [careerData, teacherData] = await Promise.all([careerPromise, teacherPromise]);
+
+        if (!isMounted) return;
+
+        setCareer(careerData);
+        setTeacher(teacherData);
+      } catch (err) {
+        showError('Error', 'Error al cargar los detalles del grupo');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [group, navigate]);
 
   const infoLeft = [
     { label: 'Plan de estudios', value: group.curriculumName || 'No asignado' },
@@ -71,16 +89,7 @@ export default function GroupDetail() {
         <h3 className="text-blue-500 fw-semibold mx-3 my-1">Detalles del grupo</h3>
       </div>
 
-      <BreadCrumb
-        model={[
-          { label: 'Carreras', command: () => navigate('/admin/careers') },
-          { label: career?.name || '--', command: () => navigate('/admin/careers') },
-          { label: 'Grupos', command: () => navigate('/admin/careers/groups', { state: { career } }) },
-          { label: `Grupo ${group.name}` || '--' },
-        ]}
-        home={{ icon: 'pi pi-home', command: () => navigate('/') }}
-        className="mt-2 pb-0 ps-0 text-nowrap"
-      />
+      <BreadCrumb model={[{ label: 'Grupos', command: () => navigate('/teacher/groups') }, { label: `Grupo ${group.name}` || '--' }]} home={{ icon: 'pi pi-home', command: () => navigate('/') }} className="mt-2 pb-0 ps-0 text-nowrap" />
 
       <div className="row my-2">
         <div className="col-12 col-lg-4 mb-2 mb-lg-0">
@@ -116,10 +125,10 @@ export default function GroupDetail() {
               <div className="d-flex align-items-center fw-medium">
                 <div className="row text-muted text-start text-uppercase ms-5 gx-4 gy-3">
                   <div className="col-6">
-                    <span>{career.name}</span>
+                    <span>{career?.name}</span>
                   </div>
                   <div className="col-6">
-                    <span>Grupo {group.name}</span>
+                    <span>Grupo {group?.name} </span>
                   </div>
 
                   {infoLeft.map(({ label, value }) => (
@@ -142,7 +151,7 @@ export default function GroupDetail() {
         </div>
       </div>
 
-      <div className="col-12">
+      <div className="mb-5">
         <GroupModulesTable group={group} />
       </div>
     </>

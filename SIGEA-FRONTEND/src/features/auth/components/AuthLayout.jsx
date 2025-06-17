@@ -6,7 +6,7 @@ export default function AuthLayout({ title, subtitle, children }) {
     <main className="container-fluid">
       <div className="row vh-100">
         {/* Panel izquierdo */}
-        <div className="col-12 col-md-6 d-flex flex-column justify-content-between p-4">
+        <div className="col-12 col-md-6 d-flex flex-column bg-main justify-content-between p-4">
           <div className="d-flex justify-content-between align-items-center mb-4 user-select-none">
             <img src={Logo} alt="CETEC Logo" height={50} />
             <h3 className="fw-bold fs-3 text-blue-800 mb-0">SIGEA</h3>

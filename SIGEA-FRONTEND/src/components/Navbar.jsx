@@ -37,7 +37,7 @@ const Navbar = forwardRef(function Navbar({ toggleSidebar }, toggleRef) {
   const campusName = user.campus?.name || '';
   const fullName = `${user.name} ${user.paternalSurname || ''}`.trim();
   const roleKey = user.role?.name || user.role;
-  const roleMap = { ADMIN: 'Administrador', INSTRUCTOR: 'Instructor', STUDENT: 'Estudiante' };
+  const roleMap = { ADMIN: 'Administrador', TEACHER: 'Maestro', STUDENT: 'Estudiante' };
   const roleName = roleMap[roleKey] || roleKey;
 
   return (
