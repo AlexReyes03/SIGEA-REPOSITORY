@@ -9,12 +9,14 @@ import { Button } from 'primereact/button';
 import { MdOutlineGroup } from 'react-icons/md';
 
 import { getCurriculumById } from '../../../api/academics/curriculumService';
+import { getGroupStudents } from '../../../api/academics/groupService';
 
 export default function ColumnGroupDemo({ group }) {
   const [loading, setLoading] = useState(true);
   const [searchTerms, setSearchTerms] = useState({});
   const [isModuleCollapsed, setIsModuleCollapsed] = useState({});
   const [curriculum, setCurriculum] = useState(null);
+  const [students, setStudents] = useState([]);
 
   const [qualifications] = useState([
     { id: 1, name: 'Juan Pérez Pérez' },
@@ -101,7 +103,7 @@ export default function ColumnGroupDemo({ group }) {
                     }
                   />
                 </div>
-                <div className="d-flex align-items-center justify-content-end mx-3 mt-3">
+                <div className="d-flex align-items-center justify-content-end mx-3">
                   <Button icon="pi pi-save" className="me-2">
                     <span className="ms-2 fw-semibold d-none d-lg-inline">Guardar</span>
                   </Button>

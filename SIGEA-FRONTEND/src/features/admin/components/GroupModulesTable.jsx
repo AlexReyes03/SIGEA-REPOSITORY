@@ -34,8 +34,8 @@ export default function ColumnGroupDemo({ group }) {
       setLoading(true);
       (async () => {
         try {
-          const data = await getCurriculumById(group.curriculumId);
-          setCurriculum(data);
+          const curriculumData = await getCurriculumById(group.curriculumId);
+          setCurriculum(curriculumData);
         } catch (err) {
           console.error('Error', 'Error al cargar el plan de estudios');
         } finally {
@@ -101,7 +101,7 @@ export default function ColumnGroupDemo({ group }) {
                     }
                   />
                 </div>
-                <div className="d-flex align-items-center justify-content-end mx-3 mt-3">
+                <div className="d-flex align-items-center justify-content-end mx-3">
                   <Button icon="pi pi-save" className="me-2">
                     <span className="ms-2 fw-semibold d-none d-lg-inline">Guardar</span>
                   </Button>
