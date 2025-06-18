@@ -9,25 +9,16 @@ import { Button } from 'primereact/button';
 import { MdOutlineGroup } from 'react-icons/md';
 
 import { getCurriculumById } from '../../../api/academics/curriculumService';
+import { getGroupStudents, enrollStudentInGroup, removeStudentFromGroup } from '../../../api/academics/groupService';
+import { getQualificationsByGroup } from '../../../api/academics/qualificationService';
 
 export default function ColumnGroupDemo({ group }) {
   const [loading, setLoading] = useState(true);
   const [searchTerms, setSearchTerms] = useState({});
   const [isModuleCollapsed, setIsModuleCollapsed] = useState({});
   const [curriculum, setCurriculum] = useState(null);
-
-  const [qualifications] = useState([
-    { id: 1, name: 'Juan Pérez Pérez' },
-    { id: 2, name: 'Ana Martínez' },
-    { id: 3, name: 'Luis Sánchez' },
-    { id: 4, name: 'María López' },
-    { id: 5, name: 'Carlos Díaz' },
-    { id: 6, name: 'Elena Torres' },
-    { id: 7, name: 'Juan Pérez Pérez' },
-    { id: 8, name: 'Ana Martínez' },
-    { id: 9, name: 'Luis Sánchez' },
-    { id: 10, name: 'María López' },
-  ]);
+  const [students, setStudents] = useState([]);
+  const [gradesMap, setGradesMap] = useState({});
 
   useEffect(() => {
     if (group && group.curriculumId) {
@@ -35,9 +26,21 @@ export default function ColumnGroupDemo({ group }) {
       (async () => {
         try {
           const curriculumData = await getCurriculumById(group.curriculumId);
+          console.log('Plan', curriculumData);
+
           setCurriculum(curriculumData);
+          const studentsData = await getGroupStudents(group.groupId);
+          setStudents(studentsData);
+
+          const qualificationsData = await getQualificationsByGroup(group.groupId);
+          const m = {};
+          qualificationsData.forEach((q) => {
+            if (!m[q.studentId]) m[q.studentId] = {};
+            m[q.studentId][q.subjectId] = q.grade;
+          });
+          setGradesMap(m);
         } catch (err) {
-          console.error('Error', 'Error al cargar el plan de estudios');
+          console.error('Error', 'Error al cargar los datos');
         } finally {
           setLoading(false);
         }
@@ -67,7 +70,7 @@ export default function ColumnGroupDemo({ group }) {
           const headerGroup = (
             <ColumnGroup>
               <Row>
-                <Column header="Nombre del estudiante" rowSpan={2} style={{ border: '1px solid #ededed', maxWidth: '1rem' }} />
+                <Column header="Nombre del estudiante" rowSpan={2} style={{ border: '1px solid #ededed' }} />
                 <Column header="Materias" colSpan={module.subjects.length} style={{ border: '1px solid #ededed' }} />
                 <Column header="Promedio" rowSpan={2} style={{ border: '1px solid #ededed' }} />
               </Row>
@@ -121,7 +124,7 @@ export default function ColumnGroupDemo({ group }) {
               <div className="m-3 mt-0">
                 {!isCollapsed && (
                   <DataTable
-                    value={qualifications}
+                    value={students}
                     headerColumnGroup={headerGroup}
                     size="small"
                     stripedRows
@@ -138,15 +141,34 @@ export default function ColumnGroupDemo({ group }) {
                     }}
                   >
                     {/* Columna de nombre */}
-                    <Column field="name" style={gridLinesX} />
+                    <Column field="fullName" body={(row) => row.fullName} style={gridLinesX} />
 
                     {/* Una columna por cada materia */}
                     {module.subjects.map((subj) => (
-                      <Column key={subj.id} header={<span className="fw-bold">-</span>} body={() => null} style={gridLinesX} />
+                      <Column
+                        key={subj.id}
+                        header={<span className="fw-bold">-</span>}
+                        body={(row) => {
+                          const studentGrades = gradesMap[row.studentId] || {};
+                          const grade = studentGrades[subj.id];
+                          return grade != null ? grade : '—';
+                        }}
+                        style={gridLinesX}
+                      />
                     ))}
 
                     {/* Columna de promedio */}
-                    <Column header="Promedio" body={() => null} style={gridLinesX} />
+                    <Column
+                      header="Promedio"
+                      body={(row) => {
+                        const studentGrades = gradesMap[row.studentId] || {};
+                        const notas = module.subjects.map((s) => studentGrades[s.id]).filter((g) => g != null);
+                        if (!notas.length) return '—';
+                        const avg = notas.reduce((a, b) => a + b, 0) / notas.length;
+                        return avg.toFixed(1);
+                      }}
+                      style={gridLinesX}
+                    />
                   </DataTable>
                 )}
               </div>
