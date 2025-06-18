@@ -4,11 +4,11 @@ import { Column } from 'primereact/column';
 import { ColumnGroup } from 'primereact/columngroup';
 import { Row } from 'primereact/row';
 import { Tooltip } from 'primereact/tooltip';
-import { MdAdd, MdOutlineGroup, MdRemove } from 'react-icons/md';
-
-import { getCurriculumById } from '../../../api/academics/curriculumService';
 import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
+import { MdOutlineGroup } from 'react-icons/md';
+
+import { getCurriculumById } from '../../../api/academics/curriculumService';
 
 export default function ColumnGroupDemo({ group }) {
   const [loading, setLoading] = useState(true);
@@ -16,7 +16,6 @@ export default function ColumnGroupDemo({ group }) {
   const [isModuleCollapsed, setIsModuleCollapsed] = useState({});
   const [curriculum, setCurriculum] = useState(null);
 
-  // Solo datos de ejemplo: nombres de estudiantes
   const [qualifications] = useState([
     { id: 1, name: 'Juan Pérez Pérez' },
     { id: 2, name: 'Ana Martínez' },
@@ -47,8 +46,8 @@ export default function ColumnGroupDemo({ group }) {
   }, [group]);
 
   const gridLinesX = {
-    borderLeft: '2px solid #ededed',
-    borderRight: '2px solid #ededed',
+    borderLeft: '1px solid #ededed',
+    borderRight: '1px solid #ededed',
   };
 
   if (loading) {
@@ -68,13 +67,13 @@ export default function ColumnGroupDemo({ group }) {
           const headerGroup = (
             <ColumnGroup>
               <Row>
-                <Column header="Nombre del estudiante" rowSpan={2} style={{ border: '2px solid #ededed', maxWidth: '1rem' }} />
-                <Column header="Materias" colSpan={module.subjects.length} style={{ border: '2px solid #ededed' }} />
-                <Column header="Promedio" rowSpan={2} style={{ border: '2px solid #ededed' }} />
+                <Column header="Nombre del estudiante" rowSpan={2} style={{ border: '1px solid #ededed', maxWidth: '1rem' }} />
+                <Column header="Materias" colSpan={module.subjects.length} style={{ border: '1px solid #ededed' }} />
+                <Column header="Promedio" rowSpan={2} style={{ border: '1px solid #ededed' }} />
               </Row>
               <Row>
                 {module.subjects.map((subj, index) => (
-                  <Column key={subj.id} header={<span className="fw-bold">{index + 1}</span>} headerTooltip={subj.name} headerTooltipOptions={{ position: 'top' }} className="text-center" style={{ border: '2px solid #ededed' }} />
+                  <Column key={subj.id} header={<span className="fw-bold">{index + 1}</span>} headerTooltip={subj.name} headerTooltipOptions={{ position: 'top' }} className="text-center" style={{ border: '1px solid #ededed' }} />
                 ))}
               </Row>
             </ColumnGroup>
@@ -83,13 +82,14 @@ export default function ColumnGroupDemo({ group }) {
           return (
             <div className="card border-0 mt-3" key={module.id}>
               <div className="d-flex flex-wrap gap-2 align-items-center justify-content-between w-100">
-                <div className="d-flex align-items-center mt-3 ms-3">
+                <div className="d-flex align-items-center my-3 mx-3">
                   <div className="title-icon p-1 rounded-circle">
                     <MdOutlineGroup size={40} className="p-1" />
                   </div>
                   <h6 className="text-blue-500 fs-5 fw-semibold ms-3 mb-0">{module.name}</h6>
                   <Button
                     icon={isCollapsed ? 'pi pi-plus' : 'pi pi-minus'}
+                    title={isCollapsed ? 'Expandir módulo' : 'Ocultar módulo'}
                     size="small"
                     text
                     className="rounded-circle ms-2"
@@ -118,7 +118,7 @@ export default function ColumnGroupDemo({ group }) {
                 </div>
               </div>
 
-              <div className="m-3">
+              <div className="m-3 mt-0">
                 {!isCollapsed && (
                   <DataTable
                     value={qualifications}
@@ -132,9 +132,9 @@ export default function ColumnGroupDemo({ group }) {
                     emptyMessage={<p className="text-center my-5">Aún no hay registros</p>}
                     tableStyle={{
                       minWidth: '50rem',
-                      borderBottom: '2px solid #ededed',
-                      borderLeft: '2px solid #ededed',
-                      borderRight: '2px solid #ededed',
+                      borderBottom: '1px solid #ededed',
+                      borderLeft: '1px solid #ededed',
+                      borderRight: '1px solid #ededed',
                     }}
                   >
                     {/* Columna de nombre */}
