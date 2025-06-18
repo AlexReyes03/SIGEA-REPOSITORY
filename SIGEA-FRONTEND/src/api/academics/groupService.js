@@ -37,3 +37,23 @@ export const deleteGroup = async (id) => {
     method: 'DELETE',
   });
 };
+
+// GROUP & STUDENTS
+export const getGroupStudents = async (groupId) => {
+  const res = await request(`/api/group-students/group/${groupId}`);
+  return res;
+};
+
+export const enrollStudentInGroup = async (groupId, studentId) => {
+  return await request('/api/group-students/enroll', {
+    method: 'POST',
+    body: { groupId, studentId },
+  });
+}
+
+export const removeStudentFromGroup = async (groupId, studentId) => {
+  return await request('/api/group-students/remove', {
+    method: 'POST',
+    body: { groupId, studentId },
+  });
+};
