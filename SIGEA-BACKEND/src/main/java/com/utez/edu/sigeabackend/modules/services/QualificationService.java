@@ -80,6 +80,17 @@ public class QualificationService {
         return ResponseEntity.ok(list);
     }
 
+    public ResponseEntity<List<QualificationDto>> findByGroup(long groupId) {
+        var list = qualificationRepository.findByGroupId(groupId)
+                .stream()
+                .map(this::toDto)
+                .toList();
+        if (list.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+        return ResponseEntity.ok(list);
+    }
+
     @Transactional
     public ResponseEntity<QualificationDto> save(QualificationDto dto) {
         // Validar existencia de entidades referenciadas
@@ -113,7 +124,8 @@ public class QualificationService {
     }
 
     @Transactional
-    public ResponseEntity<QualificationDto> update(long id, QualificationDto dto) {
+    public ResponseEntity<QualificationDto> update(QualificationDto dto) {
+        Long id = dto.id();
         QualificationEntity existing = qualificationRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Calificación no encontrada"));
 
@@ -130,7 +142,8 @@ public class QualificationService {
     }
 
     @Transactional
-    public ResponseEntity<Void> delete(long id) {
+    public ResponseEntity<Void> delete(QualificationDto dto) {
+        Long id = dto.id();
         if (!qualificationRepository.existsById(id)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }

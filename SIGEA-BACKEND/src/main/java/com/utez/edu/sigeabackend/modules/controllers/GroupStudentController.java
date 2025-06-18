@@ -1,6 +1,7 @@
 package com.utez.edu.sigeabackend.modules.controllers;
 
 import com.utez.edu.sigeabackend.modules.entities.GroupStudentEntity;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.GroupStudentDto;
 import com.utez.edu.sigeabackend.modules.services.GroupStudentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,36 +17,41 @@ public class GroupStudentController {
         this.service = service;
     }
 
-    //Endpoint para Inscribir un estudiante en un grupo
+    // Inscribir un estudiante en un grupo (JSON con { groupId, studentId })
     @PostMapping("/enroll")
-    public ResponseEntity<?> enrollStudent(
-            @RequestParam long groupId,
-            @RequestParam long studentId
-    ) {
-      try{
-          GroupStudentEntity enrollment = service.enroll(groupId, studentId);
-          return ResponseEntity.ok(enrollment);
-      }catch (IllegalArgumentException ex){
-          return ResponseEntity.badRequest().body(ex.getMessage());
-      }
+    public ResponseEntity<?> enrollStudent(@RequestBody GroupStudentDto dto) {
+        try {
+            GroupStudentEntity saved = service.enroll(dto);
+            GroupStudentDto response = new GroupStudentDto(
+                    saved.getId().getGroupId(),
+                    saved.getId().getStudentId(),
+                    saved.getStudent().getName()
+            );
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(null);
+        }
     }
 
-    //Endpoint para eliminar la inscripcion de un estudiante
+    // Eliminar la inscripción
     @DeleteMapping("/remove")
-    public ResponseEntity<?> removeStudent(
-            @RequestParam long groupId,
-            @RequestParam long studentId
-    ){
-        return service.deleteById(groupId, studentId);
+    public ResponseEntity<?> removeStudent(@RequestBody GroupStudentDto dto) {
+        return service.delete(dto);
     }
 
-    //Endpoint para obtener todas las inscripciones de un estudiante
+    // Listados sin cambios
     @GetMapping("/by-student/{studentId}")
     public ResponseEntity<?> getByStudent(@PathVariable long studentId){
         List<GroupStudentEntity> list = service.findByStudent(studentId);
-        if(list.isEmpty()){
+        if (list.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
+        return ResponseEntity.ok(list);
+    }
+
+    @GetMapping("/group/{groupId}")
+    public ResponseEntity<List<GroupStudentDto>> getByGroup(@PathVariable long groupId) {
+        List<GroupStudentDto> list = service.getStudentsInGroup(groupId);
         return ResponseEntity.ok(list);
     }
 }

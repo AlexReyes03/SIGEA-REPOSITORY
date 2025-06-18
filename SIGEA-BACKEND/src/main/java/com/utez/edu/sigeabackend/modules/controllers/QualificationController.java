@@ -16,24 +16,27 @@ public class QualificationController {
         this.service = service;
     }
 
+    // GETs sin cambios
     @GetMapping
     public ResponseEntity<List<QualificationDto>> findAll() {
         return service.findAll();
     }
-
     @GetMapping("/{id}")
     public ResponseEntity<QualificationDto> findById(@PathVariable long id) {
         return service.findById(id);
     }
-
     @GetMapping("/student/{studentId}")
     public ResponseEntity<List<QualificationDto>> findByStudent(@PathVariable long studentId) {
         return service.findByStudent(studentId);
     }
-
     @GetMapping("/subject/{subjectId}")
     public ResponseEntity<List<QualificationDto>> findBySubject(@PathVariable long subjectId) {
         return service.findBySubject(subjectId);
+    }
+
+    @GetMapping("/group/{groupId}")
+    public ResponseEntity<List<QualificationDto>> findByGroup(@PathVariable long groupId) {
+        return service.findByGroup(groupId);
     }
 
     @PostMapping
@@ -41,13 +44,13 @@ public class QualificationController {
         return service.save(dto);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<QualificationDto> update(@PathVariable long id, @RequestBody QualificationDto dto) {
-        return service.update(id, dto);
+    @PutMapping
+    public ResponseEntity<QualificationDto> update(@RequestBody QualificationDto dto) {
+        return service.update(dto);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable long id) {
-        return service.delete(id);
+    @DeleteMapping
+    public ResponseEntity<Void> delete(@RequestBody QualificationDto dto) {
+        return service.delete(dto);
     }
 }

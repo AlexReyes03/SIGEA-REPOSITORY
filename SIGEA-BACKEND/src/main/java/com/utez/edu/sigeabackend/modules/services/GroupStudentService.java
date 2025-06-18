@@ -4,6 +4,7 @@ import com.utez.edu.sigeabackend.config.CustomResponseEntity;
 import com.utez.edu.sigeabackend.modules.entities.GroupEntity;
 import com.utez.edu.sigeabackend.modules.entities.GroupStudentEntity;
 import com.utez.edu.sigeabackend.modules.entities.UserEntity;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.GroupStudentDto;
 import com.utez.edu.sigeabackend.modules.repositories.GroupRepository;
 import com.utez.edu.sigeabackend.modules.repositories.GroupStudentRepository;
 import com.utez.edu.sigeabackend.modules.repositories.UserRepository;
@@ -29,7 +30,9 @@ public class GroupStudentService {
 
     //Inscribe un estudiante en un grupo.
     @Transactional
-    public GroupStudentEntity enroll(long groupId, long studentId) {
+    public GroupStudentEntity enroll(GroupStudentDto dto) {
+        long groupId   = dto.groupId();
+        long studentId = dto.studentId();
         GroupEntity group = groupRepo.findById(groupId)
                 .orElseThrow(() -> new IllegalArgumentException("Grupo no existe"));
         UserEntity student = userRepo.findById(studentId)
@@ -42,10 +45,9 @@ public class GroupStudentService {
         return studentRepo.save(entity);
     }
 
-    //Elimina la inscripción de un estudiante
     @Transactional
-    public ResponseEntity<?> deleteById(long groupId, long studentId) {
-        GroupStudentEntity.Id id = new GroupStudentEntity.Id(groupId, studentId);
+    public ResponseEntity<?> delete(GroupStudentDto dto) {
+        GroupStudentEntity.Id id = new GroupStudentEntity.Id(dto.groupId(), dto.studentId());
         if (!studentRepo.existsById(id)) {
             return responseService.get404Response();
         }
@@ -53,10 +55,24 @@ public class GroupStudentService {
         return responseService.getOkResponse("Inscripción eliminada", null);
     }
 
-    //Lista todas las inscripciones de un grupo
     @Transactional(readOnly = true)
-    public List<GroupStudentEntity> findByGroup(long groupId) {
-        return studentRepo.findByGroupId(groupId);
+    public List<GroupStudentDto> getStudentsInGroup(long groupId) {
+        return studentRepo.findByGroupId(groupId)
+                .stream()
+                .map(gs -> {
+                    var user = gs.getStudent();
+                    String fullName = user.getName()
+                            + " "
+                            + user.getPaternalSurname()
+                            + " "
+                            + user.getMaternalSurname();
+                    return new GroupStudentDto(
+                            gs.getId().getGroupId(),
+                            gs.getId().getStudentId(),
+                            fullName
+                    );
+                })
+                .toList();
     }
 
     //Lista todas las inscripciones de un estudiant

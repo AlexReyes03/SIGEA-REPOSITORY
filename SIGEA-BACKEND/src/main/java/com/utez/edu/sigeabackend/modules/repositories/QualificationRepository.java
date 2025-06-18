@@ -10,4 +10,5 @@ import java.util.List;
 public interface QualificationRepository extends JpaRepository<QualificationEntity, Long> {
     List<QualificationEntity> findByStudentId(long studentId);
     List<QualificationEntity> findBySubjectId(long subjectId);
+    List<QualificationEntity> findByGroupId(long groupId);
 }
