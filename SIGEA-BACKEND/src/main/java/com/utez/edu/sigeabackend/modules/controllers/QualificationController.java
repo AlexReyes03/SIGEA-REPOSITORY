@@ -1,5 +1,6 @@
 package com.utez.edu.sigeabackend.modules.controllers;
 
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.QualificationDetailDto;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.QualificationDto;
 import com.utez.edu.sigeabackend.modules.services.QualificationService;
 import org.springframework.http.ResponseEntity;
@@ -39,8 +40,14 @@ public class QualificationController {
         return service.findByGroup(groupId);
     }
 
+    @GetMapping("/group/{groupId}/details")
+    public ResponseEntity<List<QualificationDetailDto>> findByGroupWithDetails(@PathVariable long groupId) {
+        return service.findByGroupWithDetails(groupId);
+    }
+
     @PostMapping
     public ResponseEntity<QualificationDto> save(@RequestBody QualificationDto dto) {
+
         return service.save(dto);
     }
 

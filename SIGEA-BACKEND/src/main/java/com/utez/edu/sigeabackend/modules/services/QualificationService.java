@@ -1,6 +1,7 @@
 package com.utez.edu.sigeabackend.modules.services;
 
 import com.utez.edu.sigeabackend.modules.entities.*;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.QualificationDetailDto;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.QualificationDto;
 import com.utez.edu.sigeabackend.modules.repositories.*;
 import org.springframework.http.HttpStatus;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
@@ -42,6 +44,30 @@ public class QualificationService {
                 q.getTeacher() != null ? q.getTeacher().getId() : null,
                 q.getGrade(),
                 q.getDate()
+        );
+    }
+
+    private QualificationDetailDto toDetailDto(QualificationEntity q) {
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yy");
+        String teacherName = "";
+
+        if (q.getTeacher() != null) {
+            UserEntity teacher = q.getTeacher();
+            teacherName = teacher.getName() + " " +
+                    teacher.getPaternalSurname() + " " +
+                    teacher.getMaternalSurname();
+        }
+
+        return new QualificationDetailDto(
+                q.getId(),
+                q.getStudent().getId(),
+                q.getGroup().getId(),
+                q.getSubject().getId(),
+                q.getTeacher() != null ? q.getTeacher().getId() : null,
+                q.getGrade(),
+                q.getDate(),
+                teacherName,
+                q.getDate() != null ? sdf.format(q.getDate()) : ""
         );
     }
 
@@ -88,6 +114,14 @@ public class QualificationService {
         return ResponseEntity.ok(list);
     }
 
+    public ResponseEntity<List<QualificationDetailDto>> findByGroupWithDetails(long groupId) {
+        var list = qualificationRepository.findByGroupId(groupId)
+                .stream()
+                .map(this::toDetailDto)
+                .toList();
+        return ResponseEntity.ok(list);
+    }
+
     @Transactional
     public ResponseEntity<QualificationDto> save(QualificationDto dto) {
         // Validar existencia de entidades referenciadas
@@ -101,10 +135,12 @@ public class QualificationService {
         if (dto.teacherId() != null)
             teacher = userRepository.findById(dto.teacherId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Docente no existe"));
-
-        // Validar inscripción del estudiante al grupo
         if (!groupStudentRepository.existsById(new GroupStudentEntity.Id(group.getId(), student.getId()))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El estudiante no está inscrito en el grupo");
+        }
+        if (dto.grade() == null || dto.grade() < 6 || dto.grade() > 10) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La calificación debe estar entre 6 y 10");
         }
 
         // Guardar la calificación

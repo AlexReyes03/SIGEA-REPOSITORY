@@ -11,4 +11,5 @@ public interface QualificationRepository extends JpaRepository<QualificationEnti
     List<QualificationEntity> findByStudentId(long studentId);
     List<QualificationEntity> findBySubjectId(long subjectId);
     List<QualificationEntity> findByGroupId(long groupId);
+    boolean existsByStudentIdAndGroupIdAndSubjectId(Long studentId, Long groupId, Long subjectId);
 }
