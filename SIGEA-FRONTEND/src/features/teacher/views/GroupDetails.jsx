@@ -9,6 +9,7 @@ import { useToast } from '../../../components/providers/ToastProvider';
 import avatarFallback from '../../../assets/img/profile.png';
 import { getUserById } from '../../../api/userService';
 import { getCareerById } from '../../../api/academics/careerService';
+import { getGroupStudents } from '../../../api/academics/groupService';
 import { BACKEND_BASE_URL } from '../../../api/common-url';
 import GroupModulesTable from '../../teacher/components/GroupModulesTable';
 
@@ -32,6 +33,7 @@ export default function GroupDetails() {
 
   const [career, setCareer] = useState(null);
   const [teacher, setTeacher] = useState(null);
+  const [studentCount, setStudentCount] = useState(0);
 
   function getAvatarUrl(url) {
     if (!url) return avatarFallback;
@@ -52,13 +54,15 @@ export default function GroupDetails() {
       try {
         const careerPromise = group.careerId ? getCareerById(group.careerId) : Promise.resolve(null);
         const teacherPromise = group.teacherId ? getUserById(group.teacherId) : Promise.resolve(null);
+        const studentsPromise = group.groupId ? getGroupStudents(group.groupId) : Promise.resolve(null);
 
-        const [careerData, teacherData] = await Promise.all([careerPromise, teacherPromise]);
+        const [careerData, teacherData, studentsData] = await Promise.all([careerPromise, teacherPromise, studentsPromise]);
 
         if (!isMounted) return;
 
         setCareer(careerData);
         setTeacher(teacherData);
+        setStudentCount(studentsData ? studentsData.length : 0);
       } catch (err) {
         showError('Error', 'Error al cargar los detalles del grupo');
       } finally {
@@ -80,7 +84,7 @@ export default function GroupDetails() {
   const infoRight = [
     { label: 'Horario', value: `${weekLabel(group.weekDay)} ${group.startTime} - ${group.endTime}` },
     { label: 'Fecha de fin', value: 'MAYO - 2026' },
-    { label: 'Alumnos', value: '20' },
+    { label: 'Total de alumnos', value: studentCount === 0 ? 'Sin alumnos' : studentCount },
   ];
 
   return (

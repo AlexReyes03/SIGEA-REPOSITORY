@@ -23,7 +23,9 @@ export default function GroupModulesTable({ group }) {
   const [searchTerms, setSearchTerms] = useState({});
   const [isModuleCollapsed, setIsModuleCollapsed] = useState({});
   const [isEditingModule, setIsEditingModule] = useState({});
+  const [invalidCells, setInvalidCells] = useState({});
   const [editedGrades, setEditedGrades] = useState({});
+  const [tempGrades, setTempGrades] = useState({}); // Estado para mantener valores temporales
   const [curriculum, setCurriculum] = useState(null);
   const [tableData, setTableData] = useState([]);
 
@@ -69,18 +71,81 @@ export default function GroupModulesTable({ group }) {
     }
   }, [group, loadData]);
 
-  const commitSameValue = (options, value) => {
-    setTimeout(() => options.editorCallback(value));
+  // Función para obtener el valor mostrado (persistente o temporal)
+  const getDisplayValue = (studentId, subjectId, moduleId) => {
+    // Primero buscar en valores temporales
+    const tempValue = tempGrades[moduleId]?.[studentId]?.[subjectId];
+    if (tempValue !== undefined) {
+      return tempValue;
+    }
+
+    // Luego en valores editados
+    const editedValue = editedGrades[moduleId]?.[studentId]?.[subjectId];
+    if (editedValue !== undefined) {
+      return editedValue;
+    }
+
+    // Finalmente en los datos originales
+    const originalRow = tableData.find((row) => row.studentId === studentId);
+    return originalRow?.[subjectId] ?? null;
+  };
+
+  // Función para validar si una celda es válida
+  const isCellValid = (moduleId, studentId, subjectId) => {
+    const value = getDisplayValue(studentId, subjectId, moduleId);
+    if (value === null || value === undefined) return true;
+    return Number.isInteger(value) && value >= 6 && value <= 10;
+  };
+
+  // Función para verificar si hay celdas inválidas en un módulo
+  const hasInvalidCells = (moduleId) => {
+    const module = curriculum?.modules.find((m) => m.id === moduleId);
+    if (!module) return false;
+
+    for (const row of tableData) {
+      for (const subject of module.subjects) {
+        const value = getDisplayValue(row.studentId, subject.id, moduleId);
+        if (value !== null && value !== undefined) {
+          if (!Number.isInteger(value) || value < 6 || value > 10) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   };
 
   const buildNumberEditor = (moduleId, subjId) => (options) => {
     const studentId = options.rowData.studentId;
+    const currentValue = getDisplayValue(studentId, subjId, moduleId);
+    const cellKey = `${moduleId}-${studentId}-${subjId}`;
+    const isInvalid = !isCellValid(moduleId, studentId, subjId);
 
     const handleChange = (e) => {
       const val = e.value;
-      options.editorCallback(val);
 
-      if (val !== null && Number.isInteger(val) && val >= 6 && val <= 10) {
+      // Actualizar valores temporales
+      setTempGrades((prev) => ({
+        ...prev,
+        [moduleId]: {
+          ...prev[moduleId],
+          [studentId]: {
+            ...prev[moduleId]?.[studentId],
+            [subjId]: val,
+          },
+        },
+      }));
+
+      // Validar y actualizar estado de celdas inválidas
+      const isValid = val === null || val === undefined || (Number.isInteger(val) && val >= 6 && val <= 10);
+
+      setInvalidCells((prev) => ({
+        ...prev,
+        [cellKey]: !isValid,
+      }));
+
+      // Si es válido, agregar a editedGrades
+      if (isValid && val !== null && val !== undefined) {
         setEditedGrades((prev) => ({
           ...prev,
           [moduleId]: {
@@ -91,10 +156,45 @@ export default function GroupModulesTable({ group }) {
             },
           },
         }));
+      } else {
+        // Si no es válido, remover de editedGrades
+        setEditedGrades((prev) => {
+          const newState = { ...prev };
+          if (newState[moduleId]?.[studentId]) {
+            delete newState[moduleId][studentId][subjId];
+            if (Object.keys(newState[moduleId][studentId]).length === 0) {
+              delete newState[moduleId][studentId];
+            }
+            if (Object.keys(newState[moduleId]).length === 0) {
+              delete newState[moduleId];
+            }
+          }
+          return newState;
+        });
       }
+
+      // Llamar al callback del editor
+      options.editorCallback(val);
     };
 
-    return <InputNumber value={options.value} onValueChange={handleChange} showButtons={false} min={6} max={10} inputStyle={{ width: '100%', textAlign: 'center' }} className="p-inputtext-sm" autoFocus />;
+    return (
+      <InputNumber
+        value={currentValue}
+        onValueChange={handleChange}
+        showButtons={false}
+        min={6}
+        max={10}
+        invalid={isInvalid}
+        inputStyle={{
+          width: '100%',
+          textAlign: 'center',
+          ...(isInvalid && { borderColor: '#e24c4c' }),
+        }}
+        className="p-inputtext-sm"
+        autoFocus
+        placeholder="6-10"
+      />
+    );
   };
 
   const gridLinesX = {
@@ -116,8 +216,15 @@ export default function GroupModulesTable({ group }) {
           const isCollapsed = isModuleCollapsed[module.id];
           const isEditing = isEditingModule[module.id];
           const search = searchTerms[module.id] || '';
+          const hasInvalidData = hasInvalidCells(module.id);
+          const hasEditedData = Object.keys(editedGrades[module.id] || {}).length > 0;
 
           const handleSave = () => {
+            if (hasInvalidData) {
+              showError('Error', 'Por favor, corrige las calificaciones inválidas antes de guardar. Las calificaciones deben estar entre 6 y 10.');
+              return;
+            }
+
             confirmAction({
               message: '¿Estás seguro? Esta calificación no se puede cambiar una vez guardada.',
               header: 'Registrar calificación',
@@ -130,20 +237,53 @@ export default function GroupModulesTable({ group }) {
                 try {
                   await Promise.all(Object.entries(edits).flatMap(([studentId, subjMap]) => Object.entries(subjMap).map(([subjectId, grade]) => saveQualification(Number(studentId), group.groupId, Number(subjectId), group.teacherId, grade))));
                   showSuccess('Hecho', 'Calificaciones registradas exitosamente');
+
+                  // Limpiar estados
                   setEditedGrades((prev) => ({
                     ...prev,
                     [module.id]: {},
                   }));
+                  setTempGrades((prev) => ({
+                    ...prev,
+                    [module.id]: {},
+                  }));
+                  setInvalidCells({});
                   setIsEditingModule((prev) => ({
                     ...prev,
                     [module.id]: false,
                   }));
+
                   loadData();
                 } catch {
                   showError('Error', 'Ocurrió un error al registrar las calificaciones');
                 }
               },
             });
+          };
+
+          const handleCancel = () => {
+            // Limpiar todos los estados relacionados con este módulo
+            setEditedGrades((prev) => ({
+              ...prev,
+              [module.id]: {},
+            }));
+            setTempGrades((prev) => ({
+              ...prev,
+              [module.id]: {},
+            }));
+            setInvalidCells((prev) => {
+              const newState = { ...prev };
+              Object.keys(newState).forEach((key) => {
+                if (key.startsWith(`${module.id}-`)) {
+                  delete newState[key];
+                }
+              });
+              return newState;
+            });
+            setIsEditingModule((prev) => ({
+              ...prev,
+              [module.id]: false,
+            }));
           };
 
           const headerGroup = (
@@ -189,21 +329,17 @@ export default function GroupModulesTable({ group }) {
                   <div className="d-flex align-items-center justify-content-end mx-3 mb-3 mb-md-0">
                     {isEditing ? (
                       <>
-                        <Button
-                          icon="pi pi-times"
-                          severity="secondary"
-                          outlined
-                          className="me-2"
-                          onClick={() =>
-                            setIsEditingModule((prev) => ({
-                              ...prev,
-                              [module.id]: false,
-                            }))
-                          }
-                        >
+                        <Button icon="pi pi-times" severity="secondary" outlined className="me-2" onClick={handleCancel}>
                           <span className="ms-2 d-none d-lg-inline">Cancelar</span>
                         </Button>
-                        <Button icon="pi pi-save" severity="success" className="me-2" onClick={handleSave}>
+                        <Button
+                          icon="pi pi-save"
+                          severity={hasInvalidData ? 'danger' : 'success'}
+                          className="me-2"
+                          onClick={handleSave}
+                          disabled={hasInvalidData || !hasEditedData}
+                          title={hasInvalidData ? 'Corrige las calificaciones inválidas' : !hasEditedData ? 'No hay cambios para guardar' : 'Guardar calificaciones'}
+                        >
                           <span className="ms-2 d-none d-lg-inline">Guardar</span>
                         </Button>
                       </>
@@ -218,7 +354,7 @@ export default function GroupModulesTable({ group }) {
                           }))
                         }
                       >
-                        <span className="ms-2 d-none d-lg-inline">Editar</span>
+                        <span className="ms-2 d-none d-lg-inline">Asignar</span>
                       </Button>
                     )}
 
@@ -270,26 +406,44 @@ export default function GroupModulesTable({ group }) {
                         header={<span className="fw-bold">{subj.id}</span>}
                         style={{ ...gridLinesX, width: '8rem', textAlign: 'center' }}
                         body={(row) => {
-                          const val = row[subj.id];
-                          if (val != null) {
-                            return <span style={{ display: 'block', textAlign: 'center' }}>{val}</span>;
+                          const val = getDisplayValue(row.studentId, subj.id, module.id);
+                          const cellKey = `${module.id}-${row.studentId}-${subj.id}`;
+                          const isInvalid = invalidCells[cellKey];
+
+                          if (val !== null && val !== undefined) {
+                            return (
+                              <span
+                                style={{
+                                  display: 'block',
+                                  textAlign: 'center',
+                                  color: isInvalid ? '#e24c4c' : 'inherit',
+                                  fontWeight: isInvalid ? 'bold' : 'normal',
+                                }}
+                              >
+                                {val}
+                                {isInvalid && <small style={{ display: 'block', fontSize: '0.7em' }}>Inválido</small>}
+                              </span>
+                            );
                           }
                           return isEditing ? 'SC' : '—';
                         }}
                         editor={(options) => {
                           const { rowData, field } = options;
-                          const currentVal = rowData[field];
+                          const currentVal = getDisplayValue(rowData.studentId, parseInt(field), module.id);
 
                           if (!isEditing) {
                             return <span>{currentVal ?? '—'}</span>;
                           }
 
-                          if (currentVal != null) {
-                            commitSameValue(options, currentVal); // evita el parpadeo y la limpieza
-                            return <span style={{ display: 'block', textAlign: 'center' }}>{currentVal}</span>;
+                          // Si ya tiene una calificación guardada, no permitir edición
+                          const originalRow = tableData.find((row) => row.studentId === rowData.studentId);
+                          const originalValue = originalRow?.[field];
+
+                          if (originalValue !== null && originalValue !== undefined) {
+                            return <span style={{ display: 'block', textAlign: 'center' }}>{originalValue}</span>;
                           }
 
-                          return buildNumberEditor(module.id, subj.id)(options);
+                          return buildNumberEditor(module.id, parseInt(field))(options);
                         }}
                       />
                     ))}
@@ -299,7 +453,13 @@ export default function GroupModulesTable({ group }) {
                       header="Promedio"
                       style={gridLinesX}
                       body={(row) => {
-                        const notas = module.subjects.map((s) => row[s.id]).filter((v) => v != null);
+                        const notas = module.subjects
+                          .map((s) => {
+                            const val = getDisplayValue(row.studentId, s.id, module.id);
+                            return val;
+                          })
+                          .filter((v) => v !== null && v !== undefined);
+
                         return notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1) : '—';
                       }}
                     />
