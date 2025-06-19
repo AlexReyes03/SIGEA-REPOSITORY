@@ -85,6 +85,50 @@ Button {
   border-radius: 5px;
 }
 
+/* === BOTONES === */
+.cetec-btn-primary {
+  background-color: var(--bg-blue-900) !important;
+  color: #021527 !important;
+  border: none !important;
+  border-radius: 6px !important;
+  transition: background-color 0.2s ease;
+}
+
+.cetec-btn-primary:hover {
+  background-color: #95a5bf !important;
+  color:#fff !important;
+}
+
+.cetec-btn-primary:active {
+  background-color: var(--bg-primary-active) !important;
+}
+
+.cetec-btn-primary:disabled {
+  background-color: var(--bg-primary-disabled) !important;
+  opacity: 0.6;
+}
+
+
+.cetec-btn-blue {
+  background-color: var(--bg-blue-800) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 6px !important;
+  transition: background-color 0.2s ease;
+}
+
+
+
+
+/* BADGES*/
+.cetec-badge-inactive {
+  background-color: var(--bg-gray-700) !important;
+  color: white !important;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+
 .p-button-text {
   margin-inline: 0.5rem;
 }
