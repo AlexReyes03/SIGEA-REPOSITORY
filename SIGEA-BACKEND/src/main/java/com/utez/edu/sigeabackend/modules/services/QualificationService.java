@@ -85,9 +85,6 @@ public class QualificationService {
                 .stream()
                 .map(this::toDto)
                 .toList();
-        if (list.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
         return ResponseEntity.ok(list);
     }
 
