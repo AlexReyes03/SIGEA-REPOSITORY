@@ -9,3 +9,10 @@ export const getQualificationsByGroup = async (groupId) => {
   const res = await request(`/api/qualifications/group/${groupId}`);
   return res;
 };
+
+export const saveQualification = async (studentId, groupId, subjectId, teacherId, grade) => {
+  return await request('/api/qualifications', {
+    method: 'POST',
+    body: { studentId, groupId, subjectId, teacherId, grade },
+  });
+}

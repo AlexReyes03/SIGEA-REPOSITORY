@@ -86,7 +86,7 @@ export default function Careers() {
       acceptClassName: 'p-button-danger',
       onAccept: async () => {
         await deleteCareer(careerToDelete.id);
-        showSuccess(`Carrera “${careerToDelete.name}” eliminada`);
+        showSuccess('Hecho',`Carrera “${careerToDelete.name}” eliminada`);
         await loadCareers();
       },
     });
