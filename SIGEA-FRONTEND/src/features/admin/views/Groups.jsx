@@ -30,15 +30,53 @@ const weekDayOptions = [
   { label: 'Sábado', value: 'SAB' },
   { label: 'Domingo', value: 'DOM' },
 ];
+
 const weekLabel = (code) => weekDayOptions.find((o) => o.value === code)?.label || code;
 const fmtTime = (d) => d?.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 const midnight = new Date();
 midnight.setHours(12, 0, 0, 0);
 
+// Funciones de validación
+const validateTimeRange = (startTime, endTime) => {
+  if (!startTime || !endTime) return null;
+
+  const start = new Date(startTime);
+  const end = new Date(endTime);
+
+  if (end <= start) {
+    return 'La hora de fin debe ser posterior a la hora de inicio';
+  }
+  return null;
+};
+
+const validateTeacherConflict = (teachers, selectedTeacher, weekDay, startTime, endTime, groups, excludeGroupId = null) => {
+  if (!selectedTeacher || !weekDay || !startTime || !endTime) return null;
+
+  const conflictingGroup = groups.find((group) => {
+    if (excludeGroupId && group.groupId === excludeGroupId) return false;
+    if (group.teacherId !== selectedTeacher.id) return false;
+    if (group.weekDay !== weekDay) return false;
+
+    const groupStart = new Date(`1970-01-01T${group.startTime}`);
+    const groupEnd = new Date(`1970-01-01T${group.endTime}`);
+    const newStart = new Date(startTime);
+    const newEnd = new Date(endTime);
+
+    // Verificar solapamiento de horarios
+    return !(newEnd <= groupStart || newStart >= groupEnd);
+  });
+
+  if (conflictingGroup) {
+    return `El docente ya tiene asignado el grupo "${conflictingGroup.name}" el día ${weekLabel(conflictingGroup.weekDay)} de ${conflictingGroup.startTime} a ${conflictingGroup.endTime}`;
+  }
+
+  return null;
+};
+
 export default function Groups() {
   const navigate = useNavigate();
   const career = useLocation().state?.career;
-  const { showSuccess, showError } = useToast();
+  const { showSuccess, showError, showWarn } = useToast();
   const { confirmAction } = useConfirmDialog();
 
   const createModalRef = useRef(null);
@@ -56,7 +94,68 @@ export default function Groups() {
   const [editingGroupId, setEditingGroupId] = useState(null);
   const [selected, setSelected] = useState(null);
   const [search, setSearch] = useState('');
-  const [form, setForm] = useState({ name: '', weekDay: null, startTime: midnight, endTime: midnight, teacher: null, curriculum: null });
+  const [form, setForm] = useState({
+    name: '',
+    weekDay: null,
+    startTime: midnight,
+    endTime: midnight,
+    teacher: null,
+    curriculum: null,
+  });
+  const [validationErrors, setValidationErrors] = useState({});
+
+  // Validar formulario en tiempo real
+  const validateForm = (formData = form) => {
+    const errors = {};
+
+    if (!formData.name.trim()) {
+      errors.name = 'El nombre del grupo es obligatorio';
+    }
+
+    if (!formData.weekDay) {
+      errors.weekDay = 'Debe seleccionar un día de la semana';
+    }
+
+    if (!formData.teacher) {
+      errors.teacher = 'Debe seleccionar un docente';
+    }
+
+    if (!formData.curriculum) {
+      errors.curriculum = 'Debe seleccionar un plan de estudios';
+    }
+
+    // Validar rango de horarios
+    const timeError = validateTimeRange(formData.startTime, formData.endTime);
+    if (timeError) {
+      errors.timeRange = timeError;
+    }
+
+    // Validar conflictos de horario del docente
+    const conflictError = validateTeacherConflict(teachers, formData.teacher, formData.weekDay, formData.startTime, formData.endTime, data, editingGroupId);
+    if (conflictError) {
+      errors.teacherConflict = conflictError;
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Efecto para validar cuando cambia el formulario
+  useEffect(() => {
+    if (form.name || form.weekDay || form.teacher || form.curriculum || form.startTime || form.endTime) {
+      validateForm();
+    }
+  }, [form, data, editingGroupId]);
+
+  const loadGroups = async () => {
+    try {
+      const response = await getGroupByCareer(career.id);
+      setData(Array.isArray(response) ? response : response?.data ?? []);
+    } catch (e) {
+      showError('Error', 'No se pudieron cargar los grupos');
+      setData([]);
+    }
+  };
 
   useEffect(() => {
     const loadAll = async () => {
@@ -82,25 +181,48 @@ export default function Groups() {
     loadAll();
   }, [career?.id]);
 
-  const openUpdateModal = (group) => {
+  const resetForm = () => {
     setForm({
+      name: '',
+      weekDay: null,
+      startTime: midnight,
+      endTime: midnight,
+      teacher: null,
+      curriculum: null,
+    });
+    setValidationErrors({});
+  };
+
+  const openCreateModal = () => {
+    resetForm();
+    setEditingGroupId(null);
+    new Modal(createModalRef.current).show();
+  };
+
+  const openUpdateModal = (group) => {
+    const updatedForm = {
       name: group.name,
       weekDay: group.weekDay,
       startTime: new Date(`1970-01-01T${group.startTime}`),
       endTime: new Date(`1970-01-01T${group.endTime}`),
       teacher: teachers.find((t) => t.id === group.teacherId) || null,
       curriculum: curriculums.find((c) => c.id === group.curriculumId) || null,
-    });
+    };
+    setForm(updatedForm);
     setEditingGroupId(group.groupId);
     new Modal(updateModalRef.current).show();
   };
 
   const saveGroup = async (e) => {
     e.preventDefault();
-    if (!form.curriculum) return showError('Debes seleccionar un plan de estudios');
+
+    if (!validateForm()) {
+      showWarn('Validación', 'Por favor corrige los errores en el formulario');
+      return;
+    }
 
     const payload = {
-      name: form.name,
+      name: form.name.trim(),
       weekDay: form.weekDay,
       startTime: fmtTime(form.startTime),
       endTime: fmtTime(form.endTime),
@@ -112,20 +234,26 @@ export default function Groups() {
     try {
       await createGroup(payload);
       await loadGroups();
-      showSuccess('Grupo creado');
+      showSuccess('Éxito', 'El grupo ha sido creado correctamente');
       Modal.getInstance(createModalRef.current).hide();
-      setForm({ name: '', weekDay: null, startTime: midnight, endTime: midnight, teacher: null, curriculum: null });
+      resetForm();
     } catch (e) {
-      showError('Error', 'No se pudo crear');
+      console.error('Error al crear grupo:', e);
+      showError('Error', e.message || 'No se pudo crear el grupo');
     }
   };
 
-  const updateGroup = async (e) => {
+  const updateGroupAction = async (e) => {
     e.preventDefault();
-    if (!form.curriculum) return showError('Debes seleccionar un plan de estudios');
+
+    if (!validateForm()) {
+      showWarn('Validación', 'Por favor corrige los errores en el formulario');
+      return;
+    }
+
     try {
       const payload = {
-        name: form.name,
+        name: form.name.trim(),
         weekDay: form.weekDay,
         startTime: fmtTime(form.startTime),
         endTime: fmtTime(form.endTime),
@@ -135,12 +263,13 @@ export default function Groups() {
       };
       await updateGroup(editingGroupId, payload);
       await loadGroups();
-      showSuccess('Grupo actualizado');
+      showSuccess('Éxito', 'El grupo ha sido actualizado correctamente');
       Modal.getInstance(updateModalRef.current).hide();
       setEditingGroupId(null);
-      setForm({ name: '', weekDay: null, startTime: midnight, endTime: midnight, teacher: null, curriculum: null });
+      resetForm();
     } catch (e) {
-      showError('Error', 'No se pudo actualizar');
+      console.error('Error al actualizar grupo:', e);
+      showError('Error', e.message || 'No se pudo actualizar el grupo');
     }
   };
 
@@ -156,9 +285,9 @@ export default function Groups() {
         deleteGroup(row.groupId)
           .then(() => {
             setData((g) => g.filter((x) => x.groupId !== row.groupId));
-            showSuccess('Grupo eliminado');
+            showSuccess('Éxito', 'El grupo ha sido eliminado');
           })
-          .catch((e) => showError('Error', e.message)),
+          .catch((e) => showError('Error', 'No se puede eliminar este grupo')),
     });
 
   const removeSelected = () =>
@@ -170,10 +299,14 @@ export default function Groups() {
       acceptLabel: 'Sí',
       rejectLabel: 'No',
       onAccept: async () => {
-        await Promise.all(selected.map((g) => deleteGroup(g.groupId)));
-        await loadGroups();
-        setSelected(null);
-        showSuccess('Grupos eliminados');
+        try {
+          await Promise.all(selected.map((g) => deleteGroup(g.groupId)));
+          await loadGroups();
+          setSelected(null);
+          showSuccess('Éxito', 'Grupos eliminados correctamente');
+        } catch (e) {
+          showError('Error', 'No se pudieron eliminar algunos grupos');
+        }
       },
     });
 
@@ -196,7 +329,7 @@ export default function Groups() {
 
   const toolbarLeft = () => (
     <div className="flex flex-wrap">
-      <Button ref={createButtonRef} icon="pi pi-plus" severity="primary" disabled={curriculums.length === 0} className="me-2" onClick={() => new Modal(createModalRef.current).show()}>
+      <Button ref={createButtonRef} icon="pi pi-plus" severity="primary" disabled={curriculums.length === 0} className="me-2" onClick={openCreateModal}>
         <span className="d-none d-sm-inline ms-1">Crear grupo</span>
       </Button>
       <Button icon="pi pi-trash" severity="danger" disabled={!selected?.length} onClick={removeSelected}>
@@ -213,11 +346,13 @@ export default function Groups() {
 
   const actions = (row) => (
     <div className="d-flex align-items-center justify-content-center">
-      <Button ref={updateButtonRef} icon="pi pi-pencil" rounded outlined tooltip="Editar" onClick={() => openUpdateModal(row)} />
+      <Button icon="pi pi-pencil" rounded outlined tooltip="Editar" onClick={() => openUpdateModal(row)} />
       <Button icon="pi pi-trash" rounded outlined severity="danger" className="mx-2" tooltip="Eliminar este grupo" tooltipOptions={{ position: 'left' }} onClick={() => removeGroup(row)} />
       <Button icon="pi pi-arrow-up-right" rounded outlined tooltip="Ver detalles" tooltipOptions={{ position: 'left' }} onClick={() => navigate('/admin/careers/groups/detail', { state: { group: row, career } })} />
     </div>
   );
+
+  const isFormValid = Object.keys(validationErrors).length === 0 && form.name.trim() && form.weekDay && form.teacher && form.curriculum;
 
   return (
     <>
@@ -280,44 +415,96 @@ export default function Groups() {
 
               <div className="modal-body">
                 <div className="mb-3">
-                  <label className="form-label">Nombre</label>
-                  <InputText className="w-100" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+                  <label className="form-label">Nombre *</label>
+                  <InputText className={`w-100 ${validationErrors.name ? 'p-invalid' : ''}`} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+                  {validationErrors.name && <small className="p-error">{validationErrors.name}</small>}
                 </div>
 
                 <div className="mb-3">
-                  <label className="form-label">Día</label>
-                  <Dropdown value={form.weekDay} options={weekDayOptions} placeholder="Seleccione día…" onChange={(e) => setForm({ ...form, weekDay: e.value })} className="w-100" required />
+                  <label className="form-label">Día *</label>
+                  <Dropdown value={form.weekDay} options={weekDayOptions} placeholder="Seleccione día…" onChange={(e) => setForm({ ...form, weekDay: e.value })} className={`w-100 ${validationErrors.weekDay ? 'p-invalid' : ''}`} required />
+                  {validationErrors.weekDay && <small className="p-error">{validationErrors.weekDay}</small>}
                 </div>
 
                 <div className="row">
                   <div className="col mb-3">
-                    <label className="form-label">Hora inicio</label>
-                    <Calendar className="w-100 gap-1" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.value })} timeOnly hourFormat="12" showIcon icon={() => <i className="pi pi-clock" />} required />
+                    <label className="form-label">Hora inicio *</label>
+                    <Calendar
+                      className={`w-100 gap-1 ${validationErrors.timeRange ? 'p-invalid' : ''}`}
+                      value={form.startTime}
+                      onChange={(e) => setForm({ ...form, startTime: e.value })}
+                      timeOnly
+                      hourFormat="24"
+                      showIcon
+                      icon={() => <i className="pi pi-clock" />}
+                      required
+                    />
                   </div>
                   <div className="col mb-3">
-                    <label className="form-label">Hora fin</label>
-                    <Calendar className="w-100 gap-1" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.value })} timeOnly hourFormat="12" showIcon icon={() => <i className="pi pi-clock" />} required />
+                    <label className="form-label">Hora fin *</label>
+                    <Calendar
+                      className={`w-100 gap-1 ${validationErrors.timeRange ? 'p-invalid' : ''}`}
+                      value={form.endTime}
+                      onChange={(e) => setForm({ ...form, endTime: e.value })}
+                      timeOnly
+                      hourFormat="24"
+                      showIcon
+                      icon={() => <i className="pi pi-clock" />}
+                      required
+                    />
                   </div>
                 </div>
+                {validationErrors.timeRange && (
+                  <div className="mb-3">
+                    <small className="p-error">{validationErrors.timeRange}</small>
+                  </div>
+                )}
 
                 <div className="row">
                   <div className="col-6 mb-3">
-                    <label className="form-label">Docente</label>
-                    <Dropdown className="w-100" value={form.teacher} options={teachers} optionLabel={(t) => `${t.name} ${t.paternalSurname}`} placeholder="Seleccione docente…" filter onChange={(e) => setForm({ ...form, teacher: e.value })} required />
+                    <label className="form-label">Docente *</label>
+                    <Dropdown
+                      className={`w-100 ${validationErrors.teacher ? 'p-invalid' : ''}`}
+                      value={form.teacher}
+                      options={teachers}
+                      optionLabel={(t) => `${t.name} ${t.paternalSurname}`}
+                      placeholder="Seleccione docente…"
+                      filter
+                      onChange={(e) => setForm({ ...form, teacher: e.value })}
+                      required
+                    />
+                    {validationErrors.teacher && <small className="p-error">{validationErrors.teacher}</small>}
                   </div>
 
                   <div className="col-6 mb-3">
-                    <label className="form-label">Plan de estudios</label>
-                    <Dropdown className="w-100" value={form.curriculum} options={curriculums} optionLabel="name" placeholder="Seleccione plan…" filter onChange={(e) => setForm({ ...form, curriculum: e.value })} required disabled={loading || curriculums.length === 0} />
+                    <label className="form-label">Plan de estudios *</label>
+                    <Dropdown
+                      className={`w-100 ${validationErrors.curriculum ? 'p-invalid' : ''}`}
+                      value={form.curriculum}
+                      options={curriculums}
+                      optionLabel="name"
+                      placeholder="Seleccione plan…"
+                      filter
+                      onChange={(e) => setForm({ ...form, curriculum: e.value })}
+                      required
+                      disabled={loading || curriculums.length === 0}
+                    />
+                    {validationErrors.curriculum && <small className="p-error">{validationErrors.curriculum}</small>}
                   </div>
                 </div>
+
+                {validationErrors.teacherConflict && (
+                  <div className="mb-3">
+                    <Message severity="error" text={validationErrors.teacherConflict} />
+                  </div>
+                )}
               </div>
 
               <div className="modal-footer">
-                <Button type="reset" icon="pi pi-times" severity="secondary" outlined data-bs-dismiss="modal">
+                <Button type="button" icon="pi pi-times" severity="secondary" outlined data-bs-dismiss="modal" onClick={resetForm}>
                   <span className="d-none d-sm-inline ms-1">Cancelar</span>
                 </Button>
-                <Button type="submit" icon="pi pi-check" severity="primary" data-bs-dismiss="modal" disabled={curriculums.length === 0}>
+                <Button type="submit" icon="pi pi-check" severity="primary" disabled={!isFormValid}>
                   <span className="d-none d-sm-inline ms-1">Guardar</span>
                 </Button>
               </div>
@@ -330,45 +517,113 @@ export default function Groups() {
       <div className="modal fade" ref={updateModalRef} tabIndex={-1}>
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
-            <form onSubmit={updateGroup}>
+            <form onSubmit={updateGroupAction}>
               <div className="modal-header">
                 <h5 className="modal-title">Modificar grupo</h5>
                 <button type="button" className="btn-close" data-bs-dismiss="modal" />
               </div>
+
               <div className="modal-body">
                 <div className="mb-3">
-                  <label className="form-label">Nombre</label>
-                  <InputText className="w-100" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+                  <label className="form-label">Nombre *</label>
+                  <InputText className={`w-100 ${validationErrors.name ? 'p-invalid' : ''}`} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+                  {validationErrors.name && <small className="p-error">{validationErrors.name}</small>}
                 </div>
+
                 <div className="mb-3">
-                  <label className="form-label">Día</label>
-                  <Dropdown value={form.weekDay} options={weekDayOptions} placeholder="Seleccione…" onChange={(e) => setForm({ ...form, weekDay: e.value })} className="w-100" required />
+                  <label className="form-label">Día *</label>
+                  <Dropdown value={form.weekDay} options={weekDayOptions} placeholder="Seleccione…" onChange={(e) => setForm({ ...form, weekDay: e.value })} className={`w-100 ${validationErrors.weekDay ? 'p-invalid' : ''}`} required />
+                  {validationErrors.weekDay && <small className="p-error">{validationErrors.weekDay}</small>}
                 </div>
+
                 <div className="row">
                   <div className="col mb-3">
-                    <label className="form-label">Hora inicio</label>
-                    <Calendar className="w-100 gap-1" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.value })} timeOnly hourFormat="12" showIcon icon={() => <i className="pi pi-clock" />} required />
+                    <label className="form-label">Hora inicio *</label>
+                    <Calendar
+                      className={`w-100 gap-1 ${validationErrors.timeRange ? 'p-invalid' : ''}`}
+                      value={form.startTime}
+                      onChange={(e) => setForm({ ...form, startTime: e.value })}
+                      timeOnly
+                      hourFormat="24"
+                      showIcon
+                      icon={() => <i className="pi pi-clock" />}
+                      required
+                    />
                   </div>
                   <div className="col mb-3">
-                    <label className="form-label">Hora fin</label>
-                    <Calendar className="w-100 gap-1" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.value })} timeOnly hourFormat="12" showIcon icon={() => <i className="pi pi-clock" />} required />
+                    <label className="form-label">Hora fin *</label>
+                    <Calendar
+                      className={`w-100 gap-1 ${validationErrors.timeRange ? 'p-invalid' : ''}`}
+                      value={form.endTime}
+                      onChange={(e) => setForm({ ...form, endTime: e.value })}
+                      timeOnly
+                      hourFormat="24"
+                      showIcon
+                      icon={() => <i className="pi pi-clock" />}
+                      required
+                    />
                   </div>
                 </div>
+                {validationErrors.timeRange && (
+                  <div className="mb-3">
+                    <small className="p-error">{validationErrors.timeRange}</small>
+                  </div>
+                )}
+
                 <div className="mb-3">
-                  <label className="form-label">Docente</label>
-                  <Dropdown className="w-100" value={form.teacher} options={teachers} optionLabel={(t) => `${t.name} ${t.paternalSurname}`} placeholder="Seleccione docente…" filter onChange={(e) => setForm({ ...form, teacher: e.value })} required />
+                  <label className="form-label">Docente *</label>
+                  <Dropdown
+                    className={`w-100 ${validationErrors.teacher ? 'p-invalid' : ''}`}
+                    value={form.teacher}
+                    options={teachers}
+                    optionLabel={(t) => `${t.name} ${t.paternalSurname}`}
+                    placeholder="Seleccione docente…"
+                    filter
+                    onChange={(e) => setForm({ ...form, teacher: e.value })}
+                    required
+                  />
+                  {validationErrors.teacher && <small className="p-error">{validationErrors.teacher}</small>}
                 </div>
+
                 <div className="mb-3">
-                  <label className="form-label">Plan de estudios</label>
-                  <Dropdown className="w-100" value={form.curriculum} options={curriculums} optionLabel="name" placeholder="Seleccione plan…" filter onChange={(e) => setForm({ ...form, curriculum: e.value })} required disabled={curriculums.length === 0} />
+                  <label className="form-label">Plan de estudios *</label>
+                  <Dropdown
+                    className={`w-100 ${validationErrors.curriculum ? 'p-invalid' : ''}`}
+                    value={form.curriculum}
+                    options={curriculums}
+                    optionLabel="name"
+                    placeholder="Seleccione plan…"
+                    filter
+                    onChange={(e) => setForm({ ...form, curriculum: e.value })}
+                    required
+                    disabled={curriculums.length === 0}
+                  />
+                  {validationErrors.curriculum && <small className="p-error">{validationErrors.curriculum}</small>}
                   {curriculums.length === 0 && <Message severity="warn" text="Para crear o modificar un grupo, primero debes definir un plan de estudios en la sección 'Plan de estudios'." className="mt-2" />}
                 </div>
+
+                {validationErrors.teacherConflict && (
+                  <div className="mb-3">
+                    <Message severity="error" text={validationErrors.teacherConflict} />
+                  </div>
+                )}
               </div>
+
               <div className="modal-footer">
-                <Button type="reset" icon="pi pi-times" severity="secondary" outlined data-bs-dismiss="modal" onClick={() => setEditingGroupId(null)}>
+                <Button
+                  type="button"
+                  icon="pi pi-times"
+                  severity="secondary"
+                  outlined
+                  data-bs-dismiss="modal"
+                  onClick={() => {
+                    setEditingGroupId(null);
+                    resetForm();
+                  }}
+                >
                   <span className="d-none d-sm-inline ms-1">Cancelar</span>
                 </Button>
-                <Button type="submit" icon="pi pi-check" severity="primary" data-bs-dismiss="modal" disabled={curriculums.length === 0}>
+                <Button type="submit" icon="pi pi-check" severity="primary" disabled={!isFormValid}>
                   <span className="d-none d-sm-inline ms-1">Modificar</span>
                 </Button>
               </div>
