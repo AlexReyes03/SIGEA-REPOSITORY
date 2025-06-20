@@ -44,6 +44,10 @@ export const getGroupStudents = async (groupId) => {
   return res;
 };
 
+export const getStudentsWithGroup = async () => {
+  return await request('/api/group-students/students-with-group');
+};
+
 export const enrollStudentInGroup = async (groupId, studentId) => {
   return await request('/api/group-students/enroll', {
     method: 'POST',
@@ -53,7 +57,7 @@ export const enrollStudentInGroup = async (groupId, studentId) => {
 
 export const removeStudentFromGroup = async (groupId, studentId) => {
   return await request('/api/group-students/remove', {
-    method: 'POST',
+    method: 'DELETE',
     body: { groupId, studentId },
   });
 };

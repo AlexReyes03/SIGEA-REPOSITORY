@@ -7,6 +7,7 @@ import { Tooltip } from 'primereact/tooltip';
 import { InputText } from 'primereact/inputtext';
 import { InputNumber } from 'primereact/inputnumber';
 import { Button } from 'primereact/button';
+import { ProgressSpinner } from 'primereact/progressspinner';
 import { MdOutlineGroup } from 'react-icons/md';
 import { motion } from 'framer-motion';
 
@@ -319,7 +320,9 @@ export default function GroupModulesTable({ group }) {
   }, [sortedModules, isEditingModule, editedGrades, showQualificationDetails]);
 
   if (loading) {
-    return <span>Cargando...</span>;
+    return (<div className="d-flex justify-content-center align-items-center" style={{ minHeight: 220 }}>
+              <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" />
+            </div>);
   }
 
   return (

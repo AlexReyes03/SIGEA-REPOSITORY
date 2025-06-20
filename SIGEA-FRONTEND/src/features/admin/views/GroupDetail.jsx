@@ -1,14 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MdOutlinePerson, MdOutlineGroup, MdOutlineAssignment } from 'react-icons/md';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MdOutlinePerson, MdOutlineGroup, MdArrowForwardIos, MdArrowBackIosNew } from 'react-icons/md';
 import { BreadCrumb } from 'primereact/breadcrumb';
 import { Rating } from 'primereact/rating';
 import { Button } from 'primereact/button';
 
+import { useToast } from '../../../components/providers/ToastProvider';
 import avatarFallback from '../../../assets/img/profile.png';
 import { getUserById } from '../../../api/userService';
-import GroupModulesTable from '../components/GroupModulesTable';
+import { getCareerById } from '../../../api/academics/careerService';
+import { getGroupStudents } from '../../../api/academics/groupService';
 import { BACKEND_BASE_URL } from '../../../api/common-url';
+import GroupModulesTable from '../../teacher/components/GroupModulesTable';
+import AssignStudentsPickList from '../components/AssignStudentsPickList';
 
 const weekDayOptions = [
   { label: 'Lunes', value: 'LUN' },
@@ -19,20 +24,58 @@ const weekDayOptions = [
   { label: 'Sábado', value: 'SAB' },
   { label: 'Domingo', value: 'DOM' },
 ];
+
 const weekLabel = (code) => weekDayOptions.find((o) => o.value === code)?.label || code;
 
-export default function GroupDetail() {
+// Variantes de animación para las transiciones
+const slideVariants = {
+  // Vista de Módulos (vista principal)
+  modulesEnter: {
+    x: '100%',
+    opacity: 0,
+  },
+  modulesCenter: {
+    x: 0,
+    opacity: 1,
+  },
+  modulesExit: {
+    x: '100%',
+    opacity: 0,
+  },
+  // Vista de Estudiantes  
+  studentsEnter: {
+    x: '-100%',
+    opacity: 0,
+  },
+  studentsCenter: {
+    x: 0,
+    opacity: 1,
+  },
+  studentsExit: {
+    x: '-100%',
+    opacity: 0,
+  },
+};
+
+const transition = {
+  type: 'tween',
+  ease: 'anticipate',
+  duration: 0.4,
+};
+
+export default function GroupDetails() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { showSuccess, showError } = useToast();
+  const [loading, setLoading] = useState(true);
   const { group, career } = location.state || {};
-  const [teacher, setTeacher] = useState(null);
+  
+  // true = GroupModulesTable, false = AssignStudentsPickList
+  const [currentView, setCurrentView] = useState(true);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
-  useEffect(() => {
-    if (!group) {
-      navigate('/admin/careers/groups');
-      return null;
-    }
-  }, [group, navigate]);
+  const [teacher, setTeacher] = useState(null);
+  const [studentCount, setStudentCount] = useState(0);
 
   function getAvatarUrl(url) {
     if (!url) return avatarFallback;
@@ -40,48 +83,129 @@ export default function GroupDetail() {
     return `${BACKEND_BASE_URL}${url}`;
   }
 
+  // Función optimizada para cambiar de vista
+  const handleViewChange = useCallback(() => {
+    if (isTransitioning) return; // Prevenir clicks múltiples durante la transición
+    
+    setIsTransitioning(true);
+    setCurrentView(prev => !prev);
+    
+    // Resetear el estado de transición después de que termine la animación
+    setTimeout(() => {
+      setIsTransitioning(false);
+    }, 400); // Duración de la animación
+  }, [isTransitioning]);
+
   useEffect(() => {
-    if (group.teacherId) {
-      (async () => {
-        try {
-          const user = await getUserById(group.teacherId);
-          setTeacher(user);
-        } catch (err) {
-          console.error('Error al cargar docente:', err);
-        }
-      })();
+    if (!group) {
+      navigate('/teacher/groups');
+      return;
     }
-  }, [group.teacherId]);
+
+    let isMounted = true;
+    setLoading(true);
+
+    (async () => {
+      try {
+        const teacherPromise = group.teacherId ? getUserById(group.teacherId) : Promise.resolve(null);
+        const studentsPromise = group.groupId ? getGroupStudents(group.groupId) : Promise.resolve(null);
+
+        const [teacherData, studentsData] = await Promise.all([teacherPromise, studentsPromise]);
+
+        if (!isMounted) return;
+
+        setTeacher(teacherData);
+        setStudentCount(studentsData ? studentsData.length : 0);
+      } catch (err) {
+        console.error('Error loading group details:', err);
+        showError('Error', 'Error al cargar los detalles del grupo');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [group, navigate, showError]);
 
   const infoLeft = [
-    { label: 'Plan de estudios', value: group.curriculumName || 'No asignado' },
+    { label: 'Plan de estudios', value: group?.curriculumName || 'No asignado' },
     { label: 'Fecha de inicio', value: 'MAYO - 2025' },
     { label: 'Estado', value: 'Activo' },
   ];
 
   const infoRight = [
-    { label: 'Horario', value: `${weekLabel(group.weekDay)} ${group.startTime} - ${group.endTime}` },
+    { label: 'Horario', value: `${weekLabel(group?.weekDay)} ${group?.startTime} - ${group?.endTime}` },
     { label: 'Fecha de fin', value: 'MAYO - 2026' },
-    { label: 'Alumnos', value: '20' },
+    { label: 'Total de alumnos', value: studentCount === 0 ? 'Sin alumnos' : studentCount },
   ];
+
+  // Determinar el texto del header y el botón según la vista actual
+  const getViewConfig = () => {
+    if (currentView) {
+      return {
+        headerText: 'Detalles del grupo',
+        buttonIcon: 'pi pi-users',
+        buttonContent: <MdArrowForwardIos />,
+        buttonTooltip: 'Ir a asignar estudiantes'
+      };
+    } else {
+      return {
+        headerText: 'Asignar estudiantes',
+        buttonContent: <><MdArrowBackIosNew /><i className="pi pi-clipboard ml-1" /></>,
+        buttonTooltip: 'Volver a detalles del grupo'
+      };
+    }
+  };
+
+  const viewConfig = getViewConfig();
+
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+        <div className="text-center">
+          <i className="pi pi-spinner pi-spin" style={{ fontSize: '2rem', color: '#6366f1' }}></i>
+          <p className="mt-3 text-600">Cargando detalles del grupo...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
-      <div className="bg-white rounded-top p-2">
-        <h3 className="text-blue-500 fw-semibold mx-3 my-1">Detalles del grupo</h3>
+      {/* Header con botón de cambio de vista */}
+      <div className="d-flex flex-row justify-content-between align-items-center bg-white rounded-top p-2">
+        <h3 className="text-blue-500 fw-semibold mx-3 my-1">
+          {viewConfig.headerText}
+        </h3>
+        <Button 
+          icon={viewConfig.buttonIcon}
+          severity="primary" 
+          size="small" 
+          onClick={handleViewChange}
+          disabled={isTransitioning}
+          tooltip={viewConfig.buttonTooltip}
+          tooltipOptions={{ position: 'left' }}
+          className="d-flex align-items-center gap-1"
+        >
+          {viewConfig.buttonContent}
+        </Button>
       </div>
 
+      {/* Breadcrumb */}
       <BreadCrumb
         model={[
           { label: 'Carreras', command: () => navigate('/admin/careers') },
           { label: career?.name || '--', command: () => navigate('/admin/careers') },
           { label: 'Grupos', command: () => navigate('/admin/careers/groups', { state: { career } }) },
-          { label: `Grupo ${group.name}` || '--' },
+          { label: `Grupo ${group?.name}` || '--' },
         ]}
         home={{ icon: 'pi pi-home', command: () => navigate('/') }}
         className="mt-2 pb-0 ps-0 text-nowrap"
       />
 
+      {/* Información del grupo y docente */}
       <div className="row my-2">
         <div className="col-12 col-lg-4 mb-2 mb-lg-0">
           <div className="card border-0" style={{ minHeight: '20rem' }}>
@@ -94,8 +218,17 @@ export default function GroupDetail() {
               </div>
               <div className="d-flex align-items-center justify-content-center fw-medium">
                 <div className="d-flex flex-column align-items-center text-center">
-                  <img alt="Avatar docente" src={getAvatarUrl(teacher?.avatarUrl)} className="rounded-circle shadow-sm mb-3" width={140} height={140} style={{ objectFit: 'cover' }} />
-                  <span className="text-muted text-uppercase">{teacher ? `${teacher.name} ${teacher.paternalSurname} ${teacher.maternalSurname}` : 'No asignado'}</span>
+                  <img 
+                    alt="Avatar docente" 
+                    src={getAvatarUrl(teacher?.avatarUrl)} 
+                    className="rounded-circle shadow-sm mb-3" 
+                    width={140} 
+                    height={140} 
+                    style={{ objectFit: 'cover' }} 
+                  />
+                  <span className="text-muted text-uppercase">
+                    {teacher ? `${teacher.name} ${teacher.paternalSurname} ${teacher.maternalSurname}` : 'No asignado'}
+                  </span>
                   <span className="text-muted mb-2">{teacher?.email || 'No asignado'}</span>
                   <Rating value={5} readOnly cancel={false} />
                 </div>
@@ -116,10 +249,10 @@ export default function GroupDetail() {
               <div className="d-flex align-items-center fw-medium">
                 <div className="row text-muted text-start text-uppercase ms-5 gx-4 gy-3">
                   <div className="col-6">
-                    <span>{career.name}</span>
+                    <span>{career?.name}</span>
                   </div>
                   <div className="col-6">
-                    <span>Grupo {group.name}</span>
+                    <span>Grupo - {group?.name}</span>
                   </div>
 
                   {infoLeft.map(({ label, value }) => (
@@ -142,8 +275,35 @@ export default function GroupDetail() {
         </div>
       </div>
 
-      <div className="col-12">
-        <GroupModulesTable group={group} />
+      {/* Contenedor con animaciones para las vistas */}
+      <div className="col-12 mb-3" style={{ position: 'relative', overflow: 'hidden' }}>
+        <AnimatePresence mode="wait" initial={false}>
+          {currentView ? (
+            <motion.div
+              key="modules-view"
+              initial="modulesEnter"
+              animate="modulesCenter"
+              exit="modulesExit"
+              variants={slideVariants}
+              transition={transition}
+              style={{ width: '100%' }}
+            >
+              <GroupModulesTable group={group} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="students-view"
+              initial="studentsEnter"
+              animate="studentsCenter"
+              exit="studentsExit"
+              variants={slideVariants}
+              transition={transition}
+              style={{ width: '100%' }}
+            >
+              <AssignStudentsPickList group={group} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </>
   );

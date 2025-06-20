@@ -76,7 +76,7 @@ export default function AppRouter() {
           <Route path="admin/careers" element={<AdminCareers />} />
           <Route path="admin/careers/groups" element={<AdminCareerGroups />} />
           <Route path="admin/careers/curriculums" element={<AdminCareerCurriculums />} />
-          <Route path="admin/careers/groups/detail" element={<AdminGroupDetail />} />
+          <Route path="admin/careers/groups/details" element={<AdminGroupDetail />} />
         </Route>
       </Route>
 
