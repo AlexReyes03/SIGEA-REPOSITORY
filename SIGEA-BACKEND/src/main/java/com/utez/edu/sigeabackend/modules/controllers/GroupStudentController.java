@@ -49,6 +49,12 @@ public class GroupStudentController {
         return ResponseEntity.ok(list);
     }
 
+    @GetMapping("/students-with-group")
+    public ResponseEntity<List<GroupStudentDto>> getStudentsWithGroup() {
+        List<GroupStudentDto> list = service.getAllStudentsWithGroup();
+        return ResponseEntity.ok(list);
+    }
+
     @GetMapping("/group/{groupId}")
     public ResponseEntity<List<GroupStudentDto>> getByGroup(@PathVariable long groupId) {
         List<GroupStudentDto> list = service.getStudentsInGroup(groupId);

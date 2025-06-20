@@ -75,6 +75,26 @@ public class GroupStudentService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<GroupStudentDto> getAllStudentsWithGroup() {
+        return studentRepo.findAll()
+                .stream()
+                .map(gs -> {
+                    var user = gs.getStudent();
+                    String fullName = user.getName()
+                            + " "
+                            + user.getPaternalSurname()
+                            + " "
+                            + user.getMaternalSurname();
+                    return new GroupStudentDto(
+                            gs.getId().getGroupId(),
+                            gs.getId().getStudentId(),
+                            fullName
+                    );
+                })
+                .toList();
+    }
+
     //Lista todas las inscripciones de un estudiant
     @Transactional(readOnly = true)
     public List<GroupStudentEntity> findByStudent(long studentId) {
