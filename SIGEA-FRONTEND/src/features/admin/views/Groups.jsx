@@ -62,7 +62,6 @@ const validateTeacherConflict = (teachers, selectedTeacher, weekDay, startTime, 
     const newStart = new Date(startTime);
     const newEnd = new Date(endTime);
 
-    // Verificar solapamiento de horarios
     return !(newEnd <= groupStart || newStart >= groupEnd);
   });
 
@@ -104,7 +103,16 @@ export default function Groups() {
   });
   const [validationErrors, setValidationErrors] = useState({});
 
-  // Validar formulario en tiempo real
+  // Procesar datos para incluir campos searchables
+  const processedData = useMemo(() => {
+    return data.map((group) => ({
+      ...group,
+      // Campo virtual que combina código y etiqueta para búsqueda
+      weekDaySearchable: `${group.weekDay} ${weekLabel(group.weekDay)}`,
+    }));
+  }, [data]);
+
+  // Validar formulario
   const validateForm = (formData = form) => {
     const errors = {};
 
@@ -140,7 +148,6 @@ export default function Groups() {
     return Object.keys(errors).length === 0;
   };
 
-  // Efecto para validar cuando cambia el formulario
   useEffect(() => {
     if (form.name || form.weekDay || form.teacher || form.curriculum || form.startTime || form.endTime) {
       validateForm();
@@ -320,7 +327,7 @@ export default function Groups() {
           <h6 className="text-blue-500 fs-5 fw-semibold ms-2 mb-0">Grupos de la carrera</h6>
         </div>
         <span className="p-input-icon-left">
-          <InputText placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <InputText placeholder="Buscar grupos..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-100" />
         </span>
       </div>
     ),
@@ -376,7 +383,7 @@ export default function Groups() {
         <div className="card border-0">
           <DataTable
             ref={dt}
-            value={data}
+            value={processedData}
             selection={selected}
             onSelectionChange={(e) => setSelected(e.value)}
             dataKey="groupId"
@@ -389,7 +396,7 @@ export default function Groups() {
           >
             <Column selectionMode="multiple" headerStyle={{ width: '3rem' }} />
             <Column field="name" header="Nombre" sortable />
-            <Column field="weekDay" header="Día" body={(row) => weekLabel(row.weekDay)} sortable />
+            <Column field="weekDaySearchable" header="Día" body={(row) => weekLabel(row.weekDay)} sortable />
             <Column field="startTime" header="Inicio" sortable />
             <Column field="endTime" header="Fin" sortable />
             <Column field="teacherName" header="Docente" sortable />
