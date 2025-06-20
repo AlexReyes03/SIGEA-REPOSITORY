@@ -3,6 +3,7 @@ package com.utez.edu.sigeabackend.modules.controllers;
 import com.utez.edu.sigeabackend.modules.entities.dto.groupDtos.GroupRequestDto;
 import com.utez.edu.sigeabackend.modules.entities.dto.groupDtos.GroupResponseDto;
 import com.utez.edu.sigeabackend.modules.services.GroupService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,6 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/sigea/api/groups")
+@CrossOrigin(origins = "*") // Temporal para debuggear CORS
 public class GroupController {
 
     private final GroupService service;
@@ -44,7 +46,7 @@ public class GroupController {
 
     /** POST  /sigea/api/groups */
     @PostMapping
-    public ResponseEntity<GroupResponseDto> create(@RequestBody GroupRequestDto dto) {
+    public ResponseEntity<GroupResponseDto> create(@Valid @RequestBody GroupRequestDto dto) {
         return service.create(dto);
     }
 
@@ -52,7 +54,7 @@ public class GroupController {
     @PutMapping("/{id}")
     public ResponseEntity<GroupResponseDto> update(
             @PathVariable("id") long id,
-            @RequestBody GroupRequestDto dto
+            @Valid @RequestBody GroupRequestDto dto
     ) {
         return service.update(id, dto);
     }
