@@ -17,15 +17,19 @@ public class GroupStudentController {
         this.service = service;
     }
 
-    // Inscribir un estudiante en un grupo (JSON con { groupId, studentId })
+    // Inscribir un estudiante en un grupo (Necesita un JSON con { groupId, studentId })
     @PostMapping("/enroll")
     public ResponseEntity<?> enrollStudent(@RequestBody GroupStudentDto dto) {
         try {
             GroupStudentEntity saved = service.enroll(dto);
+            var user = saved.getStudent();
+            String fullName = user.getName() + " " + user.getPaternalSurname() + " " + user.getMaternalSurname();
             GroupStudentDto response = new GroupStudentDto(
                     saved.getId().getGroupId(),
                     saved.getId().getStudentId(),
-                    saved.getStudent().getName()
+                    fullName,
+                    user.getEmail() != null ? user.getEmail() : "",
+                    user.getRegistrationNumber() != null ? user.getRegistrationNumber() : ""
             );
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException ex) {
@@ -39,7 +43,7 @@ public class GroupStudentController {
         return service.delete(dto);
     }
 
-    // Listados sin cambios
+    // Listados
     @GetMapping("/by-student/{studentId}")
     public ResponseEntity<?> getByStudent(@PathVariable long studentId){
         List<GroupStudentEntity> list = service.findByStudent(studentId);

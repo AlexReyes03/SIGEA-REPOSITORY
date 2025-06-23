@@ -28,6 +28,25 @@ public class GroupStudentService {
         this.responseService = responseService;
     }
 
+    /**
+     * Convierte GroupStudentEntity a GroupStudentDto con información completa
+     */
+    private GroupStudentDto toDto(GroupStudentEntity gs) {
+        var user = gs.getStudent();
+        String fullName = user.getName()
+                + " "
+                + user.getPaternalSurname()
+                + " "
+                + user.getMaternalSurname();
+        return new GroupStudentDto(
+                gs.getId().getGroupId(),
+                gs.getId().getStudentId(),
+                fullName,
+                user.getEmail() != null ? user.getEmail() : "",
+                user.getRegistrationNumber() != null ? user.getRegistrationNumber() : ""
+        );
+    }
+
     //Inscribe un estudiante en un grupo.
     @Transactional
     public GroupStudentEntity enroll(GroupStudentDto dto) {
@@ -59,19 +78,7 @@ public class GroupStudentService {
     public List<GroupStudentDto> getStudentsInGroup(long groupId) {
         return studentRepo.findByGroupId(groupId)
                 .stream()
-                .map(gs -> {
-                    var user = gs.getStudent();
-                    String fullName = user.getName()
-                            + " "
-                            + user.getPaternalSurname()
-                            + " "
-                            + user.getMaternalSurname();
-                    return new GroupStudentDto(
-                            gs.getId().getGroupId(),
-                            gs.getId().getStudentId(),
-                            fullName
-                    );
-                })
+                .map(this::toDto)
                 .toList();
     }
 
@@ -79,23 +86,11 @@ public class GroupStudentService {
     public List<GroupStudentDto> getAllStudentsWithGroup() {
         return studentRepo.findAll()
                 .stream()
-                .map(gs -> {
-                    var user = gs.getStudent();
-                    String fullName = user.getName()
-                            + " "
-                            + user.getPaternalSurname()
-                            + " "
-                            + user.getMaternalSurname();
-                    return new GroupStudentDto(
-                            gs.getId().getGroupId(),
-                            gs.getId().getStudentId(),
-                            fullName
-                    );
-                })
+                .map(this::toDto)
                 .toList();
     }
 
-    //Lista todas las inscripciones de un estudiant
+    //Lista todas las inscripciones de un estudiante
     @Transactional(readOnly = true)
     public List<GroupStudentEntity> findByStudent(long studentId) {
         return studentRepo.findByStudentId(studentId);
