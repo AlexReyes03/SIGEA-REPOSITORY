@@ -409,7 +409,7 @@ export default function UsersManagement() {
                 <h3 className="text-blue-500 fw-semibold mx-3 my-1 mb-0">Usuarios</h3>
             </div>
             
-            <div className="shadow-sm my-2 p-3 bg-white rounded">
+            <div className="shadow-sm my-2 p-2 bg-white rounded">
                 <Toolbar 
                     className="p-0 bg-white border-0" 
                     start={() => (

@@ -29,16 +29,15 @@ export default function AssignStudentsPickList({ group }) {
 
   const [selectedMode, setSelectedMode] = useState(modes[0]);
 
-  // Función para normalizar datos de estudiantes
   const normalizeStudent = (student, isFromGroup = false) => {
     if (isFromGroup) {
       return {
         id: student.studentId,
         fullName: student.fullName,
-        registrationNumber: '',
-        email: '',
+        registrationNumber: student.registrationNumber || '',
+        email: student.email || '',
         groupId: student.groupId,
-        searchText: student.fullName.toLowerCase(),
+        searchText: `${student.fullName} ${student.registrationNumber || ''} ${student.email || ''}`.toLowerCase(),
       };
     } else {
       const fullName = `${student.name} ${student.paternalSurname} ${student.maternalSurname}`.trim();
@@ -132,13 +131,21 @@ export default function AssignStudentsPickList({ group }) {
     if (!item) return <div>Estudiante no válido</div>;
 
     return (
-      <div className="flex flex-wrap p-2 align-items-center gap-3">
-        <div className="flex-1 flex flex-column gap-1">
-          <span className="font-bold">{item.fullName}</span>
-          <div className="flex gap-3 text-500 text-sm">
-            {item.registrationNumber && <p className="mb-0">{item.registrationNumber}</p>}
-            {item.email && <p className="mt-0">{item.email}</p>}
-          </div>
+      <div className="d-flex w-100">
+        <div className="flex-grow-1 d-flex flex-column gap-1">
+          <span className="fw-bold">{item.fullName}</span>
+          {item.email && (
+            <span className="text-secondary small">
+              <i className="pi pi-envelope me-1" />
+              {item.email}
+            </span>
+          )}
+          {item.registrationNumber && (
+            <span className="text-secondary small">
+              <i className="pi pi-id-card me-1" />
+              {item.registrationNumber}
+            </span>
+          )}
         </div>
       </div>
     );
@@ -213,14 +220,10 @@ export default function AssignStudentsPickList({ group }) {
 
           showSuccess('Éxito', successMessage);
 
-          // Recargar datos para actualizar las listas
           const [groupStudentsRes, studentsWithGroupRes] = await Promise.all([getGroupStudents(group.groupId), getStudentsWithGroup()]);
 
           setCurrentGroupStudents(Array.isArray(groupStudentsRes) ? groupStudentsRes : []);
           setStudentsWithGroup(Array.isArray(studentsWithGroupRes) ? studentsWithGroupRes : []);
-
-          // Después de guardar, resetear al estado original del modo actual
-          // El useEffect se encargará de esto automáticamente
         } catch (error) {
           console.error('Error al guardar cambios:', error);
           showError('Error', `No se pudieron ${actionText} los estudiantes`);
@@ -231,7 +234,6 @@ export default function AssignStudentsPickList({ group }) {
     });
   };
 
-  // FUNCIÓN CANCEL CORREGIDA - Restaura el estado original
   const cancel = () => {
     if (target && target.length > 0) {
       confirmAction({
@@ -242,7 +244,6 @@ export default function AssignStudentsPickList({ group }) {
         acceptLabel: 'Sí, cancelar',
         rejectLabel: 'No',
         onAccept: () => {
-          // Restablecer al estado original del modo actual
           resetToOriginalState();
         },
       });
@@ -260,7 +261,6 @@ export default function AssignStudentsPickList({ group }) {
     const newMode = e.value;
     if (newMode && newMode.code) {
       setSelectedMode(newMode);
-      // El useEffect se encargará de restablecer las listas
     }
   };
 
@@ -320,7 +320,6 @@ export default function AssignStudentsPickList({ group }) {
     </div>
   );
 
-  // Headers con Tags para mostrar contadores
   const getSourceHeader = () => {
     let text, icon, severity;
 
@@ -436,14 +435,14 @@ export default function AssignStudentsPickList({ group }) {
         targetFilterPlaceholder="Buscar seleccionados..."
       />
 
-      {/* Mensaje informativo usando PrimeReact Message */}
+      {/* Mensaje informativo usando */}
       {infoMessage && (
         <div className="m-3 text-center">
           <Message severity={infoMessage.severity} text={infoMessage.text} />
         </div>
       )}
 
-      {/* Información adicional para modo REMOVE */}
+      {/* Para modo REMOVE */}
       {selectedMode?.code === 'REMOVE' && sourceCount > 0 && (
         <div className="m-3 text-center">
           <Message severity="warn" text="Los estudiantes eliminados del grupo quedarán sin grupo asignado hasta que sean añadidos a otro grupo." />
