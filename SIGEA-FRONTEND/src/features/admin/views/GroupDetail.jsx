@@ -29,7 +29,6 @@ const weekLabel = (code) => weekDayOptions.find((o) => o.value === code)?.label 
 
 // Variantes de animación para las transiciones
 const slideVariants = {
-  // Vista de Módulos (vista principal)
   modulesEnter: {
     x: '100%',
     opacity: 0,
@@ -42,7 +41,7 @@ const slideVariants = {
     x: '100%',
     opacity: 0,
   },
-  // Vista de Estudiantes  
+  // Vista de Estudiantes
   studentsEnter: {
     x: '-100%',
     opacity: 0,
@@ -69,8 +68,7 @@ export default function GroupDetails() {
   const { showSuccess, showError } = useToast();
   const [loading, setLoading] = useState(true);
   const { group, career } = location.state || {};
-  
-  // true = GroupModulesTable, false = AssignStudentsPickList
+
   const [currentView, setCurrentView] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -83,17 +81,15 @@ export default function GroupDetails() {
     return `${BACKEND_BASE_URL}${url}`;
   }
 
-  // Función optimizada para cambiar de vista
   const handleViewChange = useCallback(() => {
-    if (isTransitioning) return; // Prevenir clicks múltiples durante la transición
-    
+    if (isTransitioning) return;
+
     setIsTransitioning(true);
-    setCurrentView(prev => !prev);
-    
-    // Resetear el estado de transición después de que termine la animación
+    setCurrentView((prev) => !prev);
+
     setTimeout(() => {
       setIsTransitioning(false);
-    }, 400); // Duración de la animación
+    }, 400);
   }, [isTransitioning]);
 
   useEffect(() => {
@@ -141,20 +137,24 @@ export default function GroupDetails() {
     { label: 'Total de alumnos', value: studentCount === 0 ? 'Sin alumnos' : studentCount },
   ];
 
-  // Determinar el texto del header y el botón según la vista actual
   const getViewConfig = () => {
     if (currentView) {
       return {
         headerText: 'Detalles del grupo',
         buttonIcon: 'pi pi-users',
         buttonContent: <MdArrowForwardIos />,
-        buttonTooltip: 'Ir a asignar estudiantes'
+        buttonTooltip: 'Ir a asignar estudiantes',
       };
     } else {
       return {
         headerText: 'Asignar estudiantes',
-        buttonContent: <><MdArrowBackIosNew /><i className="pi pi-clipboard ml-1" /></>,
-        buttonTooltip: 'Volver a detalles del grupo'
+        buttonContent: (
+          <>
+            <MdArrowBackIosNew />
+            <i className="pi pi-clipboard ml-1" />
+          </>
+        ),
+        buttonTooltip: 'Volver a detalles del grupo',
       };
     }
   };
@@ -176,19 +176,8 @@ export default function GroupDetails() {
     <>
       {/* Header con botón de cambio de vista */}
       <div className="d-flex flex-row justify-content-between align-items-center bg-white rounded-top p-2">
-        <h3 className="text-blue-500 fw-semibold mx-3 my-1">
-          {viewConfig.headerText}
-        </h3>
-        <Button 
-          icon={viewConfig.buttonIcon}
-          severity="primary" 
-          size="small" 
-          onClick={handleViewChange}
-          disabled={isTransitioning}
-          tooltip={viewConfig.buttonTooltip}
-          tooltipOptions={{ position: 'left' }}
-          className="d-flex align-items-center gap-1"
-        >
+        <h3 className="text-blue-500 fw-semibold mx-3 my-1">{viewConfig.headerText}</h3>
+        <Button icon={viewConfig.buttonIcon} severity="primary" size="small" onClick={handleViewChange} disabled={isTransitioning} tooltip={viewConfig.buttonTooltip} tooltipOptions={{ position: 'left' }} className="d-flex align-items-center gap-1">
           {viewConfig.buttonContent}
         </Button>
       </div>
@@ -218,17 +207,8 @@ export default function GroupDetails() {
               </div>
               <div className="d-flex align-items-center justify-content-center fw-medium">
                 <div className="d-flex flex-column align-items-center text-center">
-                  <img 
-                    alt="Avatar docente" 
-                    src={getAvatarUrl(teacher?.avatarUrl)} 
-                    className="rounded-circle shadow-sm mb-3" 
-                    width={140} 
-                    height={140} 
-                    style={{ objectFit: 'cover' }} 
-                  />
-                  <span className="text-muted text-uppercase">
-                    {teacher ? `${teacher.name} ${teacher.paternalSurname} ${teacher.maternalSurname}` : 'No asignado'}
-                  </span>
+                  <img alt="Avatar docente" src={getAvatarUrl(teacher?.avatarUrl)} className="rounded-circle shadow-sm mb-3" width={140} height={140} style={{ objectFit: 'cover' }} />
+                  <span className="text-muted text-uppercase">{teacher ? `${teacher.name} ${teacher.paternalSurname} ${teacher.maternalSurname}` : 'No asignado'}</span>
                   <span className="text-muted mb-2">{teacher?.email || 'No asignado'}</span>
                   <Rating value={5} readOnly cancel={false} />
                 </div>
@@ -279,27 +259,11 @@ export default function GroupDetails() {
       <div className="col-12 mb-3" style={{ position: 'relative', overflow: 'hidden' }}>
         <AnimatePresence mode="wait" initial={false}>
           {currentView ? (
-            <motion.div
-              key="modules-view"
-              initial="modulesEnter"
-              animate="modulesCenter"
-              exit="modulesExit"
-              variants={slideVariants}
-              transition={transition}
-              style={{ width: '100%' }}
-            >
+            <motion.div key="modules-view" initial="modulesEnter" animate="modulesCenter" exit="modulesExit" variants={slideVariants} transition={transition} style={{ width: '100%' }}>
               <GroupModulesTable group={group} />
             </motion.div>
           ) : (
-            <motion.div
-              key="students-view"
-              initial="studentsEnter"
-              animate="studentsCenter"
-              exit="studentsExit"
-              variants={slideVariants}
-              transition={transition}
-              style={{ width: '100%' }}
-            >
+            <motion.div key="students-view" initial="studentsEnter" animate="studentsCenter" exit="studentsExit" variants={slideVariants} transition={transition} style={{ width: '100%' }}>
               <AssignStudentsPickList group={group} />
             </motion.div>
           )}

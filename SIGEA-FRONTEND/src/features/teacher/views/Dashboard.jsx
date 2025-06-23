@@ -93,7 +93,7 @@ export default function Dashboard() {
                       <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" />
                     </div>
                   ) : (
-                    <div className="d-grid gap-2 px-2 overflow-auto" style={{ maxHeight: '40rem', cursor: 'pointer' }} onClick={() => navigate('/teacher/groups')}>
+                    <div className="d-grid gap-2 px-2 overflow-auto" style={{ maxHeight: '43rem', cursor: 'pointer' }} onClick={() => navigate('/teacher/groups')}>
                       {myGroups.length === 0 ? (
                         <div className="text-center mt-3">
                           <Message severity="info" text="Aún tienes grupos asignados." />
@@ -134,7 +134,45 @@ export default function Dashboard() {
                       <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" />
                     </div>
                   ) : (
-                    <div className="d-grid gap-2 px-2 overflow-auto" style={{ maxHeight: '40rem', cursor: 'pointer' }} onClick={() => navigate('/teacher/groups')}>
+                    <div className="d-grid gap-2 px-2 overflow-y-auto" style={{ maxHeight: '20rem', cursor: 'pointer' }} onClick={() => navigate('/teacher/groups')}>
+                      {myGroups.length === 0 ? (
+                        <div className="text-center mt-3">
+                          <Message severity="info" text="Aún tienes grupos asignados." />
+                        </div>
+                      ) : (
+                        myGroups.map((group) => (
+                          <div key={group.groupId} className="d-flex flex-column p-2 border rounded mt-2">
+                            <span className="fw-medium">{group.careerName}</span>
+                            <span className="text-muted fw-medium">
+                              <MdOutlineGroup size={24} className="me-2" />
+                              Grupo {group.name}
+                            </span>
+                            <span className="text-muted fw-medium">
+                              <MdOutlineCalendarMonth size={24} className="me-2" />
+                              {group.weekDay} {group.startTime} - {group.endTime}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* Última calificación registrada */}
+              <div className="card border-0 mt-3">
+                <div className="card-body">
+                  <div className="d-flex align-items-center">
+                    <div className="title-icon p-1 rounded-circle">
+                      <MdOutlineInventory size={40} className="p-1" />
+                    </div>
+                    <h6 className="text-secondary ms-2 mb-0">Ultima calificación registrada</h6>
+                  </div>
+                  {loading ? (
+                    <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 220 }}>
+                      <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" />
+                    </div>
+                  ) : (
+                    <div className="d-grid gap-2 px-2 overflow-y-auto" style={{ maxHeight: '10rem', cursor: 'pointer' }} onClick={() => navigate('/teacher/groups')}>
                       {myGroups.length === 0 ? (
                         <div className="text-center mt-3">
                           <Message severity="info" text="Aún tienes grupos asignados." />
@@ -162,53 +200,12 @@ export default function Dashboard() {
 
             {/* Espacio en blanco */}
             <div className="d-none d-md-block col-md-6"></div>
-
-            {/* Última calificación registrada */}
-            <div className="col-12 col-md-12 col-lg-6 mb-3">
-              <div className="card border-0">
-                <div className="card-body">
-                  <div className="d-flex align-items-center">
-                    <div className="title-icon p-1 rounded-circle">
-                      <MdOutlineInventory size={40} className="p-1" />
-                    </div>
-                    <h6 className="text-secondary ms-2 mb-0">Ultima calificación registrada</h6>
-                  </div>
-                  {loading ? (
-                    <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 220 }}>
-                      <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" />
-                    </div>
-                  ) : (
-                    <div className="d-grid gap-2 px-2 overflow-auto" style={{ maxHeight: '40rem', cursor: 'pointer' }} onClick={() => navigate('/teacher/groups')}>
-                      {myGroups.length === 0 ? (
-                        <div className="text-center mt-3">
-                          <Message severity="info" text="Aún tienes grupos asignados." />
-                        </div>
-                      ) : (
-                        myGroups.map((group) => (
-                          <div key={group.groupId} className="d-flex flex-column p-2 border rounded mt-2">
-                            <span className="fw-medium">{group.careerName}</span>
-                            <span className="text-muted fw-medium">
-                              <MdOutlineGroup size={24} className="me-2" />
-                              Grupo {group.name}
-                            </span>
-                            <span className="text-muted fw-medium">
-                              <MdOutlineCalendarMonth size={24} className="me-2" />
-                              {group.weekDay} {group.startTime} - {group.endTime}
-                            </span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
         {/* COLUMNA IZQUIERDA (1x1) */}
         {/* Mi desempeño */}
-        <div className="col-12 col-lg-6 mt-lg-0">
+        <div className="col-12 col-lg-6 mt-lg-0 mb-3">
           <div className="card border-0 h-100">
             <div className="card-body d-flex flex-column h-100">
               <div className="d-flex align-items-center">
