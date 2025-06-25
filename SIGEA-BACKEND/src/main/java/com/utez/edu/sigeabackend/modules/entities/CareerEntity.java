@@ -5,7 +5,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "career")
+@Table(name = "career", uniqueConstraints = {
+        @UniqueConstraint(name = "uq_career_differentiator_plantel",
+                columnNames = {"differentiator", "plantel_id"})
+})
 public class CareerEntity {
 
     @Id
@@ -13,8 +16,11 @@ public class CareerEntity {
     @Column(name = "id", nullable = false)
     private long id;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "name", nullable = false, length = 100)
     private String name;
+
+    @Column(name = "differentiator", nullable = false, length = 5)
+    private String differentiator;
 
     // ******* RELACIONES ********
     /**
@@ -22,7 +28,7 @@ public class CareerEntity {
      * Nueva columna relacionada "plantel_id"
      */
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "plantel_id")
+    @JoinColumn(name = "plantel_id", nullable = false)
     private PlantelEntity plantel;
 
     /**
@@ -32,16 +38,23 @@ public class CareerEntity {
     @OneToMany(mappedBy = "career", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private Set<GroupEntity> groups = new HashSet<>();
 
+    /**
+     * Relación uno-a-muchos con UserCareerEnrollmentEntity
+     */
+    @OneToMany(mappedBy = "career", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private Set<UserCareerEnrollmentEntity> enrollments = new HashSet<>();
+
+    // Constructors
     public CareerEntity() {
     }
 
-    public CareerEntity(long id, String name, PlantelEntity plantel, Set<GroupEntity> groups) {
-        this.id = id;
+    public CareerEntity(String name, String differentiator, PlantelEntity plantel) {
         this.name = name;
+        this.differentiator = differentiator;
         this.plantel = plantel;
-        this.groups = groups;
     }
 
+    // Getters and Setters
     public long getId() {
         return id;
     }
@@ -56,6 +69,14 @@ public class CareerEntity {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getDifferentiator() {
+        return differentiator;
+    }
+
+    public void setDifferentiator(String differentiator) {
+        this.differentiator = differentiator;
     }
 
     public PlantelEntity getPlantel() {
@@ -73,5 +94,12 @@ public class CareerEntity {
     public void setGroups(Set<GroupEntity> groups) {
         this.groups = groups;
     }
-}
 
+    public Set<UserCareerEnrollmentEntity> getEnrollments() {
+        return enrollments;
+    }
+
+    public void setEnrollments(Set<UserCareerEnrollmentEntity> enrollments) {
+        this.enrollments = enrollments;
+    }
+}

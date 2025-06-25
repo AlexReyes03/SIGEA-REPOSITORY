@@ -5,6 +5,7 @@ import com.utez.edu.sigeabackend.modules.entities.GroupEntity;
 import com.utez.edu.sigeabackend.modules.entities.GroupStudentEntity;
 import com.utez.edu.sigeabackend.modules.entities.UserEntity;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.GroupStudentDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.StudentGroupCheckDto;
 import com.utez.edu.sigeabackend.modules.repositories.GroupRepository;
 import com.utez.edu.sigeabackend.modules.repositories.GroupStudentRepository;
 import com.utez.edu.sigeabackend.modules.repositories.UserRepository;
@@ -36,14 +37,15 @@ public class GroupStudentService {
         String fullName = user.getName()
                 + " "
                 + user.getPaternalSurname()
-                + " "
-                + user.getMaternalSurname();
+                + (user.getMaternalSurname() != null ? " " + user.getMaternalSurname() : "");
+
         return new GroupStudentDto(
                 gs.getId().getGroupId(),
                 gs.getId().getStudentId(),
                 fullName,
                 user.getEmail() != null ? user.getEmail() : "",
-                user.getRegistrationNumber() != null ? user.getRegistrationNumber() : ""
+                user.getPrimaryRegistrationNumber() != null ? user.getPrimaryRegistrationNumber() : "",
+                user.getAdditionalEnrollmentsCount()
         );
     }
 
@@ -56,6 +58,12 @@ public class GroupStudentService {
                 .orElseThrow(() -> new IllegalArgumentException("Grupo no existe"));
         UserEntity student = userRepo.findById(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("Estudiante no existe"));
+
+        // Verificar que el estudiante tiene al menos una inscripción activa
+        if (student.getPrimaryRegistrationNumber() == null) {
+            throw new IllegalArgumentException("El estudiante debe estar inscrito en al menos una carrera");
+        }
+
         Id id = new Id(group.getId(), student.getId());
         if (studentRepo.existsById(id)) {
             throw new IllegalArgumentException("Ya inscrito en este grupo");
@@ -94,5 +102,29 @@ public class GroupStudentService {
     @Transactional(readOnly = true)
     public List<GroupStudentEntity> findByStudent(long studentId) {
         return studentRepo.findByStudentId(studentId);
+    }
+
+    @Transactional(readOnly = true)
+    public StudentGroupCheckDto checkStudentGroupsInCareer(Long studentId, Long careerId) {
+        long groupCount = studentRepo.countGroupsByStudentAndCareer(studentId, careerId);
+        boolean hasActiveGroups = groupCount > 0;
+
+        String careerName = "N/A";
+        if (careerId != null) {
+            careerName = "Carrera " + careerId;
+        }
+
+        return new StudentGroupCheckDto(
+                studentId,
+                careerId,
+                hasActiveGroups,
+                groupCount,
+                careerName
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<GroupStudentEntity> findByStudentAndCareer(Long studentId, Long careerId) {
+        return studentRepo.findByStudentIdAndCareerId(studentId, careerId);
     }
 }

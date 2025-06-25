@@ -1,8 +1,10 @@
 package com.utez.edu.sigeabackend.modules.controllers;
 
-import com.utez.edu.sigeabackend.modules.entities.CareerEntity;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.CareerDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.CreateCareerDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.UpdateCareerDto;
 import com.utez.edu.sigeabackend.modules.services.CareerService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,36 +18,42 @@ public class CareerController {
     public CareerController(CareerService service) {
         this.service = service;
     }
-    /** GET   /sigea/api/careers */
+
+    /** GET /sigea/api/careers - Obtener todas las carreras */
     @GetMapping
     public ResponseEntity<List<CareerDto>> findAll() {
         return service.findAll();
     }
-    /** GET   /sigea/api/careers/{id} */
+
+    /** GET /sigea/api/careers/{id} - Obtener carrera por ID */
     @GetMapping("/{id}")
-    public ResponseEntity<?> findById(@PathVariable long id) {
+    public ResponseEntity<CareerDto> findById(@PathVariable long id) {
         return service.findById(id);
     }
 
-    /** GET   /sigea/api/careers/{plantelId} */
+    /** GET /sigea/api/careers/plantel/{plantelId} - Obtener carreras por plantel */
     @GetMapping("/plantel/{plantelId}")
-    public ResponseEntity<List<CareerDto>> findByCampus(@PathVariable long plantelId) {
-        return service.findByCampus(plantelId);
-    }
-    /** POST   /sigea/api/careers*/
-    @PostMapping
-    public ResponseEntity<?> save(@RequestBody CareerEntity career, @RequestParam long plantelId) {
-        return service.save(career, plantelId);
+    public ResponseEntity<List<CareerDto>> findByPlantel(@PathVariable long plantelId) {
+        return service.findByPlantel(plantelId);
     }
 
-    /** PUT   /sigea/api/careers/{id} */
-    @PutMapping("/{id}")
-    public ResponseEntity<?> update(@PathVariable long id, @RequestBody CareerEntity career, @RequestParam long plantelId) {
-        return service.update(id, career, plantelId);
+    /** POST /sigea/api/careers - Crear nueva carrera */
+    @PostMapping
+    public ResponseEntity<CareerDto> save(@Valid @RequestBody CreateCareerDto dto) {
+        return service.save(dto);
     }
-    /** DELETE   /sigea/api/careers/{id} */
+
+    /** PUT /sigea/api/careers/{id} - Actualizar carrera */
+    @PutMapping("/{id}")
+    public ResponseEntity<CareerDto> update(
+            @PathVariable long id,
+            @Valid @RequestBody UpdateCareerDto dto) {
+        return service.update(id, dto);
+    }
+
+    /** DELETE /sigea/api/careers/{id} - Eliminar carrera */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable long id) {
+    public ResponseEntity<Void> delete(@PathVariable long id) {
         return service.delete(id);
     }
 }

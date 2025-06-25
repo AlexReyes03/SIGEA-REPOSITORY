@@ -96,4 +96,3 @@ public class GroupStudentEntity {
     public void setEntryDate(LocalDateTime entryDate) { this.entryDate = entryDate; }
 
 }
-

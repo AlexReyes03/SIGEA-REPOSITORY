@@ -5,13 +5,14 @@ import com.utez.edu.sigeabackend.modules.media.MediaEntity;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(
         name = "user",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uq_user_email", columnNames = "email"),
-                @UniqueConstraint(name = "uq_user_registration_number", columnNames = "registration_number")
+                @UniqueConstraint(name = "uq_user_email", columnNames = "email")
         }
 )
 public class UserEntity {
@@ -51,13 +52,6 @@ public class UserEntity {
     @Column(name = "password_hash", length = 255, nullable = false)
     private String password;
 
-    @Column(
-            name = "registration_number",
-            length = 40,
-            unique = true
-    )
-    private String registrationNumber;
-
     @Enumerated(EnumType.STRING)
     @Column(
             name = "status",
@@ -74,14 +68,21 @@ public class UserEntity {
     )
     private LocalDateTime createdAt;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "avatar_id", foreignKey = @ForeignKey(name = "fk_user_avatar"))
+    private MediaEntity avatar;
+
+    /**
+     * Relación uno-a-muchos con UserCareerEnrollmentEntity
+     * Un usuario puede estar inscrito en múltiples carreras
+     */
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private Set<UserCareerEnrollmentEntity> careerEnrollments = new HashSet<>();
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
     }
-
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "avatar_id", foreignKey = @ForeignKey(name = "fk_user_avatar"))
-    private MediaEntity avatar;
 
     // -- Constructors --
     public UserEntity() {}
@@ -103,6 +104,7 @@ public class UserEntity {
         this.avatar = avatar;
     }
 
+    // Getters and Setters
     public long getId() {
         return id;
     }
@@ -168,14 +170,6 @@ public class UserEntity {
         this.password = password;
     }
 
-    public String getRegistrationNumber() {
-        return registrationNumber;
-    }
-
-    public void setRegistrationNumber(String registrationNumber) {
-        this.registrationNumber = registrationNumber;
-    }
-
     public Status getStatus() {
         return status;
     }
@@ -198,6 +192,31 @@ public class UserEntity {
 
     public void setAvatar(MediaEntity avatar) {
         this.avatar = avatar;
+    }
+
+    public Set<UserCareerEnrollmentEntity> getCareerEnrollments() {
+        return careerEnrollments;
+    }
+
+    public void setCareerEnrollments(Set<UserCareerEnrollmentEntity> careerEnrollments) {
+        this.careerEnrollments = careerEnrollments;
+    }
+
+    // Helper method to get primary registration number
+    public String getPrimaryRegistrationNumber() {
+        return careerEnrollments.stream()
+                .filter(enrollment -> enrollment.getStatus() == UserCareerEnrollmentEntity.EnrollmentStatus.ACTIVE)
+                .findFirst()
+                .map(UserCareerEnrollmentEntity::getRegistrationNumber)
+                .orElse(null);
+    }
+
+    // Helper method to get additional enrollments count
+    public int getAdditionalEnrollmentsCount() {
+        long activeEnrollments = careerEnrollments.stream()
+                .filter(enrollment -> enrollment.getStatus() == UserCareerEnrollmentEntity.EnrollmentStatus.ACTIVE)
+                .count();
+        return Math.max(0, (int) activeEnrollments - 1);
     }
 
     // -- ENUM --

@@ -4,6 +4,7 @@ import com.utez.edu.sigeabackend.auth.ActiveUserService;
 import com.utez.edu.sigeabackend.auth.DTO.*;
 import com.utez.edu.sigeabackend.modules.entities.UserEntity;
 import com.utez.edu.sigeabackend.modules.repositories.UserRepository;
+import com.utez.edu.sigeabackend.modules.repositories.UserCareerEnrollmentRepository;
 import com.utez.edu.sigeabackend.utils.security.JWTUtil;
 import com.utez.edu.sigeabackend.utils.security.UserDetailsImpl;
 import org.springframework.http.HttpStatus;
@@ -28,6 +29,7 @@ public class AuthService {
 
     private final AuthenticationManager authManager;
     private final UserRepository userRepo;
+    private final UserCareerEnrollmentRepository enrollmentRepo;
     private final PasswordResetTokenRepository tokenRepo;
     private final JavaMailSender mailSender;
     private final AttemptService attemptService;
@@ -39,6 +41,7 @@ public class AuthService {
     public AuthService(
             AuthenticationManager authManager,
             UserRepository userRepo,
+            UserCareerEnrollmentRepository enrollmentRepo,
             PasswordResetTokenRepository tokenRepo,
             JavaMailSender mailSender,
             AttemptService attemptService,
@@ -48,12 +51,40 @@ public class AuthService {
     ) {
         this.authManager = authManager;
         this.userRepo = userRepo;
+        this.enrollmentRepo = enrollmentRepo;
         this.tokenRepo = tokenRepo;
         this.mailSender = mailSender;
         this.attemptService = attemptService;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.activeUserService = activeUserService;
+    }
+
+    // Helper method to get user's primary registration number safely
+    private String getUserPrimaryRegistrationNumber(Long userId) {
+        try {
+            return enrollmentRepo.findByUserIdAndStatus(userId,
+                            com.utez.edu.sigeabackend.modules.entities.UserCareerEnrollmentEntity.EnrollmentStatus.ACTIVE)
+                    .stream()
+                    .findFirst()
+                    .map(enrollment -> enrollment.getRegistrationNumber())
+                    .orElse(null);
+        } catch (Exception e) {
+            // Log the error if needed, but don't break the login
+            return null;
+        }
+    }
+
+    // Helper method to get additional enrollments count safely
+    private int getUserAdditionalEnrollmentsCount(Long userId) {
+        try {
+            long activeEnrollments = enrollmentRepo.findByUserIdAndStatus(userId,
+                            com.utez.edu.sigeabackend.modules.entities.UserCareerEnrollmentEntity.EnrollmentStatus.ACTIVE)
+                    .size();
+            return Math.max(0, (int) activeEnrollments - 1);
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     @Transactional
@@ -109,6 +140,10 @@ public class AuthService {
         Instant expiration = Instant.now().plusSeconds(10 * 60 * 60); // 10 h
         activeUserService.registerLogin(user.getId(), expiration);
 
+        // Obtener información de inscripciones de manera segura
+        String primaryRegistrationNumber = getUserPrimaryRegistrationNumber(user.getId());
+        int additionalEnrollmentsCount = getUserAdditionalEnrollmentsCount(user.getId());
+
         // Construir respuesta (user + token + status)
         Map<String, Object> payload = new HashMap<>();
 
@@ -116,26 +151,30 @@ public class AuthService {
         if (user.getAvatar() != null) {
             avatarUrl = "/sigea/api/media/raw/" + user.getAvatar().getCode();
         }
+
+        Map<String, Object> userMap = new HashMap<>();
+        userMap.put("id", user.getId());
+        userMap.put("name", user.getName());
+        userMap.put("paternalSurname", user.getPaternalSurname());
+        userMap.put("maternalSurname", user.getMaternalSurname());
+        userMap.put("email", user.getEmail());
+        userMap.put("registrationNumber", primaryRegistrationNumber != null ? primaryRegistrationNumber : "");
+        userMap.put("additionalEnrollmentsCount", additionalEnrollmentsCount);
+        userMap.put("status", user.getStatus().name());
+        userMap.put("createdAt", user.getCreatedAt());
+        userMap.put("role", Map.of(
+                "id",   user.getRole().getId(),
+                "name", user.getRole().getRoleName()
+        ));
+        userMap.put("campus", Map.of(
+                "id",   user.getPlantel().getId(),
+                "name", user.getPlantel().getName()
+        ));
+        userMap.put("avatarUrl", avatarUrl);
         payload.put("statusCode", HttpStatus.OK.value());
         payload.put("token", jwt);
-        payload.put("user", Map.of(
-                "id", user.getId(),
-                "name", user.getName(),
-                "paternalSurname", user.getPaternalSurname(),
-                "maternalSurname", user.getMaternalSurname(),
-                "email", user.getEmail(),
-                "registrationNumber", user.getRegistrationNumber(),
-                "status", user.getStatus().name(),
-                "role", Map.of(
-                        "id",   user.getRole().getId(),
-                        "name", user.getRole().getRoleName()
-                ),
-                "campus", Map.of(
-                        "id",   user.getPlantel().getId(),
-                        "name", user.getPlantel().getName()
-                ),
-                "avatarUrl", avatarUrl
-        ));
+        payload.put("user", userMap);
+
         return ResponseEntity.ok(payload);
     }
 
@@ -163,7 +202,7 @@ public class AuthService {
         prt.setUsed(false);
         tokenRepo.save(prt);
 
-        // Envía el OTP “crudo” al correo
+        // Envía el OTP "crudo" al correo
         SimpleMailMessage mail = new SimpleMailMessage();
         mail.setTo(user.getEmail());
         mail.setSubject("Código de verificación");
@@ -202,7 +241,6 @@ public class AuthService {
 
         return ResponseEntity.ok("Código verificado con éxito");
     }
-
 
     @Transactional
     public ResponseEntity<?> resetPassword(PasswordResetDto dto) {
@@ -248,5 +286,4 @@ public class AuthService {
 
         return ResponseEntity.ok(Map.of("message", "Contraseña actualizada correctamente"));
     }
-
 }
