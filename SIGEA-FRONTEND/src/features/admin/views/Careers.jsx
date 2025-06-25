@@ -239,7 +239,7 @@ export default function Careers() {
                     <div className="flex-grow-1">
                       <h6 className="fw-semibold lh-sm mb-2 text-dark text-truncate">{career.name}</h6>
                       <div className="d-flex align-items-center gap-2">
-                        <div className="ms-2">
+                        <div className="ms-2 my-2">
                           {career.studentsCount === 0 && career.teachersCount === 0 && career.groupsCount === 0 ? (
                             <small className="text-muted">
                               <i className="pi pi-info-circle me-1"></i>

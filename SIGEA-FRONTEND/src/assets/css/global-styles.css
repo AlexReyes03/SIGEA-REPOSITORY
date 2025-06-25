@@ -136,6 +136,10 @@ Button {
   background-color: var(--bg-blue-500);
 }
 
+.bg-blue-800 {
+  background-color: var(--bg-blue-800);
+}
+
 .bg-gray-800 {
   background-color: var(--bg-gray-800);
 }

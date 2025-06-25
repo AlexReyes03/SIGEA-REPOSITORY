@@ -71,7 +71,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
       case 'STUDENT':
         return [
           { label: 'Inicio', path: '/student', Icon: MdHome },
-          { label: 'Mis Cursos', path: '/student/courses', Icon: MdSchool },
+          { label: 'Mis Grupos', path: '/student/my-groups', Icon: MdSchool },
           { label: 'Perfil', path: '/student/profile', Icon: MdPerson },
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },
         ];

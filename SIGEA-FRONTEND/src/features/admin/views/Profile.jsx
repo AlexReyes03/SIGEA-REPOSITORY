@@ -67,7 +67,7 @@ export default function Profile() {
       label: 'Contraseña',
       value: '************',
     },
-    ...(user.roleName === 'TEACHER' || user.roleName === 'STUDENT'
+    ...(user.role.name === 'TEACHER' || user.role.name === 'STUDENT'
       ? [
           {
             label: 'Matrícula',
