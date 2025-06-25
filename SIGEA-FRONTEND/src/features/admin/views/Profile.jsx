@@ -35,8 +35,55 @@ export default function Profile() {
     ADMIN: 'Administrador',
     TEACHER: 'Maestro',
     STUDENT: 'Estudiante',
+    SUPERVISOR: 'Supervisor',
   };
   const roleLabel = ROLE_MAP[user.role?.name || user.role] || 'Sin rol';
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Sin fecha';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('es-MX', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Fecha inválida';
+    }
+  };
+
+  const personalInfo = [
+    {
+      label: 'Nombre Completo',
+      value: `${user.name || ''} ${user.paternalSurname || ''} ${user.maternalSurname || ''}`.trim(),
+    },
+    {
+      label: 'Correo electrónico',
+      value: user.email || 'Sin email',
+    },
+    {
+      label: 'Contraseña',
+      value: '************',
+    },
+    ...(user.roleName === 'TEACHER' || user.roleName === 'STUDENT'
+      ? [
+          {
+            label: 'Matrícula',
+            value: user.registrationNumber || (user.additionalEnrollmentsCount > 0 ? `${user.registrationNumber} +${user.additionalEnrollmentsCount}` : 'Sin matrícula'),
+          },
+        ]
+      : []),
+    {
+      label: 'Fecha de alta',
+      value: formatDate(user.createdAt),
+    },
+    {
+      label: 'Estado',
+      value: user.status === 'ACTIVE' ? 'Activo' : 'Inactivo',
+    },
+  ];
 
   useEffect(() => {
     let _val = 0;
@@ -169,7 +216,6 @@ export default function Profile() {
           <div className="card border-0 h-100">
             <div className="card-body">
               <div className="d-flex flex-column align-items-center mt-2 mb-3">
-                {/* Componente Avatar con modal */}
                 <ProfileAvatarUpload />
               </div>
 
@@ -192,27 +238,25 @@ export default function Profile() {
                 <div className="title-icon p-1 rounded-circle">
                   <MdOutlinePerson size={40} className="p-1" />
                 </div>
-                <h6 className="text-blue-500 fw-semibold ms-2 mb-0">Información personal</h6>
+                <h6 className="text-blue-500 fw-semibold ms-2 mb-0 text-truncate">Información personal</h6>
               </div>
 
-              <div className="row m-3 text-secondary">
-                <div className="col-6 text-nowrap overflow-x-auto">
-                  <p>Nombre Completo</p>
-                  <p>Correo electrónico</p>
-                  <p>Contraseña</p>
-                  <p>Matrícula</p>
-                  <p>Fecha de alta</p>
-                  <p>Estado</p>
-                </div>
-                <div className="col-6 text-nowrap overflow-x-auto">
-                  <p>
-                    {user.name} {user.paternalSurname || ''} {user.maternalSurname || ''}
-                  </p>
-                  <p>{user.email}</p>
-                  <p>************</p>
-                  <p>{user.registrationNumber}</p>
-                  <p>16 Mayo 2003</p>
-                  <p>{user.status === 'ACTIVE' ? 'Activo' : 'Inactivo'}</p>
+              <div className="mt-3">
+                <div className="table-responsive">
+                  <table className="table table-borderless">
+                    <tbody>
+                      {personalInfo.map((info, index) => (
+                        <tr key={index}>
+                          <td className="text-secondary fw-medium text-nowrap ps-3" style={{ width: '40%', verticalAlign: 'middle' }}>
+                            {info.label}
+                          </td>
+                          <td className="text-dark text-nowrap" style={{ verticalAlign: 'middle' }}>
+                            {info.value}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>

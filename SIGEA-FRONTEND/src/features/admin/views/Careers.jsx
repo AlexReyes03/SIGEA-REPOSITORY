@@ -2,7 +2,9 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Button } from 'primereact/button';
-import { MdOutlineCoPresent, MdOutlineBook, MdOutlineMoreHoriz } from 'react-icons/md';
+import { InputText } from 'primereact/inputtext';
+import { ProgressSpinner } from 'primereact/progressspinner';
+import { MdOutlineCoPresent, MdOutlineBook, MdOutlineMoreHoriz, MdOutlineSchool } from 'react-icons/md';
 import { Modal } from 'bootstrap';
 
 import { useAuth } from '../../../contexts/AuthContext';
@@ -14,7 +16,7 @@ import useBootstrapModalFocus from '../../../utils/hooks/useBootstrapModalFocus'
 export default function Careers() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { showSuccess, showError } = useToast();
+  const { showSuccess, showError, showWarn } = useToast();
   const { confirmAction } = useConfirmDialog();
 
   const opRef = useRef(null);
@@ -28,18 +30,52 @@ export default function Careers() {
   useBootstrapModalFocus(editModalRef, editButtonRef);
 
   const [careers, setCareers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [editingCareer, setEditing] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    differentiator: '',
+  });
+  const [differentiatorPreview, setDifferentiatorPreview] = useState('');
 
   const loadCareers = async () => {
     try {
+      setLoading(true);
       const list = await getCareerByPlantelId(user.campus.id);
-      setCareers(list);
+      setCareers(Array.isArray(list) ? list : []);
     } catch (err) {
+      console.error('Error loading careers:', err);
       showError('Error', 'Error al cargar carreras');
+      setCareers([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Cargar carreras al montar el componente
+  // Generar preview de matrícula
+  const generatePreview = (differentiator) => {
+    if (!differentiator) return '';
+    const year = new Date().getFullYear().toString().slice(-2);
+    return `${differentiator.toUpperCase()}${year}0001`;
+  };
+
+  const handleDifferentiatorChange = (value) => {
+    const upperValue = value
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .slice(0, 5);
+    setFormData((prev) => ({ ...prev, differentiator: upperValue }));
+    setDifferentiatorPreview(generatePreview(upperValue));
+  };
+
+  const validateDifferentiator = (differentiator) => {
+    if (!differentiator) return 'El diferenciador es obligatorio';
+    if (differentiator.length < 2) return 'Mínimo 2 caracteres';
+    if (differentiator.length > 5) return 'Máximo 5 caracteres';
+    if (!/^[A-Z0-9]+$/.test(differentiator)) return 'Solo letras mayúsculas y números';
+    return null;
+  };
+
   useEffect(() => {
     loadCareers();
   }, []);
@@ -47,31 +83,66 @@ export default function Careers() {
   // CREAR CARRERA
   const handleCreate = async (e) => {
     e.preventDefault();
-    const form = e.target;
-    const payload = { name: form.name.value };
+
+    const differentiatorError = validateDifferentiator(formData.differentiator);
+    if (differentiatorError) {
+      showWarn('Error de validación', differentiatorError);
+      return;
+    }
+
+    if (!formData.name.trim()) {
+      showWarn('Error de validación', 'El nombre es obligatorio');
+      return;
+    }
+
+    const payload = {
+      name: formData.name.trim(),
+      differentiator: formData.differentiator,
+      plantelId: user.campus.id,
+    };
+
     try {
-      await createCareer(payload, user.campus.id);
-      showSuccess('Carrera creada');
+      await createCareer(payload);
+      showSuccess('Éxito', 'Carrera creada correctamente');
       await loadCareers();
       Modal.getInstance(createModalRef.current).hide();
-      form.reset();
+      setFormData({ name: '', differentiator: '' });
+      setDifferentiatorPreview('');
     } catch (err) {
-      showError('Error', 'Error crear la carrera');
+      const message = err.response?.data?.message || 'Error al crear la carrera';
+      showError('Error', message);
     }
   };
 
   // ACTUALIZAR CARRERA
   const handleUpdate = async (e) => {
     e.preventDefault();
-    const form = e.target;
-    const payload = { name: form.name.value };
+
+    const differentiatorError = validateDifferentiator(formData.differentiator);
+    if (differentiatorError) {
+      showWarn('Error de validación', differentiatorError);
+      return;
+    }
+
+    if (!formData.name.trim()) {
+      showWarn('Error de validación', 'El nombre es obligatorio');
+      return;
+    }
+
+    const payload = {
+      name: formData.name.trim(),
+      differentiator: formData.differentiator,
+      plantelId: user.campus.id,
+    };
+
     try {
-      await updateCareer(editingCareer.id, payload, user.campus.id);
-      showSuccess('Carrera actualizada');
+      await updateCareer(editingCareer.id, payload);
+      showSuccess('Éxito', 'Carrera actualizada correctamente');
       await loadCareers();
       Modal.getInstance(editModalRef.current).hide();
     } catch (err) {
-      showError(err.message || 'No se pudo actualizar');
+      const message = err.response?.data?.message || 'Error al actualizar la carrera';
+      showError('Error', message);
     }
   };
 
@@ -85,66 +156,146 @@ export default function Careers() {
       rejectLabel: 'Cancelar',
       acceptClassName: 'p-button-danger',
       onAccept: async () => {
-        await deleteCareer(careerToDelete.id);
-        showSuccess('Hecho',`Carrera “${careerToDelete.name}” eliminada`);
-        await loadCareers();
+        try {
+          await deleteCareer(careerToDelete.id);
+          showSuccess('Hecho', `Carrera "${careerToDelete.name}" eliminada`);
+          await loadCareers();
+        } catch (err) {
+          const message = err.response?.data?.message || 'Error al eliminar la carrera';
+          showError('Error', message);
+        }
       },
     });
   };
 
   // Abre cualquiera de los dos modales
-  const openModal = (ref) => {
+  const openModal = (ref, career = null) => {
+    if (career) {
+      setEditing(career);
+      setFormData({
+        name: career.name || '',
+        differentiator: career.differentiator || '',
+      });
+      setDifferentiatorPreview(generatePreview(career.differentiator || ''));
+    } else {
+      setFormData({ name: '', differentiator: '' });
+      setDifferentiatorPreview('');
+    }
     if (ref.current) new Modal(ref.current).show();
   };
+
+  const isCareerActive = (career) => {
+    return career.studentsCount > 0 || career.groupsCount > 0 || career.teachersCount > 0;
+  };
+
+  if (loading) {
+    return (
+      <>
+        <div className="bg-white rounded-top p-2 d-flex align-items-center">
+          <h3 className="text-blue-500 fw-semibold mx-3 my-1">Carreras</h3>
+          <div className="ms-auto">
+            <Button icon="pi pi-plus" severity="primary" rounded disabled>
+              <span className="d-none d-sm-inline ms-2">Crear carrera</span>
+            </Button>
+          </div>
+        </div>
+
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 400 }}>
+          <div className="text-center">
+            <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" />
+            <p className="mt-3 text-600">Cargando carreras...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
       <div className="bg-white rounded-top p-2 d-flex align-items-center">
         <h3 className="text-blue-500 fw-semibold mx-3 my-1">Carreras</h3>
-        <div className="ms-auto">
+        <div className="ms-auto d-flex align-items-center gap-2">
           <Button ref={createButtonRef} icon="pi pi-plus" severity="primary" rounded onClick={() => openModal(createModalRef)}>
             <span className="d-none d-sm-inline ms-2">Crear carrera</span>
           </Button>
         </div>
       </div>
 
-      <div className="row mt-3">
-        {careers.map((career) => (
-          <div key={career.id} className="col-12 col-sm-6 col-lg-4 col-xl-3 mb-3" style={{ maxWidth: '25rem' }}>
-            <div className="card border-0 h-100 hovereable" onClick={() => navigate('/admin/careers/curriculums', { state: { career } })}>
-              <img src={career.imageUrl || 'https://placehold.co/600x400?text=Cetec-Fallback'} className="card-img-top" alt={career.name} style={{ objectFit: 'cover', height: 180 }} />
+      {careers.length === 0 ? (
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 300 }}>
+          <div className="text-center">
+            <MdOutlineSchool className="text-secondary" size={70} />
+            <h5 className="mt-3 text-muted">No hay carreras registradas</h5>
+            <p className="text-muted">Crea tu primera carrera para comenzar</p>
+          </div>
+        </div>
+      ) : (
+        <div className="row mt-3">
+          {careers.map((career) => (
+            <div key={career.id} className="col-12 col-sm-6 col-lg-4 col-xl-3 mb-3" style={{ maxWidth: '25rem' }}>
+              <div className="card border-0 h-100 hovereable shadow-sm" onClick={() => navigate('/admin/careers/curriculums', { state: { career } })}>
+                <div className="card-body">
+                  <div className="d-flex justify-content-between align-items-start mb-3">
+                    <div className="flex-grow-1">
+                      <h6 className="fw-semibold lh-sm mb-2 text-dark text-truncate">{career.name}</h6>
+                      <div className="d-flex align-items-center gap-2">
+                        <div className="ms-2">
+                          {career.studentsCount === 0 && career.teachersCount === 0 && career.groupsCount === 0 ? (
+                            <small className="text-muted">
+                              <i className="pi pi-info-circle me-1"></i>
+                              Carrera sin actividad
+                            </small>
+                          ) : (
+                            <small className="text-success">
+                              <i className="pi pi-check-circle me-1"></i>
+                              {career.studentsCount > 0 && career.groupsCount > 0 ? 'Operativa' : career.studentsCount > 0 ? 'Con estudiantes' : 'Con personal'}
+                            </small>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
-              <div className="card-body">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <p className="fw-semibold lh-sm mb-0 flex-grow-1">{career.name}</p>
+                    <button
+                      className="btn border-0 p-1 ms-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedCareer(career);
+                        opRef.current.toggle(e);
+                      }}
+                    >
+                      <MdOutlineMoreHoriz size={20} />
+                    </button>
+                  </div>
 
-                  <button
-                    className="btn border-0 p-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedCareer(career);
-                      opRef.current.toggle(e);
-                    }}
-                  >
-                    <MdOutlineMoreHoriz size={24} />
-                  </button>
-                </div>
-
-                <div className="d-flex flex-column gap-2 text-secondary fs-6">
-                  <span>
-                    <MdOutlineCoPresent className="me-2 fs-4" />
-                    Docentes: <strong>{career.teachersCount || 0}</strong>
-                  </span>
-                  <span>
-                    <MdOutlineBook className="me-2 fs-4" />
-                    Grupos: <strong>{career.groupsCount || 0}</strong>
-                  </span>
+                  <div className="row g-2 text-center">
+                    <div className="col-4">
+                      <div className="p-2 rounded bg-light h-100 text-truncate">
+                        <MdOutlineCoPresent className="text-secondary mb-1" size={24} />
+                        <div className="fw-bold text-secondary">{career.studentsCount || 0}</div>
+                        <small className="text-muted">Estudiantes</small>
+                      </div>
+                    </div>
+                    <div className="col-4">
+                      <div className="p-2 rounded bg-light h-100 text-truncate">
+                        <MdOutlineBook className="text-secondary mb-1" size={24} />
+                        <div className="fw-bold text-secondary">{career.groupsCount || 0}</div>
+                        <small className="text-muted">Grupos</small>
+                      </div>
+                    </div>
+                    <div className="col-4">
+                      <div className="p-2 rounded bg-light h-100 text-truncate">
+                        <i className="pi pi-users text-secondary mb-1" style={{ fontSize: '1.5rem' }}></i>
+                        <div className="fw-bold text-secondary">{career.teachersCount || 0}</div>
+                        <small className="text-muted">Maestros</small>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* OverlayPanel de acciones */}
       <OverlayPanel ref={opRef}>
@@ -152,8 +303,7 @@ export default function Careers() {
           ref={editButtonRef}
           className="dropdown-item"
           onClick={() => {
-            setEditing(selectedCareer);
-            openModal(editModalRef);
+            openModal(editModalRef, selectedCareer);
             opRef.current.hide();
           }}
         >
@@ -173,7 +323,7 @@ export default function Careers() {
       </OverlayPanel>
 
       {/* Modal CREAR */}
-      <div className="modal fade" ref={createModalRef} tabIndex="-1">
+      <div className="modal fade" ref={createModalRef} tabIndex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
             <div className="modal-header">
@@ -184,22 +334,29 @@ export default function Careers() {
             <form onSubmit={handleCreate}>
               <div className="modal-body">
                 <div className="mb-3">
-                  <label className="form-label">Nombre</label>
-                  <input name="name" className="form-control" autoComplete="off" spellCheck="false" placeholder="Carrera Técnica en" required pattern="^[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñ ]+$" title="Debe iniciar en mayúscula y solo letras/espacios" />
+                  <label className="form-label">Nombre *</label>
+                  <input className="form-control" value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} autoComplete="off" spellCheck="false" placeholder="Carrera Técnica en..." required />
                 </div>
-                <input type="hidden" name="plantelId" value={user.campus.id} />
+
                 <div className="mb-3">
-                  <label className="form-label">Imagen (opcional)</label>
-                  <input type="file" className="form-control" accept="image/*" />
+                  <label className="form-label">
+                    Diferenciador * <small className="text-muted">(2-5 caracteres, solo mayúsculas y números)</small>
+                  </label>
+                  <InputText className="form-control" value={formData.differentiator} onChange={(e) => handleDifferentiatorChange(e.target.value)} placeholder="CO, IN, MEC..." maxLength={5} required />
+                  {differentiatorPreview && (
+                    <small className="text-muted">
+                      Previsualizar matrícula: <strong>{differentiatorPreview}</strong>
+                    </small>
+                  )}
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="reset" className="btn btn-secondary" data-bs-dismiss="modal">
-                  Cancelar
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Guardar
-                </button>
+                <Button type="button" icon="pi pi-times" severity="secondary" outlined data-bs-dismiss="modal">
+                  <span className="ms-1">Cancelar</span>
+                </Button>
+                <Button type="submit" icon="pi pi-check" severity="primary">
+                  <span className="ms-1">Guardar</span>
+                </Button>
               </div>
             </form>
           </div>
@@ -207,46 +364,67 @@ export default function Careers() {
       </div>
 
       {/* Modal EDITAR */}
-      <div className="modal fade" ref={editModalRef} tabIndex="-1">
+      <div className="modal fade" ref={editModalRef} tabIndex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
             <div className="modal-header">
               <h5 className="modal-title">Modificar carrera</h5>
               <button type="button" className="btn-close" data-bs-dismiss="modal" />
             </div>
-            {editingCareer && (
-              <form onSubmit={handleUpdate}>
-                <div className="modal-body">
-                  <div className="mb-3">
-                    <label className="form-label">Nombre</label>
-                    <input
-                      name="name"
-                      className="form-control"
-                      defaultValue={editingCareer.name}
-                      placeholder="Carrera Técnica en"
-                      autoComplete="off"
-                      spellCheck="false"
-                      required
-                      pattern="^[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñ ]+$"
-                      title="Debe iniciar en mayúscula y solo letras/espacios"
-                    />
-                  </div>
-                  <input type="hidden" name="plantelId" value={user.campus.id} />
-                  <div className="mb-3">
-                    <label className="form-label">Imagen (opcional)</label>
-                    <input type="file" className="form-control" accept="image/*" />
-                  </div>
+            <form onSubmit={handleUpdate}>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label">Nombre *</label>
+                  <input className="form-control" value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} placeholder="Carrera Técnica en..." autoComplete="off" spellCheck="false" required />
                 </div>
-                <div className="modal-footer">
-                  <button type="reset" className="btn btn-secondary" data-bs-dismiss="modal">
-                    Cancelar
-                  </button>
-                  <button type="submit" className="btn btn-primary">
-                    Guardar cambios
-                  </button>
+
+                <div className="mb-3">
+                  <label className="form-label">
+                    Diferenciador * <small className="text-muted">(2-5 caracteres, solo mayúsculas y números)</small>
+                  </label>
+                  <InputText className="form-control" value={formData.differentiator} onChange={(e) => handleDifferentiatorChange(e.target.value)} placeholder="CO, IN, MEC..." maxLength={5} required />
+                  {differentiatorPreview && (
+                    <small className="text-muted">
+                      Previsualizar matrícula: <strong>{differentiatorPreview}</strong>
+                    </small>
+                  )}
                 </div>
-              </form>
-            )}
+
+                {editingCareer && isCareerActive(editingCareer) && (
+                  <div className="mb-3">
+                    <label className="form-label">Estado actual</label>
+                    <div className="row g-2 text-center">
+                      <div className="col-4">
+                        <div className="p-2 rounded bg-light">
+                          <div className="fw-bold text-secondary">{editingCareer.studentsCount || 0}</div>
+                          <small className="text-muted">Estudiantes</small>
+                        </div>
+                      </div>
+                      <div className="col-4">
+                        <div className="p-2 rounded bg-light">
+                          <div className="fw-bold text-secondary">{editingCareer.groupsCount || 0}</div>
+                          <small className="text-muted">Grupos</small>
+                        </div>
+                      </div>
+                      <div className="col-4">
+                        <div className="p-2 rounded bg-light">
+                          <div className="fw-bold text-secondary">{editingCareer.teachersCount || 0}</div>
+                          <small className="text-muted">Maestros</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <Button type="button" icon="pi pi-times" severity="secondary" outlined data-bs-dismiss="modal">
+                  <span className="ms-1">Cancelar</span>
+                </Button>
+                <Button type="submit" icon="pi pi-check" severity="primary">
+                  <span className="ms-1">Modificar</span>
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       </div>

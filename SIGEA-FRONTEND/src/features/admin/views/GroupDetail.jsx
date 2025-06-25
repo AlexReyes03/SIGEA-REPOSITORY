@@ -27,7 +27,6 @@ const weekDayOptions = [
 
 const weekLabel = (code) => weekDayOptions.find((o) => o.value === code)?.label || code;
 
-// Variantes de animación para las transiciones
 const slideVariants = {
   modulesEnter: {
     x: '100%',
@@ -41,7 +40,7 @@ const slideVariants = {
     x: '100%',
     opacity: 0,
   },
-  // Vista de Estudiantes
+
   studentsEnter: {
     x: '-100%',
     opacity: 0,
@@ -197,7 +196,7 @@ export default function GroupDetails() {
       {/* Información del grupo y docente */}
       <div className="row my-2">
         <div className="col-12 col-lg-4 mb-2 mb-lg-0">
-          <div className="card border-0" style={{ minHeight: '20rem' }}>
+          <div className="card border-0" style={{ minHeight: '22rem' }}>
             <div className="card-body">
               <div className="d-flex align-items-center">
                 <div className="title-icon p-1 rounded-circle">
@@ -218,7 +217,7 @@ export default function GroupDetails() {
         </div>
 
         <div className="col-12 col-lg-8">
-          <div className="card border-0" style={{ minHeight: '20rem' }}>
+          <div className="card border-0" style={{ minHeight: '22rem' }}>
             <div className="card-body">
               <div className="d-flex align-items-center">
                 <div className="title-icon p-1 rounded-circle">

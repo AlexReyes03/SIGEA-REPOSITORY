@@ -10,20 +10,20 @@ export const getCareerById = async (id) => {
   return res;
 };
 
-export const getCareerByPlantelId = async (PlantelId) => {
-  const res = await request(`/api/careers/plantel/${PlantelId}`);
+export const getCareerByPlantelId = async (plantelId) => {
+  const res = await request(`/api/careers/plantel/${plantelId}`);
   return res;
 };
 
-export const createCareer = async (careerDto, plantelId) => {
-  return await request(`/api/careers?plantelId=${plantelId}`, {
+export const createCareer = async (careerDto) => {
+  return await request('/api/careers', {
     method: 'POST',
     body: careerDto,
   });
 };
 
-export const updateCareer = async (id, careerDto, plantelId) => {
-  return await request(`/api/careers/${id}?plantelId=${plantelId}`, {
+export const updateCareer = async (id, careerDto) => {
+  return await request(`/api/careers/${id}`, {
     method: 'PUT',
     body: careerDto,
   });
@@ -33,4 +33,9 @@ export const deleteCareer = async (id) => {
   return await request(`/api/careers/${id}`, {
     method: 'DELETE',
   });
+};
+
+export const checkDifferentiatorAvailability = async (differentiator, plantelId) => {
+  const res = await request(`/api/careers/check-differentiator?differentiator=${differentiator}&plantelId=${plantelId}`);
+  return res;
 };

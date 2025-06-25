@@ -13,9 +13,9 @@ import { Message } from 'primereact/message';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Modal } from 'bootstrap';
 
+import { getTeachersByCareer } from '../../../api/academics/enrollmentService';
 import { getGroupByCareer, createGroup, updateGroup, deleteGroup } from '../../../api/academics/groupService';
 import { getCurriculumByCareerId } from '../../../api/academics/curriculumService';
-import { getAllUsers } from '../../../api/userService';
 import { useToast } from '../../../components/providers/ToastProvider';
 import { useConfirmDialog } from '../../../components/providers/ConfirmDialogProvider';
 import useBootstrapModalFocus from '../../../utils/hooks/useBootstrapModalFocus';
@@ -88,7 +88,7 @@ export default function Groups() {
 
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState([]);
-  const [teachers, setTeachers] = useState([]);
+  const [careerTeachers, setCareerTeachers] = useState([]);
   const [curriculums, setCurriculums] = useState([]);
   const [editingGroupId, setEditingGroupId] = useState(null);
   const [selected, setSelected] = useState(null);
@@ -103,14 +103,20 @@ export default function Groups() {
   });
   const [validationErrors, setValidationErrors] = useState({});
 
-  // Procesar datos para incluir campos searchables
   const processedData = useMemo(() => {
     return data.map((group) => ({
       ...group,
-      // Campo virtual que combina código y etiqueta para búsqueda
       weekDaySearchable: `${group.weekDay} ${weekLabel(group.weekDay)}`,
     }));
   }, [data]);
+
+  const teacherOptions = useMemo(() => {
+    return careerTeachers.map((teacher) => ({
+      label: `${teacher.name} ${teacher.paternalSurname}`,
+      value: teacher,
+      ...teacher,
+    }));
+  }, [careerTeachers]);
 
   // Validar formulario
   const validateForm = (formData = form) => {
@@ -138,8 +144,7 @@ export default function Groups() {
       errors.timeRange = timeError;
     }
 
-    // Validar conflictos de horario del docente
-    const conflictError = validateTeacherConflict(teachers, formData.teacher, formData.weekDay, formData.startTime, formData.endTime, data, editingGroupId);
+    const conflictError = validateTeacherConflict(careerTeachers, formData.teacher, formData.weekDay, formData.startTime, formData.endTime, data, editingGroupId);
     if (conflictError) {
       errors.teacherConflict = conflictError;
     }
@@ -172,21 +177,24 @@ export default function Groups() {
       }
       setLoading(true);
       try {
-        const [groupsRes, usersRes, curriculumsRes] = await Promise.all([getGroupByCareer(career.id), getAllUsers(), getCurriculumByCareerId(career.id)]);
+        const [groupsRes, curriculumsRes] = await Promise.all([getGroupByCareer(career.id), getCurriculumByCareerId(career.id)]);
+
+        const teachersRes = await getTeachersByCareer(career.id);
+
         setData(Array.isArray(groupsRes) ? groupsRes : groupsRes?.data ?? []);
-        setTeachers(Array.isArray(usersRes) ? usersRes.filter((x) => x.roleName === 'TEACHER') : []);
+        setCareerTeachers(Array.isArray(teachersRes) ? teachersRes : []);
         setCurriculums(Array.isArray(curriculumsRes) ? curriculumsRes : curriculumsRes?.data ?? []);
       } catch (e) {
         showError('Error', 'Ocurrió un error al cargar los datos');
         setData([]);
-        setTeachers([]);
+        setCareerTeachers([]);
         setCurriculums([]);
       } finally {
         setLoading(false);
       }
     };
     loadAll();
-  }, [career?.id]);
+  }, [career?.id, navigate, showError]);
 
   const resetForm = () => {
     setForm({
@@ -212,7 +220,7 @@ export default function Groups() {
       weekDay: group.weekDay,
       startTime: new Date(`1970-01-01T${group.startTime}`),
       endTime: new Date(`1970-01-01T${group.endTime}`),
-      teacher: teachers.find((t) => t.id === group.teacherId) || null,
+      teacher: careerTeachers.find((t) => t.id === group.teacherId) || null,
       curriculum: curriculums.find((c) => c.id === group.curriculumId) || null,
     };
     setForm(updatedForm);
@@ -335,8 +343,8 @@ export default function Groups() {
   );
 
   const toolbarLeft = () => (
-    <div className="flex flex-wrap">
-      <Button ref={createButtonRef} icon="pi pi-plus" severity="primary" disabled={curriculums.length === 0} className="me-2" onClick={openCreateModal}>
+    <div className="flex flex-wrap align-items-center">
+      <Button ref={createButtonRef} icon="pi pi-plus" severity="primary" disabled={curriculums.length === 0 || careerTeachers.length === 0} className="me-2" onClick={openCreateModal}>
         <span className="d-none d-sm-inline ms-1">Crear grupo</span>
       </Button>
       <Button icon="pi pi-trash" severity="danger" disabled={!selected?.length} onClick={removeSelected}>
@@ -361,6 +369,55 @@ export default function Groups() {
 
   const isFormValid = Object.keys(validationErrors).length === 0 && form.name.trim() && form.weekDay && form.teacher && form.curriculum;
 
+  if (loading) {
+    return (
+      <>
+        <div className="bg-white rounded-top p-2">
+          <CareerTabs />
+        </div>
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 220 }}>
+          <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" />
+        </div>
+      </>
+    );
+  }
+
+  if (curriculums?.length === 0) {
+    return (
+      <>
+        <div className="bg-white rounded-top p-2">
+          <CareerTabs />
+        </div>
+        <BreadCrumb
+          model={[{ label: 'Carreras', command: () => navigate('/admin/careers') }, { label: career?.name || '--', command: () => navigate('/admin/careers') }, { label: 'Grupos' }]}
+          home={{ icon: 'pi pi-home', command: () => navigate('/') }}
+          className="mt-2 pb-0 ps-0 text-nowrap"
+        />
+        <div className="d-flex justify-content-center my-2">
+          <Message severity="warn" text="Para crear un grupo, primero debes definir un plan de estudios en la sección 'Plan de estudios'." className="py-4" />
+        </div>
+      </>
+    );
+  }
+
+  if (careerTeachers.length === 0) {
+    return (
+      <>
+        <div className="bg-white rounded-top p-2">
+          <CareerTabs />
+        </div>
+        <BreadCrumb
+          model={[{ label: 'Carreras', command: () => navigate('/admin/careers') }, { label: career?.name || '--', command: () => navigate('/admin/careers') }, { label: 'Grupos' }]}
+          home={{ icon: 'pi pi-home', command: () => navigate('/') }}
+          className="mt-2 pb-0 ps-0 text-nowrap"
+        />
+        <div className="d-flex justify-content-center my-2">
+          <Message severity="warn" text="No hay docentes asignados a esta carrera. Para asignar docentes, ve a la sección de Usuarios y asígnalos a esta carrera." className="py-4" />
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <div className="bg-white rounded-top p-2">
@@ -375,42 +432,33 @@ export default function Groups() {
 
       <Toolbar className="my-2 py-2" start={toolbarLeft} end={toolbarRight} />
 
-      {loading ? (
-        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 220 }}>
-          <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" />
-        </div>
-      ) : curriculums?.length !== 0 ? (
-        <div className="card border-0">
-          <DataTable
-            ref={dt}
-            value={processedData}
-            selection={selected}
-            onSelectionChange={(e) => setSelected(e.value)}
-            dataKey="groupId"
-            paginator
-            rows={5}
-            rowsPerPageOptions={[5, 10, 25]}
-            globalFilter={search}
-            header={header}
-            emptyMessage={<p className="text-center my-5">Aún no hay registros</p>}
-          >
-            <Column selectionMode="multiple" headerStyle={{ width: '3rem' }} />
-            <Column field="name" header="Nombre" sortable />
-            <Column field="weekDaySearchable" header="Día" body={(row) => weekLabel(row.weekDay)} sortable />
-            <Column field="startTime" header="Inicio" sortable />
-            <Column field="endTime" header="Fin" sortable />
-            <Column field="teacherName" header="Docente" sortable />
-            <Column field="curriculumName" header="Plan de estudios" sortable />
-            <Column body={actions} header="Acciones" exportable={false} />
-          </DataTable>
-        </div>
-      ) : (
-        <div className="d-flex justify-content-center my-2">
-          <Message severity="warn" text="Para crear un grupo, primero debes definir un plan de estudios en la sección 'Plan de estudios'." className="py-4" />
-        </div>
-      )}
+      <div className="card border-0">
+        <DataTable
+          ref={dt}
+          value={processedData}
+          selection={selected}
+          onSelectionChange={(e) => setSelected(e.value)}
+          dataKey="groupId"
+          paginator
+          rows={5}
+          rowsPerPageOptions={[5, 10, 25]}
+          globalFilter={search}
+          header={header}
+          className="text-nowrap"
+          emptyMessage={<p className="text-center my-5">Aún no hay registros</p>}
+        >
+          <Column selectionMode="multiple" headerStyle={{ width: '3rem' }} />
+          <Column field="name" header="Nombre" sortable />
+          <Column field="weekDaySearchable" header="Día" body={(row) => weekLabel(row.weekDay)} sortable />
+          <Column field="startTime" header="Inicio" sortable />
+          <Column field="endTime" header="Fin" sortable />
+          <Column field="teacherName" header="Docente" sortable />
+          <Column field="curriculumName" header="Plan de estudios" sortable />
+          <Column body={actions} header="Acciones" exportable={false} />
+        </DataTable>
+      </div>
 
-      {/* ───────── MODAL CREAR ───────── */}
+      {/* MODAL CREAR */}
       <div className="modal fade" ref={createModalRef} tabIndex={-1}>
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
@@ -469,12 +517,14 @@ export default function Groups() {
 
                 <div className="row">
                   <div className="col-6 mb-3">
-                    <label className="form-label">Docente *</label>
+                    <label className="form-label">
+                      Docente *<small className="text-secondary ms-1">({careerTeachers.length} disponibles)</small>
+                    </label>
                     <Dropdown
                       className={`w-100 ${validationErrors.teacher ? 'p-invalid' : ''}`}
                       value={form.teacher}
-                      options={teachers}
-                      optionLabel={(t) => `${t.name} ${t.paternalSurname}`}
+                      options={teacherOptions}
+                      optionLabel="label"
                       placeholder="Seleccione docente…"
                       filter
                       onChange={(e) => setForm({ ...form, teacher: e.value })}
@@ -494,7 +544,6 @@ export default function Groups() {
                       filter
                       onChange={(e) => setForm({ ...form, curriculum: e.value })}
                       required
-                      disabled={loading || curriculums.length === 0}
                     />
                     {validationErrors.curriculum && <small className="p-error">{validationErrors.curriculum}</small>}
                   </div>
@@ -520,7 +569,7 @@ export default function Groups() {
         </div>
       </div>
 
-      {/* ───────── MODAL MODIFICAR ───────── */}
+      {/* MODAL MODIFICAR */}
       <div className="modal fade" ref={updateModalRef} tabIndex={-1}>
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
@@ -578,17 +627,10 @@ export default function Groups() {
                 )}
 
                 <div className="mb-3">
-                  <label className="form-label">Docente *</label>
-                  <Dropdown
-                    className={`w-100 ${validationErrors.teacher ? 'p-invalid' : ''}`}
-                    value={form.teacher}
-                    options={teachers}
-                    optionLabel={(t) => `${t.name} ${t.paternalSurname}`}
-                    placeholder="Seleccione docente…"
-                    filter
-                    onChange={(e) => setForm({ ...form, teacher: e.value })}
-                    required
-                  />
+                  <label className="form-label">
+                    Docente *<small className="text-secondary ms-1">({careerTeachers.length} disponibles)</small>
+                  </label>
+                  <Dropdown className={`w-100 ${validationErrors.teacher ? 'p-invalid' : ''}`} value={form.teacher} options={teacherOptions} optionLabel="label" placeholder="Seleccione docente…" filter onChange={(e) => setForm({ ...form, teacher: e.value })} required />
                   {validationErrors.teacher && <small className="p-error">{validationErrors.teacher}</small>}
                 </div>
 
@@ -603,10 +645,8 @@ export default function Groups() {
                     filter
                     onChange={(e) => setForm({ ...form, curriculum: e.value })}
                     required
-                    disabled={curriculums.length === 0}
                   />
                   {validationErrors.curriculum && <small className="p-error">{validationErrors.curriculum}</small>}
-                  {curriculums.length === 0 && <Message severity="warn" text="Para crear o modificar un grupo, primero debes definir un plan de estudios en la sección 'Plan de estudios'." className="mt-2" />}
                 </div>
 
                 {validationErrors.teacherConflict && (

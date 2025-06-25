@@ -8,7 +8,7 @@ import { Button } from 'primereact/button';
 
 import { useToast } from '../../../components/providers/ToastProvider';
 import { useConfirmDialog } from '../../../components/providers/ConfirmDialogProvider';
-import { getAllUsers } from '../../../api/userService';
+import { getStudentsByCareer } from '../../../api/academics/enrollmentService';
 import { getGroupStudents, enrollStudentInGroup, removeStudentFromGroup, getStudentsWithGroup } from '../../../api/academics/groupService';
 
 export default function AssignStudentsPickList({ group }) {
@@ -17,7 +17,7 @@ export default function AssignStudentsPickList({ group }) {
   const [loading, setLoading] = useState(true);
   const { showSuccess, showError, showWarn } = useToast();
   const { confirmAction } = useConfirmDialog();
-  const [allStudents, setAllStudents] = useState([]);
+  const [careerStudents, setCareerStudents] = useState([]);
   const [currentGroupStudents, setCurrentGroupStudents] = useState([]);
   const [studentsWithGroup, setStudentsWithGroup] = useState([]);
 
@@ -40,19 +40,19 @@ export default function AssignStudentsPickList({ group }) {
         searchText: `${student.fullName} ${student.registrationNumber || ''} ${student.email || ''}`.toLowerCase(),
       };
     } else {
-      const fullName = `${student.name} ${student.paternalSurname} ${student.maternalSurname}`.trim();
+      const fullName = `${student.userName || student.name} ${student.userPaternalSurname || student.paternalSurname} ${student.userMaternalSurname || student.maternalSurname}`.trim();
+
       return {
-        id: student.id,
+        id: student.userId || student.id,
         fullName: fullName,
         registrationNumber: student.registrationNumber || '',
-        email: student.email || '',
+        email: student.userEmail || student.email || '',
         groupId: null,
-        searchText: `${fullName} ${student.registrationNumber || ''} ${student.email || ''}`.toLowerCase(),
+        searchText: `${fullName} ${student.registrationNumber || ''} ${student.userEmail || student.email || ''}`.toLowerCase(),
       };
     }
   };
 
-  // Función para restablecer las listas al estado original del modo actual
   const resetToOriginalState = useCallback(() => {
     if (loading || !selectedMode?.code) return;
 
@@ -63,17 +63,22 @@ export default function AssignStudentsPickList({ group }) {
 
     switch (selectedMode.code) {
       case 'ADD':
-        // Modo ADD: Solo estudiantes que NO tienen NINGÚN grupo asignado
-        originalSource = allStudents.filter((student) => !currentGroupStudentIds.includes(student.id) && !allStudentsWithGroupIds.includes(student.id)).map((student) => normalizeStudent(student));
+        // Solo estudiantes de la carrera que NO tienen NINGÚN grupo asignado
+        originalSource = careerStudents
+          .filter((student) => {
+            const studentId = student.userId || student.id;
+            return !currentGroupStudentIds.includes(studentId) && !allStudentsWithGroupIds.includes(studentId);
+          })
+          .map((student) => normalizeStudent(student, false));
         break;
 
       case 'MOVE':
-        // Modo MOVE: Solo estudiantes que SÍ tienen grupo pero NO están en el grupo actual
+        // Solo estudiantes que SÍ tienen grupo pero NO están en el grupo actual
         originalSource = studentsWithGroup.filter((student) => student.groupId !== group.groupId).map((student) => normalizeStudent(student, true));
         break;
 
       case 'REMOVE':
-        // Modo REMOVE: Estudiantes que están en el grupo actual
+        // Estudiantes que están en el grupo actual
         originalSource = currentGroupStudents.map((student) => normalizeStudent(student, true));
         break;
 
@@ -83,30 +88,30 @@ export default function AssignStudentsPickList({ group }) {
 
     setSource(originalSource);
     setTarget([]);
-  }, [selectedMode, allStudents, currentGroupStudents, studentsWithGroup, loading, group?.groupId]);
+  }, [selectedMode, careerStudents, currentGroupStudents, studentsWithGroup, loading, group?.groupId]);
 
   useEffect(() => {
     const loadData = async () => {
-      if (!group?.groupId) {
+      if (!group?.groupId || !group?.careerId) {
         showError('Error', 'No se especificó un grupo válido');
         return;
       }
 
       setLoading(true);
       try {
-        const [allUsersRes, groupStudentsRes, studentsWithGroupRes] = await Promise.all([getAllUsers(), getGroupStudents(group.groupId), getStudentsWithGroup()]);
+        const [careerStudentsRes, groupStudentsRes, studentsWithGroupRes] = await Promise.all([
+          getStudentsByCareer(group.careerId),
+          getGroupStudents(group.groupId),
+          getStudentsWithGroup(),
+        ]);
 
-        const students = Array.isArray(allUsersRes) ? allUsersRes.filter((user) => user.roleName === 'STUDENT') : [];
-        const groupStudents = Array.isArray(groupStudentsRes) ? groupStudentsRes : [];
-        const studentsWithGroup = Array.isArray(studentsWithGroupRes) ? studentsWithGroupRes : [];
-
-        setAllStudents(students);
-        setCurrentGroupStudents(groupStudents);
-        setStudentsWithGroup(studentsWithGroup);
+        setCareerStudents(Array.isArray(careerStudentsRes) ? careerStudentsRes : []);
+        setCurrentGroupStudents(Array.isArray(groupStudentsRes) ? groupStudentsRes : []);
+        setStudentsWithGroup(Array.isArray(studentsWithGroupRes) ? studentsWithGroupRes : []);
       } catch (error) {
         console.error('Error cargando datos:', error);
         showError('Error', 'No se pudieron cargar los datos');
-        setAllStudents([]);
+        setCareerStudents([]);
         setCurrentGroupStudents([]);
         setStudentsWithGroup([]);
       } finally {
@@ -115,9 +120,8 @@ export default function AssignStudentsPickList({ group }) {
     };
 
     loadData();
-  }, [group?.groupId, showError]);
+  }, [group?.groupId, group?.careerId, showError]);
 
-  // Configurar source y target según el modo seleccionado
   useEffect(() => {
     resetToOriginalState();
   }, [resetToOriginalState]);
@@ -267,11 +271,10 @@ export default function AssignStudentsPickList({ group }) {
   const sourceCount = source.length;
   const targetCount = target.length;
   const hasSelectedStudents = targetCount > 0;
-  const studentsWithoutGroup = allStudents.length - studentsWithGroup.length;
+  const studentsWithoutGroup = careerStudents.length - studentsWithGroup.filter((s) => careerStudents.some((cs) => (cs.userId || cs.id) === s.studentId)).length;
 
   const toolbarRight = () => (
     <div className="flex flex-wrap">
-      {/* Solo mostrar botón cancelar si hay estudiantes seleccionados */}
       {hasSelectedStudents && (
         <Button icon="pi pi-times" outlined severity="secondary" className="me-2" onClick={cancel} disabled={loading} tooltip="Cancelar y restaurar selección" tooltipOptions={{ position: 'top' }}>
           <span className="d-none d-sm-inline ms-1">Cancelar</span>
@@ -371,7 +374,13 @@ export default function AssignStudentsPickList({ group }) {
         if (sourceCount === 0 && studentsWithoutGroup === 0) {
           return {
             severity: 'info',
-            text: 'Todos los estudiantes ya tienen un grupo asignado. No hay estudiantes disponibles para añadir.',
+            text: 'Todos los estudiantes de esta carrera ya tienen un grupo asignado. No hay estudiantes disponibles para añadir.',
+          };
+        }
+        if (careerStudents.length === 0) {
+          return {
+            severity: 'warn',
+            text: 'No hay estudiantes inscritos en esta carrera. Ve a la sección de Usuarios para inscribir estudiantes.',
           };
         }
         break;
@@ -379,7 +388,7 @@ export default function AssignStudentsPickList({ group }) {
         if (sourceCount === 0) {
           return {
             severity: 'warn',
-            text: 'No hay estudiantes en otros grupos para mover. Todos los estudiantes con grupo ya están en este grupo.',
+            text: 'No hay estudiantes de esta carrera en otros grupos para mover.',
           };
         }
         break;
@@ -403,7 +412,7 @@ export default function AssignStudentsPickList({ group }) {
         <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
           <div className="text-center">
             <i className="pi pi-spinner pi-spin" style={{ fontSize: '2rem', color: '#6366f1' }}></i>
-            <p className="mt-3 text-600">Cargando estudiantes...</p>
+            <p className="mt-3 text-600">Cargando estudiantes de la carrera...</p>
           </div>
         </div>
       </div>
@@ -413,6 +422,27 @@ export default function AssignStudentsPickList({ group }) {
   return (
     <div className="card border-0 mt-3">
       <Toolbar className="py-2 border-0 border-bottom rounded-bottom-0" start={toolbarLeft} end={toolbarRight} />
+
+      <div className="px-3 py-2 bg-light border-bottom">
+        <div className="row text-center">
+          <div className="col-md-3">
+            <small className="text-muted d-block">Total en carrera</small>
+            <strong className="text-secondary">{careerStudents.length}</strong>
+          </div>
+          <div className="col-md-3">
+            <small className="text-muted d-block">En este grupo</small>
+            <strong className="text-secondary">{currentGroupStudents.length}</strong>
+          </div>
+          <div className="col-md-3">
+            <small className="text-muted d-block">En otros grupos</small>
+            <strong className="text-secondary">{studentsWithGroup.filter((s) => careerStudents.some((cs) => (cs.userId || cs.id) === s.studentId) && s.groupId !== group.groupId).length}</strong>
+          </div>
+          <div className="col-md-3">
+            <small className="text-muted d-block">Sin grupo</small>
+            <strong className="text-secondary">{studentsWithoutGroup}</strong>
+          </div>
+        </div>
+      </div>
 
       <PickList
         dataKey="id"
@@ -435,7 +465,7 @@ export default function AssignStudentsPickList({ group }) {
         targetFilterPlaceholder="Buscar seleccionados..."
       />
 
-      {/* Mensaje informativo usando */}
+      {/* Mensajes informativos */}
       {infoMessage && (
         <div className="m-3 text-center">
           <Message severity={infoMessage.severity} text={infoMessage.text} />
