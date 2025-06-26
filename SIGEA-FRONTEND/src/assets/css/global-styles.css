@@ -187,7 +187,7 @@ Button {
   cursor: pointer;
 }
 
-/* Estado “current” (sidebar cerrado): fondo transparente, texto gris */
+/* Estado "current" (sidebar cerrado): fondo transparente, texto gris */
 .sidebar-btn-current {
   background: transparent !important;
   color: var(--bg-gray-600) !important;
@@ -250,6 +250,31 @@ Button {
   color: var(--bg-gray-600) !important;
 }
 
+/* FIX: Prevenir doble fondo azul durante mousedown + drag */
+/* Durante :active, cancelar el ::before del botón activo */
+.sidebar-btn:not(.sidebar-btn-current):not(.sidebar-btn-current-animate):active::before {
+  width: 0 !important;
+  transition: none !important;
+}
+
+/* Estilo para el botón durante :active */
+.sidebar-btn:not(.sidebar-btn-current):not(.sidebar-btn-current-animate):active {
+  color: var(--bg-gray-600) !important;
+  background: var(--bg-gray-100) !important;
+  transform: scale(0.98);
+  transition: transform 0.1s ease, background 0.1s ease;
+}
+
+/* Prevenir drag selection y touch behaviors que pueden causar hovers múltiples */
+.sidebar-btn {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  touch-action: none;
+  -webkit-touch-callout: none;
+}
+
 /* Cuando el sidebar está cerrado, solo el botón current recibe eventos */
 .sidebar-closed .sidebar-btn {
   pointer-events: none;
@@ -258,7 +283,7 @@ Button {
   pointer-events: auto;
 }
 
-/* Ícono y texto siempre “por encima” de la pseudobarra */
+/* Ícono y texto siempre "por encima" de la pseudobarra */
 .sidebar-btn > * {
   position: relative;
   z-index: 1;

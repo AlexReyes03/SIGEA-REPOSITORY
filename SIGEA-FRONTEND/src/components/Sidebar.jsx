@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MdHome, MdSchool, MdGroups, MdPerson, MdLogout } from 'react-icons/md';
 import { motion } from 'framer-motion';
@@ -88,23 +88,26 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
     return matches[0]?.path || null;
   }, [MENU_ITEMS, currentPath]);
 
-  const handleItemClick = (item) => {
-    if (!isOpen) return;
-    if (item.path) {
-      navigate(item.path);
-      onClose();
-    } else {
-      confirmAction({
-        message: '¿Estás seguro de que quieres cerrar sesión?',
-        header: 'Cerrar sesión',
-        icon: 'pi pi-exclamation-triangle',
-        acceptLabel: 'Sí, salir',
-        rejectLabel: 'Cancelar',
-        acceptClassName: 'p-button-danger',
-        onAccept: () => onLogout(),
-      });
-    }
-  };
+  const handleItemClick = useCallback(
+    (item) => {
+      if (!isOpen) return;
+      if (item.path) {
+        navigate(item.path);
+        onClose();
+      } else {
+        confirmAction({
+          message: '¿Estás seguro de que quieres cerrar sesión?',
+          header: 'Cerrar sesión',
+          icon: 'pi pi-exclamation-triangle',
+          acceptLabel: 'Sí, salir',
+          rejectLabel: 'Cancelar',
+          acceptClassName: 'p-button-danger',
+          onAccept: onLogout,
+        });
+      }
+    },
+    [isOpen, navigate, onClose, confirmAction, onLogout]
+  );
 
   return (
     <div
@@ -118,7 +121,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
         overflow: 'hidden',
         transition: 'width 0.25s cubic-bezier(0.33, 1, 0.68, 1)',
         zIndex: 1040,
-        cursor: 'pointer',
+        cursor: isOpen ? 'auto' : 'pointer',
       }}
       onClick={() => {
         if (!isOpen) toggleSidebar();

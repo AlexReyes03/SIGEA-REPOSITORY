@@ -99,11 +99,7 @@ export default function AssignStudentsPickList({ group }) {
 
       setLoading(true);
       try {
-        const [careerStudentsRes, groupStudentsRes, studentsWithGroupRes] = await Promise.all([
-          getStudentsByCareer(group.careerId),
-          getGroupStudents(group.groupId),
-          getStudentsWithGroup(),
-        ]);
+        const [careerStudentsRes, groupStudentsRes, studentsWithGroupRes] = await Promise.all([getStudentsByCareer(group.careerId), getGroupStudents(group.groupId), getStudentsWithGroup()]);
 
         setCareerStudents(Array.isArray(careerStudentsRes) ? careerStudentsRes : []);
         setCurrentGroupStudents(Array.isArray(groupStudentsRes) ? groupStudentsRes : []);
@@ -252,13 +248,6 @@ export default function AssignStudentsPickList({ group }) {
         },
       });
     }
-  };
-
-  const customFilter = (value, filter) => {
-    if (!filter) return true;
-    if (!value?.searchText) return false;
-    const filterLower = filter.toLowerCase().trim();
-    return value.searchText.includes(filterLower);
   };
 
   const handleModeChange = (e) => {
@@ -453,7 +442,6 @@ export default function AssignStudentsPickList({ group }) {
         itemTemplate={itemTemplate}
         filter
         filterBy="searchText"
-        filterFunction={customFilter}
         breakpoint="1280px"
         showSourceControls={false}
         showTargetControls={false}

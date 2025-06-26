@@ -10,28 +10,33 @@ export const getUserById = async (id) => {
   return res;
 };
 
-export const getUserByRole = async (roleId) =>{
+export const getUserByRole = async (roleId) => {
   const res = await request(`/api/users/role/${roleId}`);
   return res;
-}
+};
+
+export const getUserByRoleAndPlantel = async (roleId, plantelId) => {
+  const res = await request(`/api/users/role/${roleId}/plantel/${plantelId}`);
+  return res;
+};
 
 export const createUser = async (userDto) => {
   return await request('/api/users', {
     method: 'POST',
-    body: userDto
+    body: userDto,
   });
 };
 
 export const updateUser = async (id, userDto) => {
   return await request(`/api/users/${id}`, {
     method: 'PUT',
-    body: userDto
+    body: userDto,
   });
 };
 
 export const deleteUser = async (id) => {
   return await request(`/api/users/${id}`, {
-    method: 'DELETE'
+    method: 'DELETE',
   });
 };
 

@@ -6,7 +6,6 @@ import { MultiSelect } from 'primereact/multiselect';
 import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
 import { Tag } from 'primereact/tag';
-import { Chip } from 'primereact/chip';
 import { Checkbox } from 'primereact/checkbox';
 import { Toolbar } from 'primereact/toolbar';
 import { ProgressSpinner } from 'primereact/progressspinner';
@@ -16,7 +15,7 @@ import { Toast } from 'primereact/toast';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import * as bootstrap from 'bootstrap';
 
-import { getAllUsers, getUserByRole, createUser, deleteUser, updateUser } from '../../../api/userService';
+import { getUserByRole, getUserByRoleAndPlantel, createUser, deleteUser, updateUser } from '../../../api/userService';
 import { getAllRoles } from '../../../api/roleService';
 import { getCareerByPlantelId } from '../../../api/academics/careerService';
 import { createEnrollment, generateRegistrationNumber, getEnrollmentsByUser, updateEnrollmentRegistration, deleteEnrollment, canRemoveUserFromCareer } from '../../../api/academics/enrollmentService';
@@ -70,11 +69,13 @@ export default function UsersManagement() {
   const { showError, showSuccess, showWarn } = useToast();
 
   const [users, setUsers] = useState([]);
+  const [cachedUsersByRole, setCachedUsersByRole] = useState({});
   const [userEnrollments, setUserEnrollments] = useState([]);
   const [enrollmentInputs, setEnrollmentInputs] = useState({});
   const [roles, setRoles] = useState([]);
   const [careers, setCareers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [globalFilter, setGlobalFilter] = useState('');
   const [selectedTipoUsuario, setSelectedTipoUsuario] = useState(null);
   const [selected, setSelected] = useState([]);
@@ -118,12 +119,14 @@ export default function UsersManagement() {
     return ROLE_NEEDS_CAREERS.includes(getCurrentRole.roleName);
   }, [getCurrentRole]);
 
+  // Opciones de carrera con formato "Nombre - Identificador"
   const careerOptions = useMemo(
     () =>
       careers.map((career) => ({
-        label: career.name,
+        label: `${career.name} - ${career.differentiator}`,
         value: career.id,
         differentiator: career.differentiator,
+        name: career.name,
       })),
     [careers]
   );
@@ -212,6 +215,7 @@ export default function UsersManagement() {
             newChips.push({
               careerId: careerId,
               careerName: career.name,
+              differentiator: career.differentiator,
               matricula: matricula,
               editable: false,
             });
@@ -221,6 +225,7 @@ export default function UsersManagement() {
             newChips.push({
               careerId: careerId,
               careerName: career.name,
+              differentiator: career.differentiator,
               matricula: defaultMatricula,
               editable: true,
               hasError: true,
@@ -237,8 +242,17 @@ export default function UsersManagement() {
     }
   };
 
-  const updateChipMatricula = (careerId, newMatricula) => {
-    setCareerChips((prev) => prev.map((chip) => (chip.careerId === careerId ? { ...chip, matricula: newMatricula, hasError: false } : chip)));
+  const updateChipLast4Digits = (careerId, newLast4) => {
+    setCareerChips((prev) =>
+      prev.map((chip) => {
+        if (chip.careerId === careerId) {
+          const prefix = chip.matricula.replace(/\d{4}$/, '');
+          const newMatricula = `${prefix}${newLast4.padStart(4, '0')}`;
+          return { ...chip, matricula: newMatricula, hasError: false };
+        }
+        return chip;
+      })
+    );
   };
 
   const removeCareerChip = (careerId) => {
@@ -246,12 +260,28 @@ export default function UsersManagement() {
     setSelectedCareers((prev) => prev.filter((id) => id !== careerId));
   };
 
-  const loadData = useCallback(
-    async (dataLoader) => {
+  // Función optimizada para cargar usuarios por rol y plantel con cache
+  const loadUsersByRoleAndPlantel = useCallback(
+    async (roleId, plantelId) => {
+      const cacheKey = `${roleId}_${plantelId}`;
+
+      // Verificar si ya tenemos los datos en cache
+      if (cachedUsersByRole[cacheKey]) {
+        setUsers(cachedUsersByRole[cacheKey]);
+        return;
+      }
+
       try {
         setLoading(true);
-        const data = await dataLoader();
+        const data = await getUserByRoleAndPlantel(roleId, plantelId);
         const usersArray = Array.isArray(data) ? data : [];
+
+        // Guardar en cache
+        setCachedUsersByRole((prev) => ({
+          ...prev,
+          [cacheKey]: usersArray,
+        }));
+
         setUsers(usersArray);
       } catch (error) {
         console.error('Error loading data:', error);
@@ -261,16 +291,56 @@ export default function UsersManagement() {
         setLoading(false);
       }
     },
-    [showError]
+    [cachedUsersByRole, showError]
   );
 
-  const loadUsers = useCallback(() => loadData(() => getAllUsers()), [loadData]);
-  const loadUsersByRole = useCallback((roleId) => loadData(() => getUserByRole(roleId)), [loadData]);
+  // Función para refrescar datos manualmente
+  const refreshCurrentView = useCallback(async () => {
+    if (!selectedTipoUsuario || !user?.campus?.id) return;
+
+    setRefreshing(true);
+    const cacheKey = `${selectedTipoUsuario}_${user.campus.id}`;
+
+    // Limpiar cache para este rol específico y recargar
+    setCachedUsersByRole((prev) => {
+      const newCache = { ...prev };
+      delete newCache[cacheKey];
+      return newCache;
+    });
+
+    try {
+      const data = await getUserByRoleAndPlantel(selectedTipoUsuario, user.campus.id);
+      const usersArray = Array.isArray(data) ? data : [];
+
+      // Actualizar cache
+      setCachedUsersByRole((prev) => ({
+        ...prev,
+        [cacheKey]: usersArray,
+      }));
+
+      setUsers(usersArray);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      showError('Error', 'No se pudieron actualizar los usuarios');
+    } finally {
+      setRefreshing(false);
+    }
+  }, [selectedTipoUsuario, user?.campus?.id, showError]);
 
   const reloadCurrentView = useCallback(() => {
-    const loader = typeof selectedTipoUsuario === 'number' ? () => loadUsersByRole(selectedTipoUsuario) : () => loadUsers();
-    loader();
-  }, [selectedTipoUsuario, loadUsers, loadUsersByRole]);
+    if (selectedTipoUsuario && user?.campus?.id) {
+      const cacheKey = `${selectedTipoUsuario}_${user.campus.id}`;
+
+      // Limpiar cache para este rol específico y recargar
+      setCachedUsersByRole((prev) => {
+        const newCache = { ...prev };
+        delete newCache[cacheKey];
+        return newCache;
+      });
+
+      loadUsersByRoleAndPlantel(selectedTipoUsuario, user.campus.id);
+    }
+  }, [selectedTipoUsuario, user?.campus?.id, loadUsersByRoleAndPlantel]);
 
   const loadCareers = useCallback(async () => {
     try {
@@ -298,27 +368,21 @@ export default function UsersManagement() {
   }, [showError, loadCareers]);
 
   useEffect(() => {
-    if (roles.length > 0 && isInitialLoad) {
+    if (roles.length > 0 && isInitialLoad && user?.campus?.id) {
       const studentRole = roles.find((role) => role.roleName === 'STUDENT' || role.id === 4);
       if (studentRole) {
         setSelectedTipoUsuario(studentRole.id);
-        loadUsersByRole(studentRole.id);
-      } else {
-        loadUsers();
+        loadUsersByRoleAndPlantel(studentRole.id, user.campus.id);
       }
       setIsInitialLoad(false);
     }
-  }, [roles, isInitialLoad, loadUsers, loadUsersByRole]);
+  }, [roles, isInitialLoad, user?.campus?.id, loadUsersByRoleAndPlantel]);
 
   useEffect(() => {
-    if (!isInitialLoad) {
-      if (typeof selectedTipoUsuario === 'number') {
-        loadUsersByRole(selectedTipoUsuario);
-      } else {
-        loadUsers();
-      }
+    if (!isInitialLoad && selectedTipoUsuario && user?.campus?.id) {
+      loadUsersByRoleAndPlantel(selectedTipoUsuario, user.campus.id);
     }
-  }, [selectedTipoUsuario, isInitialLoad, loadUsers, loadUsersByRole]);
+  }, [selectedTipoUsuario, isInitialLoad, user?.campus?.id, loadUsersByRoleAndPlantel]);
 
   const handleFormSubmit = useCallback(
     async (e, isEdit = false) => {
@@ -622,15 +686,16 @@ export default function UsersManagement() {
           <h5 className="title-text ms-2 me-2 mb-0">{getCurrentFilterLabel()}</h5>
           <span className="badge bg-blue-500 p-2 me-2">{processedUsers.length}</span>
         </div>
-        <span className="p-input-icon-left">
+        <div className="d-flex align-items-center gap-2">
           <InputText placeholder="Buscar ..." value={globalFilter} onChange={(e) => setGlobalFilter(e.target.value)} disabled={loading} className="me-2" style={{ minWidth: '250px' }} />
-          <Button icon="pi pi-upload" className="cetec-btn-primary" onClick={() => dt.current?.exportCSV()} disabled={loading || !processedUsers.length}>
+          <Button icon={refreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} className="cetec-btn-secondary" onClick={refreshCurrentView} disabled={loading || refreshing || !selectedTipoUsuario} tooltip="Actualizar datos" tooltipOptions={{ position: 'top' }} />
+          <Button icon="pi pi-upload" outlined={loading || !processedUsers.length} severity="help" onClick={() => dt.current?.exportCSV()} disabled={loading || !processedUsers.length}>
             <span className="d-none d-sm-inline ms-2">Exportar</span>
           </Button>
-        </span>
+        </div>
       </div>
     ),
-    [getCurrentFilterLabel, processedUsers.length, globalFilter, loading]
+    [getCurrentFilterLabel, processedUsers.length, globalFilter, loading, refreshing, refreshCurrentView, selectedTipoUsuario]
   );
 
   // Templates
@@ -811,14 +876,35 @@ export default function UsersManagement() {
 
                     {careerChips.length > 0 && (
                       <div className="mt-3">
-                        <small className="text-muted d-block mb-2">Matrículas generadas:</small>
-                        <div className="d-flex flex-wrap gap-2">
-                          {careerChips.map((chip) => (
-                            <div key={chip.careerId} className="d-flex align-items-center">
-                              <Chip label={chip.matricula} removable onRemove={() => removeCareerChip(chip.careerId)} className={chip.hasError ? 'p-chip-warning' : ''} title={chip.careerName} />
-                              {chip.editable && <InputText value={chip.matricula} onChange={(e) => updateChipMatricula(chip.careerId, e.target.value)} className="ms-2" style={{ width: '120px' }} placeholder="Matrícula" />}
-                            </div>
-                          ))}
+                        <small className="text-muted d-block mb-2">Matrículas generadas (editables últimos 4 dígitos):</small>
+                        <div className="row g-2">
+                          {careerChips.map((chip) => {
+                            const prefix = chip.matricula.replace(/\d{4}$/, '');
+                            const last4 = extractLast4Digits(chip.matricula);
+
+                            return (
+                              <div key={chip.careerId} className="col-md-6">
+                                <div className="input-group" style={{ maxWidth: '280px' }}>
+                                  <span className="input-group-text">{prefix}</span>
+                                  <input
+                                    type="text"
+                                    className="form-control"
+                                    value={last4}
+                                    onChange={(e) => {
+                                      const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                      updateChipLast4Digits(chip.careerId, value);
+                                    }}
+                                    placeholder="0000"
+                                    maxLength="4"
+                                    style={{ width: '70px' }}
+                                  />
+                                  <button type="button" className="btn btn-light border border-start-0" onClick={() => removeCareerChip(chip.careerId)} title={`Quitar ${chip.careerName}`}>
+                                    <i className="pi pi-times"></i>
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
