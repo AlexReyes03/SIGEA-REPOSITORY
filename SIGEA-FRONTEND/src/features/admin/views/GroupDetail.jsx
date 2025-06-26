@@ -9,10 +9,9 @@ import { Button } from 'primereact/button';
 import { useToast } from '../../../components/providers/ToastProvider';
 import avatarFallback from '../../../assets/img/profile.png';
 import { getUserById } from '../../../api/userService';
-import { getCareerById } from '../../../api/academics/careerService';
 import { getGroupStudents } from '../../../api/academics/groupService';
 import { BACKEND_BASE_URL } from '../../../api/common-url';
-import GroupModulesTable from '../../teacher/components/GroupModulesTable';
+import GroupModulesTable from '../../admin/components/GroupModulesTable';
 import AssignStudentsPickList from '../components/AssignStudentsPickList';
 
 const weekDayOptions = [

@@ -32,6 +32,12 @@ export default function Careers() {
   const [careers, setCareers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingCareer, setEditing] = useState(null);
+  
+  // NUEVOS ESTADOS PARA LOADING
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const [formData, setFormData] = useState({
     name: '',
     differentiator: '',
@@ -80,9 +86,12 @@ export default function Careers() {
     loadCareers();
   }, []);
 
-  // CREAR CARRERA
+  // CREAR CARRERA - CON LOADING STATE
   const handleCreate = async (e) => {
     e.preventDefault();
+    
+    // Prevenir doble envío
+    if (isCreating) return;
 
     const differentiatorError = validateDifferentiator(formData.differentiator);
     if (differentiatorError) {
@@ -102,21 +111,38 @@ export default function Careers() {
     };
 
     try {
+      setIsCreating(true);
       await createCareer(payload);
       showSuccess('Éxito', 'Carrera creada correctamente');
-      await loadCareers();
-      Modal.getInstance(createModalRef.current).hide();
+      
+      // Cerrar modal correctamente
+      const modalInstance = Modal.getInstance(createModalRef.current);
+      if (modalInstance) {
+        modalInstance.hide();
+      }
+      
+      // Limpiar formulario
       setFormData({ name: '', differentiator: '' });
       setDifferentiatorPreview('');
+      
+      // Recargar datos
+      await loadCareers();
+      
     } catch (err) {
-      const message = err.response?.data?.message || 'Error al crear la carrera';
+      console.error('Error creating career:', err);
+      const message = err.message || 'Error al crear la carrera';
       showError('Error', message);
+    } finally {
+      setIsCreating(false);
     }
   };
 
-  // ACTUALIZAR CARRERA
+  // ACTUALIZAR CARRERA - CON LOADING STATE
   const handleUpdate = async (e) => {
     e.preventDefault();
+    
+    // Prevenir doble envío
+    if (isUpdating) return;
 
     const differentiatorError = validateDifferentiator(formData.differentiator);
     if (differentiatorError) {
@@ -136,18 +162,32 @@ export default function Careers() {
     };
 
     try {
+      setIsUpdating(true);
       await updateCareer(editingCareer.id, payload);
       showSuccess('Éxito', 'Carrera actualizada correctamente');
+      
+      // Cerrar modal correctamente
+      const modalInstance = Modal.getInstance(editModalRef.current);
+      if (modalInstance) {
+        modalInstance.hide();
+      }
+      
+      // Recargar datos
       await loadCareers();
-      Modal.getInstance(editModalRef.current).hide();
+      
     } catch (err) {
-      const message = err.response?.data?.message || 'Error al actualizar la carrera';
+      console.error('Error updating career:', err);
+      const message = err.message || 'Error al actualizar la carrera';
       showError('Error', message);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  // ELIMINAR CARRERA
+  // ELIMINAR CARRERA - CON LOADING STATE
   const handleDelete = (careerToDelete) => {
+    if (isDeleting) return;
+
     confirmAction({
       message: '¿Estás seguro de eliminar esta carrera?',
       header: 'Eliminar carrera',
@@ -157,12 +197,16 @@ export default function Careers() {
       acceptClassName: 'p-button-danger',
       onAccept: async () => {
         try {
+          setIsDeleting(true);
           await deleteCareer(careerToDelete.id);
           showSuccess('Hecho', `Carrera "${careerToDelete.name}" eliminada`);
           await loadCareers();
         } catch (err) {
-          const message = err.response?.data?.message || 'Error al eliminar la carrera';
+          console.error('Error deleting career:', err);
+          const message = err.message || 'Error al eliminar la carrera';
           showError('Error', message);
+        } finally {
+          setIsDeleting(false);
         }
       },
     });
@@ -215,7 +259,14 @@ export default function Careers() {
       <div className="bg-white rounded-top p-2 d-flex align-items-center">
         <h3 className="text-blue-500 fw-semibold mx-3 my-1">Carreras</h3>
         <div className="ms-auto d-flex align-items-center gap-2">
-          <Button ref={createButtonRef} icon="pi pi-plus" severity="primary" rounded onClick={() => openModal(createModalRef)}>
+          <Button 
+            ref={createButtonRef} 
+            icon="pi pi-plus" 
+            severity="primary" 
+            rounded 
+            onClick={() => openModal(createModalRef)}
+            disabled={isCreating || isUpdating || isDeleting}
+          >
             <span className="d-none d-sm-inline ms-2">Crear carrera</span>
           </Button>
         </div>
@@ -236,7 +287,7 @@ export default function Careers() {
               <div className="card border-0 h-100 hovereable shadow-sm" onClick={() => navigate('/admin/careers/curriculums', { state: { career } })}>
                 <div className="card-body">
                   <div className="d-flex justify-content-between align-items-start mb-3">
-                    <div className="flex-grow-1">
+                    <div className="flex-grow-1 text-truncate">
                       <h6 className="fw-semibold lh-sm mb-2 text-dark text-truncate">{career.name}</h6>
                       <div className="d-flex align-items-center gap-2">
                         <div className="ms-2 my-2">
@@ -262,6 +313,7 @@ export default function Careers() {
                         setSelectedCareer(career);
                         opRef.current.toggle(e);
                       }}
+                      disabled={isDeleting}
                     >
                       <MdOutlineMoreHoriz size={20} />
                     </button>
@@ -306,6 +358,7 @@ export default function Careers() {
             openModal(editModalRef, selectedCareer);
             opRef.current.hide();
           }}
+          disabled={isUpdating || isDeleting}
         >
           <i className="pi pi-pencil me-2" />
           Modificar
@@ -316,6 +369,7 @@ export default function Careers() {
             handleDelete(selectedCareer);
             opRef.current.hide();
           }}
+          disabled={isDeleting}
         >
           <i className="pi pi-trash me-2" />
           Eliminar
@@ -328,21 +382,43 @@ export default function Careers() {
           <div className="modal-content">
             <div className="modal-header">
               <h5 className="modal-title">Crear carrera</h5>
-              <button type="button" className="btn-close" data-bs-dismiss="modal" />
+              <button 
+                type="button" 
+                className="btn-close" 
+                data-bs-dismiss="modal"
+                disabled={isCreating}
+              />
             </div>
 
             <form onSubmit={handleCreate}>
               <div className="modal-body">
                 <div className="mb-3">
                   <label className="form-label">Nombre *</label>
-                  <input className="form-control" value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} autoComplete="off" spellCheck="false" placeholder="Carrera Técnica en..." required />
+                  <input 
+                    className="form-control" 
+                    value={formData.name} 
+                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} 
+                    autoComplete="off" 
+                    spellCheck="false" 
+                    placeholder="Carrera Técnica en..." 
+                    required 
+                    disabled={isCreating}
+                  />
                 </div>
 
                 <div className="mb-3">
                   <label className="form-label">
                     Diferenciador * <small className="text-muted">(2-5 caracteres, solo mayúsculas y números)</small>
                   </label>
-                  <InputText className="form-control" value={formData.differentiator} onChange={(e) => handleDifferentiatorChange(e.target.value)} placeholder="CO, IN, MEC..." maxLength={5} required />
+                  <InputText 
+                    className="form-control" 
+                    value={formData.differentiator} 
+                    onChange={(e) => handleDifferentiatorChange(e.target.value)} 
+                    placeholder="CO, IN, MEC..." 
+                    maxLength={5} 
+                    required 
+                    disabled={isCreating}
+                  />
                   {differentiatorPreview && (
                     <small className="text-muted">
                       Previsualizar matrícula: <strong>{differentiatorPreview}</strong>
@@ -351,11 +427,23 @@ export default function Careers() {
                 </div>
               </div>
               <div className="modal-footer">
-                <Button type="button" icon="pi pi-times" severity="secondary" outlined data-bs-dismiss="modal">
+                <Button 
+                  type="button" 
+                  icon="pi pi-times" 
+                  severity="secondary" 
+                  outlined 
+                  data-bs-dismiss="modal"
+                  disabled={isCreating}
+                >
                   <span className="ms-1">Cancelar</span>
                 </Button>
-                <Button type="submit" icon="pi pi-check" severity="primary">
-                  <span className="ms-1">Guardar</span>
+                <Button 
+                  type="submit" 
+                  icon={isCreating ? "pi pi-spin pi-spinner" : "pi pi-check"} 
+                  severity="primary"
+                  disabled={isCreating}
+                >
+                  <span className="ms-1">{isCreating ? 'Creando...' : 'Guardar'}</span>
                 </Button>
               </div>
             </form>
@@ -369,20 +457,42 @@ export default function Careers() {
           <div className="modal-content">
             <div className="modal-header">
               <h5 className="modal-title">Modificar carrera</h5>
-              <button type="button" className="btn-close" data-bs-dismiss="modal" />
+              <button 
+                type="button" 
+                className="btn-close" 
+                data-bs-dismiss="modal"
+                disabled={isUpdating}
+              />
             </div>
             <form onSubmit={handleUpdate}>
               <div className="modal-body">
                 <div className="mb-3">
                   <label className="form-label">Nombre *</label>
-                  <input className="form-control" value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} placeholder="Carrera Técnica en..." autoComplete="off" spellCheck="false" required />
+                  <input 
+                    className="form-control" 
+                    value={formData.name} 
+                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} 
+                    placeholder="Carrera Técnica en..." 
+                    autoComplete="off" 
+                    spellCheck="false" 
+                    required 
+                    disabled={isUpdating}
+                  />
                 </div>
 
                 <div className="mb-3">
                   <label className="form-label">
                     Diferenciador * <small className="text-muted">(2-5 caracteres, solo mayúsculas y números)</small>
                   </label>
-                  <InputText className="form-control" value={formData.differentiator} onChange={(e) => handleDifferentiatorChange(e.target.value)} placeholder="CO, IN, MEC..." maxLength={5} required />
+                  <InputText 
+                    className="form-control" 
+                    value={formData.differentiator} 
+                    onChange={(e) => handleDifferentiatorChange(e.target.value)} 
+                    placeholder="CO, IN, MEC..." 
+                    maxLength={5} 
+                    required 
+                    disabled={isUpdating}
+                  />
                   {differentiatorPreview && (
                     <small className="text-muted">
                       Previsualizar matrícula: <strong>{differentiatorPreview}</strong>
@@ -417,11 +527,23 @@ export default function Careers() {
                 )}
               </div>
               <div className="modal-footer">
-                <Button type="button" icon="pi pi-times" severity="secondary" outlined data-bs-dismiss="modal">
+                <Button 
+                  type="button" 
+                  icon="pi pi-times" 
+                  severity="secondary" 
+                  outlined 
+                  data-bs-dismiss="modal"
+                  disabled={isUpdating}
+                >
                   <span className="ms-1">Cancelar</span>
                 </Button>
-                <Button type="submit" icon="pi pi-check" severity="primary">
-                  <span className="ms-1">Modificar</span>
+                <Button 
+                  type="submit" 
+                  icon={isUpdating ? "pi pi-spin pi-spinner" : "pi pi-check"} 
+                  severity="primary"
+                  disabled={isUpdating}
+                >
+                  <span className="ms-1">{isUpdating ? 'Modificando...' : 'Modificar'}</span>
                 </Button>
               </div>
             </form>

@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MdRemove, MdAdd, MdOutlineMoreHoriz } from 'react-icons/md';
+import { motion } from 'framer-motion';
 import { BreadCrumb } from 'primereact/breadcrumb';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
@@ -62,6 +63,61 @@ export default function Curriculums() {
   const [newModName, setNewModName] = useState('');
   const [newSubName, setNewSubName] = useState('');
   const [weeksNumber, setWeeksNumber] = useState(1);
+  
+  // Calcular duración de un módulo específico
+  const getModuleDuration = useMemo(() => {
+    return (module) => {
+      if (!module?.subjects || module.subjects.length === 0) {
+        return { weeks: 0, months: 0, text: 'Sin materias' };
+      }
+      
+      const totalWeeks = module.subjects.reduce((acc, subject) => acc + (subject.weeks || 0), 0);
+      const months = totalWeeks / 4;
+      
+      return {
+        weeks: totalWeeks,
+        months: months,
+        text: `${totalWeeks} semanas (${months.toFixed(2)} meses)`
+      };
+    };
+  }, [data]);
+
+  // Calcular duración de un curriculum específico
+  const getCurriculumDuration = useMemo(() => {
+    return (curriculum) => {
+      if (!curriculum?.modules || curriculum.modules.length === 0) {
+        return { weeks: 0, months: 0, years: 0, text: 'Sin módulos' };
+      }
+      
+      const totalWeeks = curriculum.modules.reduce((acc, module) => {
+        if (!module.subjects) return acc;
+        return acc + module.subjects.reduce((subAcc, subject) => subAcc + (subject.weeks || 0), 0);
+      }, 0);
+      
+      const totalMonths = totalWeeks / 4;
+      const years = Math.floor(totalMonths / 12);
+      const remainingMonths = Math.floor(totalMonths % 12);
+      
+      let text = '';
+      if (years > 0 && remainingMonths > 0) {
+        text = `${years} año${years > 1 ? 's' : ''} y ${remainingMonths} mes${remainingMonths > 1 ? 'es' : ''}`;
+      } else if (years > 0) {
+        text = `${years} año${years > 1 ? 's' : ''}`;
+      } else if (remainingMonths > 0) {
+        text = `${remainingMonths} mes${remainingMonths > 1 ? 'es' : ''}`;
+      } else {
+        text = `${totalWeeks} semanas`;
+      }
+      
+      return {
+        weeks: totalWeeks,
+        months: totalMonths,
+        years: years,
+        remainingMonths: remainingMonths,
+        text: text
+      };
+    };
+  }, [data]);
 
   useEffect(() => {
     if (!career?.id) {
@@ -288,24 +344,44 @@ export default function Curriculums() {
                   <Button ref={modalCurrButtonRef} className="rounded-circle" severity="primary" icon="pi pi-plus" size="small" onClick={() => new Modal(modalCurrRef.current).show()}></Button>
                 </div>
               </div>
-              {!isCurriculumsCollapsed && (
-                <>
-                  <hr />
-                  {loading ? (
-                    <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 150 }}>
-                      <div className="d-flex flex-column align-items-center">
-                        <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" />
-                        <span className="mt-3 fs-5 text-muted">Cargando...</span>
-                      </div>
+              <motion.div
+                initial={false}
+                animate={{
+                  height: isCurriculumsCollapsed ? 0 : 'auto',
+                  opacity: isCurriculumsCollapsed ? 0 : 1,
+                }}
+                transition={{
+                  height: {
+                    duration: 0.4,
+                    ease: [0.04, 0.62, 0.23, 0.98],
+                  },
+                  opacity: {
+                    duration: 0.3,
+                    ease: 'easeOut',
+                  },
+                }}
+                style={{
+                  overflow: 'hidden',
+                }}
+              >
+                <hr />
+                {loading ? (
+                  <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 150 }}>
+                    <div className="d-flex flex-column align-items-center">
+                      <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" />
+                      <span className="mt-3 fs-5 text-muted">Cargando...</span>
                     </div>
-                  ) : (
-                    <div className="d-grid gap-2 px-2 overflow-auto" style={{ maxHeight: '33rem' }}>
-                      {data.length === 0 ? (
-                        <div className="text-center">
-                          <Message severity="info" text="Aún no hay planes de estudio" />
-                        </div>
-                      ) : (
-                        data.map((curriculum) => (
+                  </div>
+                ) : (
+                  <div className="d-grid gap-2 px-2 overflow-auto" style={{ maxHeight: '33rem' }}>
+                    {data.length === 0 ? (
+                      <div className="text-center">
+                        <Message severity="info" text="Aún no hay planes de estudio" />
+                      </div>
+                    ) : (
+                      data.map((curriculum) => {
+                        const duration = getCurriculumDuration(curriculum);
+                        return (
                           <React.Fragment key={curriculum.id}>
                             <div
                               className={`card p-3 hovereable d-flex flex-row align-items-center justify-content-between ${selectedCurriculumId === curriculum.id ? 'bg-blue-500 text-white' : ''}`}
@@ -323,7 +399,12 @@ export default function Curriculums() {
                                 }
                               }}
                             >
-                              <span className="text-truncate flex-grow-1">{curriculum.name}</span>
+                              <div className="flex-grow-1 text-truncate">
+                                <div className="text-truncate fw-semibold">{curriculum.name}</div>
+                                <small className={`${selectedCurriculumId === curriculum.id ? 'text-white-50' : 'text-muted'}`}>
+                                  {duration.text}
+                                </small>
+                              </div>
                               <button
                                 className={`btn border-0 p-1 ms-2 ${selectedCurriculumId === curriculum.id && 'text-white'}`}
                                 onClick={(e) => {
@@ -376,12 +457,12 @@ export default function Curriculums() {
                               </button>
                             </OverlayPanel>
                           </React.Fragment>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </motion.div>
             </div>
           </div>
         </div>
@@ -398,12 +479,32 @@ export default function Curriculums() {
                   <Button ref={modalModButtonRef} className="rounded-circle" severity="primary" icon="pi pi-plus" size="small" disabled={!selectedCurriculum} onClick={() => new Modal(modalModRef.current).show()}></Button>
                 </div>
               </div>
-              {!isModuleCollapsed && (
-                <>
-                  <hr />
-                  <div className="d-grid gap-2 px-2 overflow-auto" style={{ maxHeight: '33rem' }}>
-                    {selectedCurriculum && selectedCurriculum.modules.length > 0 ? (
-                      selectedCurriculum.modules.map((module) => (
+              <motion.div
+                initial={false}
+                animate={{
+                  height: isModuleCollapsed ? 0 : 'auto',
+                  opacity: isModuleCollapsed ? 0 : 1,
+                }}
+                transition={{
+                  height: {
+                    duration: 0.4,
+                    ease: [0.04, 0.62, 0.23, 0.98],
+                  },
+                  opacity: {
+                    duration: 0.3,
+                    ease: 'easeOut',
+                  },
+                }}
+                style={{
+                  overflow: 'hidden',
+                }}
+              >
+                <hr />
+                <div className="d-grid gap-2 px-2 overflow-auto" style={{ maxHeight: '33rem' }}>
+                  {selectedCurriculum && selectedCurriculum.modules.length > 0 ? (
+                    selectedCurriculum.modules.map((module) => {
+                      const duration = getModuleDuration(module);
+                      return (
                         <React.Fragment key={module.id}>
                           <div
                             className={`card p-3 hovereable d-flex flex-row align-items-center justify-content-between ${selectedModuleId === module.id ? 'bg-blue-500 text-white' : ''}`}
@@ -419,7 +520,12 @@ export default function Curriculums() {
                               }
                             }}
                           >
-                            <span className="text-truncate flex-grow-1">{module.name}</span>
+                            <div className="flex-grow-1 text-truncate">
+                              <div className="text-truncate fw-semibold">{module.name}</div>
+                              <small className={`${selectedModuleId === module.id ? 'text-white-50' : 'text-muted'}`}>
+                                {duration.text}
+                              </small>
+                            </div>
                             <button
                               className={`btn border-0 p-1 ms-2 ${selectedModuleId === module.id && 'text-white'}`}
                               onClick={(e) => {
@@ -472,13 +578,13 @@ export default function Curriculums() {
                             </button>
                           </OverlayPanel>
                         </React.Fragment>
-                      ))
-                    ) : (
-                      <div className="text-center text-secondary">{selectedCurriculum ? <Message severity="info" text="No hay módulos registrados" /> : <Message severity="info" text="Selecciona un plan de estudios para ver los módulos" />}</div>
-                    )}
-                  </div>
-                </>
-              )}
+                      );
+                    })
+                  ) : (
+                    <div className="text-center text-secondary">{selectedCurriculum ? <Message severity="info" text="No hay módulos registrados" /> : <Message severity="info" text="Selecciona un plan de estudios para ver los módulos" />}</div>
+                  )}
+                </div>
+              </motion.div>
             </div>
           </div>
         </div>
@@ -495,79 +601,101 @@ export default function Curriculums() {
                   <Button ref={modalSubButtonRef} className="rounded-circle" severity="primary" icon="pi pi-plus" size="small" disabled={!selectedModule} onClick={() => new Modal(modalSubRef.current).show()}></Button>
                 </div>
               </div>
-              {!isSubjectCollapsed && (
-                <React.Fragment>
-                  <hr />
-                  <div className="d-grid gap-2 px-2 overflow-auto" style={{ maxHeight: '33rem' }}>
-                    {selectedModule && selectedModule.subjects.length > 0 ? (
-                      selectedModule.subjects.map((subject) => (
-                        <React.Fragment key={subject.id}>
-                          <div
-                            className={`card p-3 hovereable d-flex flex-row align-items-center justify-content-between ${selectedSubjectId === subject.id ? 'bg-blue-500 text-white' : ''}`}
-                            style={{ cursor: 'pointer' }}
+              <motion.div
+                initial={false}
+                animate={{
+                  height: isSubjectCollapsed ? 0 : 'auto',
+                  opacity: isSubjectCollapsed ? 0 : 1,
+                }}
+                transition={{
+                  height: {
+                    duration: 0.4,
+                    ease: [0.04, 0.62, 0.23, 0.98],
+                  },
+                  opacity: {
+                    duration: 0.3,
+                    ease: 'easeOut',
+                  },
+                }}
+                style={{
+                  overflow: 'hidden',
+                }}
+              >
+                <hr />
+                <div className="d-grid gap-2 px-2 overflow-auto" style={{ maxHeight: '33rem' }}>
+                  {selectedModule && selectedModule.subjects.length > 0 ? (
+                    selectedModule.subjects.map((subject) => (
+                      <React.Fragment key={subject.id}>
+                        <div
+                          className={`card p-3 hovereable d-flex flex-row align-items-center justify-content-between ${selectedSubjectId === subject.id ? 'bg-blue-500 text-white' : ''}`}
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => {
+                            if (selectedSubjectId === subject.id) {
+                              setSelectedSubjectId(null);
+                            } else {
+                              setSelectedSubjectId(subject.id);
+                            }
+                          }}
+                        >
+                          <div className="flex-grow-1 text-truncate">
+                            <div className="text-truncate fw-semibold">{subject.name}</div>
+                            <small className={`${selectedSubjectId === subject.id ? 'text-white-50' : 'text-muted'}`}>
+                              {subject.weeks} semanas
+                            </small>
+                          </div>
+                          <button
+                            className={`btn border-0 p-1 ms-2 ${selectedSubjectId === subject.id && 'text-white'}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingSubject(subject);
+                              opSubRef.current.toggle(e);
+                            }}
+                            tabIndex={-1}
+                          >
+                            <MdOutlineMoreHoriz size={22} />
+                          </button>
+                        </div>
+
+                        <OverlayPanel ref={opSubRef}>
+                          <button
+                            className="dropdown-item"
                             onClick={() => {
-                              if (selectedSubjectId === subject.id) {
-                                setSelectedSubjectId(null);
-                              } else {
-                                setSelectedSubjectId(subject.id);
-                              }
+                              openEditSubjectModal(editingSubject);
+                              opSubRef.current.hide();
                             }}
                           >
-                            <span className="text-truncate flex-grow-1">{subject.name}</span>
-                            <button
-                              className={`btn border-0 p-1 ms-2 ${selectedSubjectId === subject.id && 'text-white'}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingSubject(subject);
-                                opSubRef.current.toggle(e);
-                              }}
-                              tabIndex={-1}
-                            >
-                              <MdOutlineMoreHoriz size={22} />
-                            </button>
-                          </div>
-
-                          <OverlayPanel ref={opSubRef}>
-                            <button
-                              className="dropdown-item"
-                              onClick={() => {
-                                openEditSubjectModal(editingSubject);
-                                opSubRef.current.hide();
-                              }}
-                            >
-                              <i className="pi pi-pencil me-2" />
-                              Modificar
-                            </button>
-                            <button
-                              className="dropdown-item text-danger"
-                              onClick={() => {
-                                confirmAction({
-                                  message: '¿Estás seguro? Esta acción no se podrá deshacer',
-                                  header: `Eliminar materia "${editingSubject.name}"`,
-                                  icon: 'pi pi-exclamation-triangle',
-                                  acceptClassName: 'p-button-danger',
-                                  acceptLabel: 'Confirmar',
-                                  onAccept: async () => {
-                                    await deleteSubject(editingSubject.id);
-                                    showSuccess('Materia eliminada');
-                                    await loadCurriculums();
-                                  },
-                                });
-                                opSubRef.current.hide();
-                              }}
-                            >
-                              <i className="pi pi-trash me-2" />
-                              Eliminar
-                            </button>
-                          </OverlayPanel>
-                        </React.Fragment>
-                      ))
-                    ) : (
-                      <div className="text-center text-secondary">{selectedModule ? <Message severity="info" text="No hay materias registradas" /> : <Message severity="info" text="Selecciona un módulo para ver las materias" />}</div>
-                    )}
-                  </div>
-                </React.Fragment>
-              )}
+                            <i className="pi pi-pencil me-2" />
+                            Modificar
+                          </button>
+                          <button
+                            className="dropdown-item text-danger"
+                            onClick={() => {
+                              confirmAction({
+                                message: '¿Estás seguro? Esta acción no se podrá deshacer',
+                                header: `Eliminar materia "${editingSubject.name}"`,
+                                icon: 'pi pi-exclamation-triangle',
+                                acceptClassName: 'p-button-danger',
+                                acceptLabel: 'Confirmar',
+                                onAccept: async () => {
+                                  await deleteSubject(editingSubject.id);
+                                  showSuccess('Materia eliminada');
+                                  await loadCurriculums();
+                                },
+                              });
+                              opSubRef.current.hide();
+                            }}
+                          >
+                            <i className="pi pi-trash me-2" />
+                            Eliminar
+                          </button>
+                        </OverlayPanel>
+                      </React.Fragment>
+                    ))
+                  ) : (
+                    <div className="text-center text-secondary">{selectedModule ? <Message severity="info" text="No hay materias registradas" /> : <Message severity="info" text="Selecciona un módulo para ver las materias" />}</div>
+                  )}
+                </div>
+              </motion.div>
             </div>
           </div>
         </div>

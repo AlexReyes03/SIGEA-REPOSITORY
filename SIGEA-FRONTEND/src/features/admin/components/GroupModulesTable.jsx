@@ -5,35 +5,26 @@ import { ColumnGroup } from 'primereact/columngroup';
 import { Row } from 'primereact/row';
 import { Tooltip } from 'primereact/tooltip';
 import { InputText } from 'primereact/inputtext';
-import { InputNumber } from 'primereact/inputnumber';
 import { Button } from 'primereact/button';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { MdOutlineGroup } from 'react-icons/md';
 import { motion } from 'framer-motion';
 
 import { useToast } from '../../../components/providers/ToastProvider';
-import { useConfirmDialog } from '../../../components/providers/ConfirmDialogProvider';
 import { getCurriculumById } from '../../../api/academics/curriculumService';
 import { getGroupStudents } from '../../../api/academics/groupService';
-import { getQualificationsByGroupWithDetails, saveQualification } from '../../../api/academics/qualificationService';
+import { getQualificationsByGroupWithDetails } from '../../../api/academics/qualificationService';
 
-export default function GroupModulesTable({ group }) {
+export default function GroupModulesTableReadOnly({ group }) {
   const [loading, setLoading] = useState(true);
-  const { showSuccess, showError, showWarn } = useToast();
-  const { confirmAction } = useConfirmDialog();
+  const { showError } = useToast();
 
   const [searchTerms, setSearchTerms] = useState({});
   const [isModuleCollapsed, setIsModuleCollapsed] = useState({});
-  const [isEditingModule, setIsEditingModule] = useState({});
-  const [invalidCells, setInvalidCells] = useState({});
-  const [editedGrades, setEditedGrades] = useState({});
   const [curriculum, setCurriculum] = useState(null);
   const [tableData, setTableData] = useState([]);
   const [qualificationDetails, setQualificationDetails] = useState({});
   const [showQualificationDetails, setShowQualificationDetails] = useState({});
-
-  // Cache optimizado para getCurrentValue
-  const getCurrentValueCache = useMemo(() => new Map(), [editedGrades]);
 
   const loadData = useCallback(async () => {
     try {
@@ -87,190 +78,6 @@ export default function GroupModulesTable({ group }) {
     }
   }, [group, loadData]);
 
-  // Funciones memoizadas fuera del render loop
-  const hasInvalidValues = useCallback(
-    (moduleId) => {
-      const moduleInvalidCells = invalidCells[moduleId] || {};
-      return Object.values(moduleInvalidCells).some((studentCells) => Object.values(studentCells).some((isInvalid) => isInvalid));
-    },
-    [invalidCells]
-  );
-
-  const hasValidGradesToSave = useCallback(
-    (moduleId) => {
-      const edits = editedGrades[moduleId] || {};
-      return Object.values(edits).some((studentGrades) => Object.values(studentGrades).some((grade) => grade !== null && grade !== undefined && Number.isInteger(grade) && grade >= 6 && grade <= 10));
-    },
-    [editedGrades]
-  );
-
-  const areAllGradesComplete = useCallback(
-    (moduleId) => {
-      if (!tableData.length || !curriculum) return true;
-
-      const module = curriculum.modules.find((m) => m.id === moduleId);
-      if (!module || !module.subjects.length) return true;
-
-      return tableData.every((student) => {
-        return module.subjects.every((subject) => {
-          const gradeFromDB = student[subject.id];
-          return gradeFromDB !== null && gradeFromDB !== undefined;
-        });
-      });
-    },
-    [tableData, curriculum]
-  );
-
-  const getCurrentValue = useCallback(
-    (moduleId, studentId, subjectId, originalValue) => {
-      const cacheKey = `${moduleId}-${studentId}-${subjectId}`;
-
-      if (getCurrentValueCache.has(cacheKey)) {
-        return getCurrentValueCache.get(cacheKey);
-      }
-
-      const editedValue = editedGrades[moduleId]?.[studentId]?.[subjectId];
-      const result = editedValue !== undefined ? editedValue : originalValue;
-
-      getCurrentValueCache.set(cacheKey, result);
-      return result;
-    },
-    [editedGrades, getCurrentValueCache]
-  );
-
-  const buildNumberEditor = useCallback(
-    (moduleId, subjId) => (options) => {
-      const studentId = options.rowData.studentId;
-      const currentValue = getCurrentValue(moduleId, studentId, subjId, options.value);
-
-      const handleChange = (e) => {
-        const val = e.value;
-
-        setEditedGrades((prev) => {
-          const newState = {
-            ...prev,
-            [moduleId]: {
-              ...prev[moduleId],
-              [studentId]: {
-                ...prev[moduleId]?.[studentId],
-                [subjId]: val,
-              },
-            },
-          };
-          return newState;
-        });
-
-        const isValid = val === null || (Number.isInteger(val) && val >= 6 && val <= 10);
-        setInvalidCells((prev) => ({
-          ...prev,
-          [moduleId]: {
-            ...prev[moduleId],
-            [studentId]: {
-              ...prev[moduleId]?.[studentId],
-              [subjId]: !isValid,
-            },
-          },
-        }));
-
-        options.editorCallback(val);
-      };
-
-      const isInvalid = invalidCells[moduleId]?.[studentId]?.[subjId] || false;
-
-      return <InputNumber value={currentValue} onValueChange={handleChange} showButtons={false} min={1} max={10} inputStyle={{ width: '100%', textAlign: 'center' }} className={`p-inputtext-sm ${isInvalid ? 'p-invalid' : ''}`} autoFocus />;
-    },
-    [getCurrentValue, invalidCells]
-  );
-
-  // Handlers
-  const createHandleSave = useCallback(
-    (moduleId) => async () => {
-      const hasInvalidGrades = hasInvalidValues(moduleId);
-
-      if (hasInvalidGrades) {
-        showWarn('Advertencia', 'Hay calificaciones inválidas. Por favor corrige los valores antes de guardar.');
-        return;
-      }
-
-      if (!hasValidGradesToSave(moduleId)) {
-        showWarn('Advertencia', 'No hay calificaciones nuevas para guardar.');
-        return;
-      }
-
-      confirmAction({
-        message: 'Esta calificación no se puede modificar una vez guardada.',
-        header: 'Registrar calificación',
-        icon: 'pi pi-exclamation-triangle',
-        acceptLabel: 'Sí, registrar',
-        rejectLabel: 'Cancelar',
-        acceptClassName: 'p-button-danger',
-        onAccept: async () => {
-          try {
-            const edits = editedGrades[moduleId] || {};
-            const gradesToSave = [];
-
-            Object.entries(edits).forEach(([studentId, subjMap]) => {
-              Object.entries(subjMap).forEach(([subjectId, grade]) => {
-                if (grade !== null && grade !== undefined && Number.isInteger(grade) && grade >= 6 && grade <= 10) {
-                  gradesToSave.push({
-                    studentId: Number(studentId),
-                    subjectId: Number(subjectId),
-                    grade,
-                  });
-                }
-              });
-            });
-
-            if (gradesToSave.length === 0) {
-              showWarn('Advertencia', 'No hay calificaciones válidas para guardar.');
-              return;
-            }
-
-            await Promise.all(gradesToSave.map(({ studentId, subjectId, grade }) => saveQualification(studentId, group.groupId, subjectId, group.teacherId, grade)));
-
-            showSuccess('Hecho', 'Calificaciones registradas exitosamente');
-
-            setEditedGrades((prev) => ({
-              ...prev,
-              [moduleId]: {},
-            }));
-            setInvalidCells((prev) => ({
-              ...prev,
-              [moduleId]: {},
-            }));
-            setIsEditingModule((prev) => ({
-              ...prev,
-              [moduleId]: false,
-            }));
-
-            loadData();
-          } catch (error) {
-            showError('Error', error.message || 'Ocurrió un error al registrar las calificaciones');
-          }
-        },
-      });
-    },
-    [hasInvalidValues, hasValidGradesToSave, editedGrades, group, showWarn, showSuccess, showError, confirmAction, loadData]
-  );
-
-  const createHandleCancelEdit = useCallback(
-    (moduleId) => () => {
-      setIsEditingModule((prev) => ({
-        ...prev,
-        [moduleId]: false,
-      }));
-      setEditedGrades((prev) => ({
-        ...prev,
-        [moduleId]: {},
-      }));
-      setInvalidCells((prev) => ({
-        ...prev,
-        [moduleId]: {},
-      }));
-    },
-    []
-  );
-
   // Módulos ordenados
   const sortedModules = useMemo(() => {
     if (!curriculum?.modules) return [];
@@ -286,7 +93,7 @@ export default function GroupModulesTable({ group }) {
     []
   );
 
-  // Crear header groups para todos los módulos (fuera del loop)
+  // Crear header groups para todos los módulos
   const headerGroups = useMemo(() => {
     const groups = {};
     sortedModules.forEach((module) => {
@@ -308,21 +115,21 @@ export default function GroupModulesTable({ group }) {
     return groups;
   }, [sortedModules]);
 
-  // Crear table keys para todos los módulos (fuera del loop)
+  // Crear table keys para todos los módulos
   const tableKeys = useMemo(() => {
     const keys = {};
     sortedModules.forEach((module) => {
-      const isEditing = isEditingModule[module.id];
-      const editedCount = Object.keys(editedGrades[module.id] || {}).length;
-      keys[module.id] = `${module.id}-${isEditing ? 'edit' : 'view'}-${showQualificationDetails[module.id] ? 'details' : 'nodetails'}-${editedCount}`;
+      keys[module.id] = `${module.id}-readonly-${showQualificationDetails[module.id] ? 'details' : 'nodetails'}`;
     });
     return keys;
-  }, [sortedModules, isEditingModule, editedGrades, showQualificationDetails]);
+  }, [sortedModules, showQualificationDetails]);
 
   if (loading) {
-    return (<div className="d-flex justify-content-center align-items-center" style={{ minHeight: 220 }}>
-              <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" />
-            </div>);
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 220 }}>
+        <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" />
+      </div>
+    );
   }
 
   return (
@@ -331,17 +138,7 @@ export default function GroupModulesTable({ group }) {
 
       {sortedModules.map((module) => {
         const isCollapsed = isModuleCollapsed[module.id];
-        const isEditing = isEditingModule[module.id];
         const search = searchTerms[module.id] || '';
-
-        // Valores calculados por módulo
-        const hasInvalidGrades = hasInvalidValues(module.id);
-        const hasValidGrades = hasValidGradesToSave(module.id);
-        const allGradesComplete = areAllGradesComplete(module.id);
-
-        // Handlers específicos del módulo
-        const handleSave = createHandleSave(module.id);
-        const handleCancelEdit = createHandleCancelEdit(module.id);
 
         // Obtener header group y table key
         const headerGroup = headerGroups[module.id];
@@ -373,50 +170,19 @@ export default function GroupModulesTable({ group }) {
 
               {!isCollapsed && (
                 <div className="d-flex align-items-center justify-content-end mx-3 mb-3 mb-md-0">
-                  {isEditing ? (
-                    <>
-                      <Button icon="pi pi-times" severity="secondary" outlined className="me-2" onClick={handleCancelEdit}>
-                        <span className="ms-2 d-none d-lg-inline">Cancelar</span>
-                      </Button>
-                      <Button icon="pi pi-save" severity="success" className="me-2" onClick={handleSave} disabled={hasInvalidGrades || !hasValidGrades}>
-                        <span className="ms-2 d-none d-lg-inline">Guardar</span>
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        icon="pi pi-question-circle"
-                        className={`me-2 ${showQualificationDetails[module.id] ? 'p-button-help' : 'p-button-secondary'}`}
-                        outlined={!showQualificationDetails[module.id]}
-                        onClick={() =>
-                          setShowQualificationDetails((prev) => ({
-                            ...prev,
-                            [module.id]: !prev[module.id],
-                          }))
-                        }
-                        data-pr-tooltip={showQualificationDetails[module.id] ? 'Ocultar detalles de calificación' : 'Mostrar detalles de calificación'}
-                        data-pr-position="top"
-                      />
-                      <Button
-                        icon="pi pi-pencil"
-                        className="me-2"
-                        disabled={allGradesComplete}
-                        title={allGradesComplete ? 'No se pueden asignar calificaciones a este módulo' : undefined}
-                        onClick={() => {
-                          setIsEditingModule((prev) => ({
-                            ...prev,
-                            [module.id]: true,
-                          }));
-                          setShowQualificationDetails((prev) => ({
-                            ...prev,
-                            [module.id]: false,
-                          }));
-                        }}
-                      >
-                        <span className="ms-2 d-none d-lg-inline">Registrar</span>
-                      </Button>
-                    </>
-                  )}
+                  <Button
+                    icon="pi pi-question-circle"
+                    className={`me-2 ${showQualificationDetails[module.id] ? 'p-button-help' : 'p-button-secondary'}`}
+                    outlined={!showQualificationDetails[module.id]}
+                    onClick={() =>
+                      setShowQualificationDetails((prev) => ({
+                        ...prev,
+                        [module.id]: !prev[module.id],
+                      }))
+                    }
+                    data-pr-tooltip={showQualificationDetails[module.id] ? 'Ocultar detalles de calificación' : 'Mostrar detalles de calificación'}
+                    data-pr-position="top"
+                  />
 
                   <div className="p-fluid">
                     <InputText
@@ -459,7 +225,6 @@ export default function GroupModulesTable({ group }) {
                 <DataTable
                   key={tableKey}
                   value={tableData}
-                  editMode={isEditing ? 'cell' : undefined}
                   headerColumnGroup={headerGroup}
                   size="small"
                   stripedRows
@@ -491,13 +256,13 @@ export default function GroupModulesTable({ group }) {
                         minHeight: showQualificationDetails[module.id] ? '80px' : 'auto',
                       }}
                       body={(row) => {
-                        const originalValue = row[subj.id];
-                        const currentValue = getCurrentValue(module.id, row.studentId, subj.id, originalValue);
-                        const isInvalid = invalidCells[module.id]?.[row.studentId]?.[subj.id] || false;
+                        const grade = row[subj.id];
                         const details = qualificationDetails[row.studentId]?.[subj.id];
 
-                        if (originalValue != null) {
-                          const tooltipContent = details ? `Calificado por: ${details.teacherName}\nFecha: ${details.dateFormatted}` : 'Sin información del docente';
+                        if (grade != null) {
+                          const tooltipContent = details 
+                            ? `Calificado por: ${details.teacherName}\nFecha: ${details.dateFormatted}` 
+                            : 'Sin información del docente';
 
                           return (
                             <span
@@ -509,49 +274,24 @@ export default function GroupModulesTable({ group }) {
                               data-pr-tooltip={showQualificationDetails[module.id] ? tooltipContent : undefined}
                               data-pr-position={showQualificationDetails[module.id] ? 'top' : undefined}
                             >
-                              {originalValue}
+                              {grade}
                             </span>
                           );
                         }
 
-                        if (isEditing) {
-                          if (currentValue !== null && currentValue !== undefined) {
-                            const isValidGrade = Number.isInteger(currentValue) && currentValue >= 6 && currentValue <= 10;
-
-                            return (
-                              <span
-                                title={isInvalid ? 'Se necesita un valor entre 6 y 10' : ''}
-                                style={{
-                                  display: 'block',
-                                  textAlign: 'center',
-                                  color: isInvalid ? '#dc3545' : 'inherit',
-                                  fontWeight: isInvalid ? 'bold' : 'normal',
-                                  opacity: isValidGrade ? 0.7 : 1,
-                                }}
-                              >
-                                {currentValue}
-                              </span>
-                            );
-                          }
-
-                          return <span style={{ display: 'block', textAlign: 'center', color: '#6c757d' }}>SC</span>;
-                        }
-
-                        return '';
-                      }}
-                      editor={(options) => {
-                        const { rowData, field } = options;
-                        const originalValue = rowData[field];
-
-                        if (!isEditing) {
-                          return <span>{originalValue ?? ''}</span>;
-                        }
-
-                        if (originalValue != null) {
-                          setTimeout(() => options.editorCallback(originalValue));
-                          return <span style={{ display: 'block', textAlign: 'center' }}>{originalValue}</span>;
-                        }
-                        return buildNumberEditor(module.id, subj.id)(options);
+                        // Sin calificación
+                        return (
+                          <span 
+                            style={{ 
+                              display: 'block', 
+                              textAlign: 'center', 
+                              color: '#6c757d',
+                              fontStyle: 'italic'
+                            }}
+                          >
+                            SC
+                          </span>
+                        );
                       }}
                     />
                   ))}
@@ -559,17 +299,14 @@ export default function GroupModulesTable({ group }) {
                   {/* Promedio */}
                   <Column
                     header="Promedio"
+                    className='fw-semibold'
                     style={gridLinesX}
                     body={(row) => {
-                      const notas = module.subjects
-                        .map((s) => {
-                          const originalValue = row[s.id];
-                          const currentValue = getCurrentValue(module.id, row.studentId, s.id, originalValue);
-                          return currentValue;
-                        })
+                      const grades = module.subjects
+                        .map((s) => row[s.id])
                         .filter((v) => v != null && v >= 6 && v <= 10);
 
-                      return notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1) : '—';
+                      return grades.length ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(1) : '—';
                     }}
                   />
                 </DataTable>

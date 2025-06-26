@@ -1022,7 +1022,7 @@ export default function UsersManagement() {
                                       style={{ width: '80px' }}
                                     />
                                   </div>
-                                  <small className="text-muted">Preview: {preview}</small>
+                                  <small className="text-muted">Previsualizar: {preview}</small>
                                 </div>
                               );
                             })}
