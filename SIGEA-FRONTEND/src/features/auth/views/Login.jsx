@@ -38,6 +38,8 @@ export default function LoginForm() {
       switch (user.role.name) {
         case 'ADMIN':
           return navigate('/admin');
+        case 'SUPERVISOR':
+          return navigate('/supervisor');
         case 'TEACHER':
           return navigate('/teacher');
         case 'STUDENT':

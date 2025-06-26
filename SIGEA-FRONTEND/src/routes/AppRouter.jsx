@@ -21,6 +21,8 @@ import AdminCareerGroups from '../features/admin/views/Groups';
 import AdminCareerCurriculums from '../features/admin/views/Curriculums';
 import AdminGroupDetail from '../features/admin/views/GroupDetail';
 
+import SupervisorDashboard from '../features/supervisor/views/Dashboard'
+
 import TeacherDashboard from '../features/teacher/views/Dashboard';
 import TeacherGroups from '../features/teacher/views/Groups';
 import TeacherGroupDetails from '../features/teacher/views/GroupDetails';
@@ -94,8 +96,9 @@ export default function AppRouter() {
 
       <Route element={<PrivateRoute allowedRoles={['SUPERVISOR']} />}>
         <Route element={<AppLayout />}>
-          {/* ESTUDIANTE */}
-          <Route path="supervisor" element={<StudentDashboard />} />
+          {/* SUPERVISOR */}
+          <Route path="supervisor" element={<SupervisorDashboard />} />
+          <Route path="supervisor/profile" element={<Profile />} />
         </Route>
       </Route>
 

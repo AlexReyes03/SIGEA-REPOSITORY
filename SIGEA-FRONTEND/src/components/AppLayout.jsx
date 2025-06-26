@@ -20,13 +20,12 @@ export default function AppLayout() {
     switch (user.role.name) {
       case 'ADMIN':
         return 'Administrador';
-
+      case 'SUPERVISOR':
+        return 'Supervisor';
       case 'TEACHER':
         return 'Docente';
-
       case 'STUDENT':
         return 'Alumno';
-
       default:
         return 'Invitado';
     }

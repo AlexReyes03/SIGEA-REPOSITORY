@@ -13,7 +13,7 @@ const NotFound = () => {
 
   return (
     <div className="container text-center my-5">
-      <img src={NotFoundPNG} alt="" height={500} />
+      <img src={NotFoundPNG} alt="" height={400} />
       <p className="fs-4 mt-4 text-muted">Lo sentimos, la página que buscas no existe.</p>
       <Button className="bg-blue-800" onClick={goHome}>
         Ir a Inicio
