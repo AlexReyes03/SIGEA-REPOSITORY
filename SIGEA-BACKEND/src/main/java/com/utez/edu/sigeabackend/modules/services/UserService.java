@@ -114,6 +114,26 @@ public class UserService {
         }
     }
 
+    // Obtener usuarios por rol y plantel
+    public ResponseEntity<List<UserResponseDto>> findByRoleIdAndPlantelId(long roleId, long plantelId) {
+        try {
+            List<UserEntity> users = userRepo.findByRoleIdAndPlantelId(roleId, plantelId);
+
+            if (users.isEmpty()) {
+                return ResponseEntity.ok(List.of());
+            }
+
+            List<UserResponseDto> usersDto = users.stream()
+                    .map(this::toDto)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(usersDto);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error al consultar usuarios por rol y plantel " + e.getMessage(), e);
+        }
+    }
+
     // Obtener usuarios activos en una carrera específica
     public ResponseEntity<List<UserResponseDto>> findByActiveCareerEnrollment(long careerId) {
         try {

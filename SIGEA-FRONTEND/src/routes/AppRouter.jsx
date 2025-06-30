@@ -21,7 +21,9 @@ import AdminCareerGroups from '../features/admin/views/Groups';
 import AdminCareerCurriculums from '../features/admin/views/Curriculums';
 import AdminGroupDetail from '../features/admin/views/GroupDetail';
 
-import SupervisorDashboard from '../features/supervisor/views/Dashboard'
+import SupervisorDashboard from '../features/supervisor/views/Dashboard';
+import SupervisorTeachersScore from '../features/supervisor/views/TeachersScore';
+import SupervisorCareers from '../features/supervisor/views/Careers';
 
 import TeacherDashboard from '../features/teacher/views/Dashboard';
 import TeacherGroups from '../features/teacher/views/Groups';
@@ -98,6 +100,8 @@ export default function AppRouter() {
         <Route element={<AppLayout />}>
           {/* SUPERVISOR */}
           <Route path="supervisor" element={<SupervisorDashboard />} />
+          <Route path="supervisor/careers" element={<SupervisorCareers />} />
+          <Route path="supervisor/teacher-score" element={<SupervisorTeachersScore />} />
           <Route path="supervisor/profile" element={<Profile />} />
         </Route>
       </Route>

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MdHome, MdSchool, MdGroups, MdPerson, MdLogout } from 'react-icons/md';
+import { MdHome, MdSchool, MdGroups, MdPerson, MdLeaderboard, MdLogout } from 'react-icons/md';
 import { motion } from 'framer-motion';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -64,6 +64,8 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
       case 'SUPERVISOR':
         return [
           { label: 'Inicio', path: '/supervisor', Icon: MdHome },
+          { label: 'Carreras', path: '/supervisor/careers', Icon: MdSchool },
+          { label: 'Desempeño', path: '/supervisor/teacher-score', Icon: MdLeaderboard },
           { label: 'Perfil', path: '/supervisor/profile', Icon: MdPerson },
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },
         ];

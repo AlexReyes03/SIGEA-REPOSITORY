@@ -1,11 +1,10 @@
-import { Rating } from 'primereact/rating'
 import React from 'react'
 
-export default function Dashboard() {
+export default function CampusSelector() {
   return (
     <>
         <div className="bg-white rounded-top p-2">
-            <h3 className="text-blue-500 fw-semibold mx-3 my-1">Inicio</h3>
+            <h3 className="text-blue-500 fw-semibold mx-3 my-1">Seleccione un Plantel</h3>
         </div>
 
         <div className="row mt-3">
@@ -15,7 +14,6 @@ export default function Dashboard() {
                     <div className="card-body">
                         <h5 className='fs-5 fw-semibold'>Plantel Cuernavaca</h5>
                         <span className='fw-semibold text-muted'>Carreras 2</span>
-                        <Rating value={5} readOnly cancel={false} />
                     </div>
                 </div>
             </div>
@@ -25,7 +23,6 @@ export default function Dashboard() {
                     <div className="card-body">
                         <h5 className='fs-5 fw-semibold'>Plantel Temixco</h5>
                         <span className='fw-semibold text-muted'>Carreras 2</span>
-                        <Rating value={4} readOnly cancel={false} />
                     </div>
                 </div>
             </div>
@@ -35,7 +32,6 @@ export default function Dashboard() {
                     <div className="card-body">
                         <h5 className='fs-5 fw-semibold'>Plantel Cuautla</h5>
                         <span className='fw-semibold text-muted'>Carreras 3</span>
-                        <Rating value={2} readOnly cancel={false} />
                     </div>
                 </div>
             </div>
@@ -45,7 +41,6 @@ export default function Dashboard() {
                     <div className="card-body">
                         <h5 className='fs-5 fw-semibold'>Plantel Jiutepec</h5>
                         <span className='fw-semibold text-muted'>Carreras 4</span>
-                        <Rating value={3} readOnly cancel={false} />
                     </div>
                 </div>
             </div>

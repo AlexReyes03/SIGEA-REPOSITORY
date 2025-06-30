@@ -21,6 +21,9 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     @Query("SELECT u FROM UserEntity u WHERE u.role.id = :roleId")
     List<UserEntity> findByRoleId(@Param("roleId") Long roleId);
 
+    @Query("SELECT u FROM UserEntity u WHERE u.role.id = :roleId AND u.plantel.plantelId = :plantelId")
+    List<UserEntity> findByRoleIdAndPlantelId(@Param("roleId") Long roleId, @Param("plantelId") Long plantelId);
+
     // Encontrar usuarios con sus inscripciones activas
     @EntityGraph(attributePaths = {"careerEnrollments", "careerEnrollments.career"})
     @Query("SELECT DISTINCT u FROM UserEntity u " +

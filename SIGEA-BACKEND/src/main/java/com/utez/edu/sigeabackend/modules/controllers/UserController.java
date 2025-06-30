@@ -47,6 +47,14 @@ public class UserController {
         return service.findByRoleId(roleId);
     }
 
+    /** GET /sigea/api/users/role/{roleId}/plantel/{plantelId} - Obtener usuarios por rol y plantel */
+    @GetMapping("/role/{roleId}/plantel/{plantelId}")
+    public ResponseEntity<List<UserResponseDto>> getUsersByRoleAndPlantel(
+            @PathVariable long roleId,
+            @PathVariable long plantelId) {
+        return service.findByRoleIdAndPlantelId(roleId, plantelId);
+    }
+
     /** GET /sigea/api/users/career/{careerId}/active - Obtener usuarios activos en una carrera */
     @GetMapping("/career/{careerId}/active")
     public ResponseEntity<List<UserResponseDto>> getUsersByActiveCareer(@PathVariable long careerId) {
