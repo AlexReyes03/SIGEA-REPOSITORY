@@ -29,7 +29,7 @@ public class UserCareerEnrollmentEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "plantel_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_enrollment_plantel"))
-    private PlantelEntity plantel;
+    private CampusEntity campus;
 
     @Column(name = "registration_number", nullable = false, length = 15)
     private String registrationNumber;
@@ -54,11 +54,10 @@ public class UserCareerEnrollmentEntity {
     // Constructors
     public UserCareerEnrollmentEntity() {}
 
-    public UserCareerEnrollmentEntity(UserEntity user, CareerEntity career,
-                                      PlantelEntity plantel, String registrationNumber) {
+    public UserCareerEnrollmentEntity(UserEntity user, CareerEntity career, CampusEntity campus, String registrationNumber) {
         this.user = user;
         this.career = career;
-        this.plantel = plantel;
+        this.campus = campus;
         this.registrationNumber = registrationNumber;
     }
 
@@ -87,12 +86,12 @@ public class UserCareerEnrollmentEntity {
         this.career = career;
     }
 
-    public PlantelEntity getPlantel() {
-        return plantel;
+    public CampusEntity getCampus() {
+        return campus;
     }
 
-    public void setPlantel(PlantelEntity plantel) {
-        this.plantel = plantel;
+    public void setCampus(CampusEntity campus) {
+        this.campus = campus;
     }
 
     public String getRegistrationNumber() {

@@ -14,5 +14,5 @@ public record CreateCareerDto(
         String differentiator,
 
         @NotNull(message = "El plantel es obligatorio")
-        Long plantelId
+        Long campusId
 ) {}

@@ -9,5 +9,5 @@ public record UpdateCareerDto(
         @Size(max = 5, message = "El diferenciador no puede exceder 5 caracteres")
         String differentiator,
 
-        Long plantelId
+        Long campusId
 ) {}

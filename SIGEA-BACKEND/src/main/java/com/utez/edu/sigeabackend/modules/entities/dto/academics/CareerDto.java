@@ -4,8 +4,8 @@ public record CareerDto(
         long id,
         String name,
         String differentiator,
-        long plantelId,
-        String plantelName,
+        long campusId,
+        String campusName,
         int groupsCount,
         int studentsCount,
         int teachersCount

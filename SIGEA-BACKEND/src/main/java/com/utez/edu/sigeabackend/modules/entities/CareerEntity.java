@@ -29,7 +29,7 @@ public class CareerEntity {
      */
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "plantel_id", nullable = false)
-    private PlantelEntity plantel;
+    private CampusEntity campus;
 
     /**
      * Relación uno-a-muchos con GroupEntity.
@@ -48,10 +48,10 @@ public class CareerEntity {
     public CareerEntity() {
     }
 
-    public CareerEntity(String name, String differentiator, PlantelEntity plantel) {
+    public CareerEntity(String name, String differentiator, CampusEntity campus) {
         this.name = name;
         this.differentiator = differentiator;
-        this.plantel = plantel;
+        this.campus = campus;
     }
 
     // Getters and Setters
@@ -79,12 +79,12 @@ public class CareerEntity {
         this.differentiator = differentiator;
     }
 
-    public PlantelEntity getPlantel() {
-        return plantel;
+    public CampusEntity getCampus() {
+        return campus;
     }
 
-    public void setPlantel(PlantelEntity plantel) {
-        this.plantel = plantel;
+    public void setCampus(CampusEntity campus) {
+        this.campus = campus;
     }
 
     public Set<GroupEntity> getGroups() {

@@ -1,10 +1,12 @@
 package com.utez.edu.sigeabackend.modules.services;
 
+import com.utez.edu.sigeabackend.modules.entities.CampusEntity;
 import com.utez.edu.sigeabackend.modules.entities.CareerEntity;
 import com.utez.edu.sigeabackend.modules.entities.UserCareerEnrollmentEntity;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.CareerDto;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.CreateCareerDto;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.UpdateCareerDto;
+import com.utez.edu.sigeabackend.modules.repositories.CampusRepository;
 import com.utez.edu.sigeabackend.modules.repositories.CareerRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,11 +20,11 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class CareerService {
     private final CareerRepository repository;
-    private final PlantelRepository plantelRepository;
+    private final CampusRepository campusRepository;
 
-    public CareerService(CareerRepository repository, PlantelRepository plantelRepository) {
+    public CareerService(CareerRepository repository, CampusRepository campusRepository) {
         this.repository = repository;
-        this.plantelRepository = plantelRepository;
+        this.campusRepository = campusRepository;
     }
 
     // Helper method to convert entity to DTO
@@ -45,8 +47,8 @@ public class CareerService {
                 entity.getId(),
                 entity.getName(),
                 entity.getDifferentiator(),
-                entity.getPlantel().getId(),
-                entity.getPlantel().getName(),
+                entity.getCampus().getId(),
+                entity.getCampus().getName(),
                 groupsCount,
                 studentsCount,
                 teachersCount
@@ -68,8 +70,8 @@ public class CareerService {
     }
 
     // Obtener carreras por plantel
-    public ResponseEntity<List<CareerDto>> findByPlantel(long plantelId) {
-        List<CareerDto> dtos = repository.findAllWithCountsByPlantel(plantelId);
+    public ResponseEntity<List<CareerDto>> findByCampus(long campusId) {
+        List<CareerDto> dtos = repository.findAllWithCountsByCampus(campusId);
         return ResponseEntity.ok(dtos);
     }
 
@@ -77,12 +79,12 @@ public class CareerService {
     @Transactional
     public ResponseEntity<CareerDto> save(CreateCareerDto dto) {
         // Verificar que el plantel existe
-        PlantelEntity plantel = plantelRepository.findById(dto.plantelId())
+        CampusEntity plantel = campusRepository.findById(dto.campusId())
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "Plantel no encontrado"));
+                        HttpStatus.BAD_REQUEST, "Campus no encontrado"));
 
         // Verificar que el diferenciador no existe en este plantel
-        if (repository.existsByDifferentiatorAndPlantelId(dto.differentiator(), dto.plantelId())) {
+        if (repository.existsByDifferentiatorAndCampusId(dto.differentiator(), dto.campusId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Ya existe una carrera con este diferenciador en el plantel");
         }
@@ -122,7 +124,7 @@ public class CareerService {
 
                         // Verificar que no existe otro con el mismo diferenciador en el plantel
                         if (!existing.getDifferentiator().equals(newDifferentiator) &&
-                                repository.existsByDifferentiatorAndPlantelId(newDifferentiator, existing.getPlantel().getId())) {
+                                repository.existsByDifferentiatorAndCampusId(newDifferentiator, existing.getCampus().getId())) {
                             throw new ResponseStatusException(HttpStatus.CONFLICT,
                                     "Ya existe una carrera con este diferenciador en el plantel");
                         }
@@ -131,18 +133,18 @@ public class CareerService {
                     }
 
                     // Actualizar plantel si se proporciona
-                    if (dto.plantelId() != null) {
-                        PlantelEntity plantel = plantelRepository.findById(dto.plantelId())
+                    if (dto.campusId() != null) {
+                        CampusEntity plantel = campusRepository.findById(dto.campusId())
                                 .orElseThrow(() -> new ResponseStatusException(
-                                        HttpStatus.BAD_REQUEST, "Plantel no encontrado"));
+                                        HttpStatus.BAD_REQUEST, "Campus no encontrado"));
 
                         // Si cambia de plantel, verificar que el diferenciador no existe en el nuevo plantel
-                        if (existing.getPlantel().getId() != dto.plantelId()) {
+                        if (existing.getCampus().getId() != dto.campusId()) {
                             throw new ResponseStatusException(HttpStatus.CONFLICT,
                                     "Ya existe una carrera con este diferenciador en el plantel destino");
                         }
 
-                        existing.setPlantel(plantel);
+                        existing.setCampus(plantel);
                     }
 
                     CareerEntity updated = repository.save(existing);
@@ -179,13 +181,13 @@ public class CareerService {
     }
 
     // Verificar disponibilidad de diferenciador
-    public ResponseEntity<Boolean> isDifferentiatorAvailable(String differentiator, Long plantelId) {
-        boolean available = !repository.existsByDifferentiatorAndPlantelId(differentiator.toUpperCase(), plantelId);
+    public ResponseEntity<Boolean> isDifferentiatorAvailable(String differentiator, Long campusId) {
+        boolean available = !repository.existsByDifferentiatorAndCampusId(differentiator.toUpperCase(), campusId);
         return ResponseEntity.ok(available);
     }
 
     // Obtener carreras de un plantel específico (solo entidades)
-    public List<CareerEntity> getCareersByPlantel(Long plantelId) {
-        return repository.findByPlantelId(plantelId);
+    public List<CareerEntity> getCareersByCampus(Long campusId) {
+        return repository.findByCampusId(campusId);
     }
 }

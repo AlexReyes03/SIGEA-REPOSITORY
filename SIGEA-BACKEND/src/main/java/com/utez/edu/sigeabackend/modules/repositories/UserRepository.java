@@ -21,8 +21,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     @Query("SELECT u FROM UserEntity u WHERE u.role.id = :roleId")
     List<UserEntity> findByRoleId(@Param("roleId") Long roleId);
 
-    @Query("SELECT u FROM UserEntity u WHERE u.role.id = :roleId AND u.plantel.plantelId = :plantelId")
-    List<UserEntity> findByRoleIdAndPlantelId(@Param("roleId") Long roleId, @Param("plantelId") Long plantelId);
+    @Query("SELECT u FROM UserEntity u WHERE u.role.id = :roleId AND u.campus.id = :campusId")
+    List<UserEntity> findByRoleIdAndCampusId(@Param("roleId") Long roleId, @Param("campusId") Long campusId);
 
     // Encontrar usuarios con sus inscripciones activas
     @EntityGraph(attributePaths = {"careerEnrollments", "careerEnrollments.career"})
@@ -36,4 +36,22 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
             "JOIN u.careerEnrollments e " +
             "WHERE e.career.id = :careerId AND e.status = 'ACTIVE'")
     List<UserEntity> findByActiveCareerEnrollment(@Param("careerId") Long careerId);
+
+    // Nuevas consultas para supervisión de campus
+
+    /**
+     * Encuentra supervisores con sus asignaciones de campus
+     */
+    @EntityGraph(attributePaths = {"campusSupervisions", "campusSupervisions.campus"})
+    @Query("SELECT u FROM UserEntity u " +
+            "WHERE u.role.roleName = 'SUPERVISOR' AND u.id = :supervisorId")
+    Optional<UserEntity> findSupervisorWithCampusSupervisions(@Param("supervisorId") Long supervisorId);
+
+    /**
+     * Encuentra todos los supervisores de un campus específico
+     */
+    @Query("SELECT DISTINCT u FROM UserEntity u " +
+            "LEFT JOIN u.campusSupervisions cs " +
+            "WHERE u.campus.id = :campusId OR cs.campus.id = :campusId")
+    List<UserEntity> findSupervisorsByCampusId(@Param("campusId") Long campusId);
 }

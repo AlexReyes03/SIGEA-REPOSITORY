@@ -13,17 +13,17 @@ import java.util.Optional;
 @Repository
 public interface CareerRepository extends JpaRepository<CareerEntity, Long> {
 
-    // Verificar si existe un diferenciador en un plantel específico
-    boolean existsByDifferentiatorAndPlantelId(String differentiator, Long plantelId);
+    // Verificar si existe un diferenciador en un campus específico
+    boolean existsByDifferentiatorAndCampusId(String differentiator, Long campusId);
 
-    // Encontrar carreras por plantel
-    List<CareerEntity> findByPlantelId(Long plantelId);
+    // Encontrar carreras por campus
+    List<CareerEntity> findByCampusId(Long campusId);
 
-    // Encontrar carrera por diferenciador y plantel
-    Optional<CareerEntity> findByDifferentiatorAndPlantelId(String differentiator, Long plantelId);
+    // Encontrar carrera por diferenciador y campus
+    Optional<CareerEntity> findByDifferentiatorAndCampusId(String differentiator, Long campusId);
 
     @Query("SELECT new com.utez.edu.sigeabackend.modules.entities.dto.academics.CareerDto(" +
-            "c.id, c.name, c.differentiator, c.plantel.plantelId, c.plantel.name, " +
+            "c.id, c.name, c.differentiator, c.campus.id, c.campus.name, " +
             "CAST(" +
             "  (SELECT COUNT(g) FROM GroupEntity g WHERE g.career.id = c.id)" +
             " AS int), " +
@@ -41,7 +41,7 @@ public interface CareerRepository extends JpaRepository<CareerEntity, Long> {
     List<CareerDto> findAllWithCounts();
 
     @Query("SELECT new com.utez.edu.sigeabackend.modules.entities.dto.academics.CareerDto(" +
-            "c.id, c.name, c.differentiator, c.plantel.plantelId, c.plantel.name, " +
+            "c.id, c.name, c.differentiator, c.campus.id, c.campus.name, " +
             "CAST(" +
             "  (SELECT COUNT(g) FROM GroupEntity g WHERE g.career.id = c.id)" +
             " AS int), " +
@@ -55,15 +55,15 @@ public interface CareerRepository extends JpaRepository<CareerEntity, Long> {
             " AS int)" +
             ") " +
             "FROM CareerEntity c " +
-            "WHERE c.plantel.plantelId = :plantelId " +
+            "WHERE c.campus.id = :campusId " +
             "ORDER BY c.name ASC")
-    List<CareerDto> findAllWithCountsByPlantel(@Param("plantelId") Long plantelId);
+    List<CareerDto> findAllWithCountsByCampus(@Param("campusId") Long campusId);
 
     // Obtener solo carreras con estudiantes activos
     @Query("SELECT DISTINCT c FROM CareerEntity c " +
             "JOIN c.enrollments e " +
-            "WHERE e.status = 'ACTIVE' AND c.plantel.plantelId = :plantelId")
-    List<CareerEntity> findActiveCareersWithStudents(@Param("plantelId") Long plantelId);
+            "WHERE e.status = 'ACTIVE' AND c.campus.id = :campusId")
+    List<CareerEntity> findActiveCareersWithStudents(@Param("campusId") Long campusId);
 
     // Contar estudiantes por carrera
     @Query("SELECT COUNT(DISTINCT e.user.id) FROM CareerEntity c " +
@@ -94,8 +94,8 @@ public interface CareerRepository extends JpaRepository<CareerEntity, Long> {
     // Obtener carreras con sus totales de inscripciones (incluye inactivas)
     @Query("SELECT c FROM CareerEntity c " +
             "LEFT JOIN FETCH c.enrollments e " +
-            "WHERE c.plantel.plantelId = :plantelId")
-    List<CareerEntity> findByPlantelIdWithEnrollments(@Param("plantelId") Long plantelId);
+            "WHERE c.campus.id = :campusId")
+    List<CareerEntity> findByCampusIdWithEnrollments(@Param("campusId") Long campusId);
 
     // Verificar si una carrera tiene inscripciones activas
     @Query("SELECT COUNT(e) > 0 FROM CareerEntity c " +

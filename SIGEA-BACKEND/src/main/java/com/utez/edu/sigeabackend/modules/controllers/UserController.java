@@ -1,8 +1,8 @@
 package com.utez.edu.sigeabackend.modules.controllers;
 
-import com.utez.edu.sigeabackend.modules.entities.dto.CreateUserDto;
-import com.utez.edu.sigeabackend.modules.entities.dto.UpdateUserDto;
-import com.utez.edu.sigeabackend.modules.entities.dto.UserResponseDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.users.CreateUserDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.users.UpdateUserDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.users.UserResponseDto;
 import com.utez.edu.sigeabackend.modules.media.dto.MediaUploadResponseDto;
 import com.utez.edu.sigeabackend.modules.services.UserService;
 import jakarta.validation.Valid;
@@ -47,12 +47,12 @@ public class UserController {
         return service.findByRoleId(roleId);
     }
 
-    /** GET /sigea/api/users/role/{roleId}/plantel/{plantelId} - Obtener usuarios por rol y plantel */
-    @GetMapping("/role/{roleId}/plantel/{plantelId}")
-    public ResponseEntity<List<UserResponseDto>> getUsersByRoleAndPlantel(
+    /** GET /sigea/api/users/role/{roleId}/campus/{campusId} - Obtener usuarios por rol y campus */
+    @GetMapping("/role/{roleId}/campus/{campusId}")
+    public ResponseEntity<List<UserResponseDto>> getUsersByRoleAndCampus(
             @PathVariable long roleId,
-            @PathVariable long plantelId) {
-        return service.findByRoleIdAndPlantelId(roleId, plantelId);
+            @PathVariable long campusId) {
+        return service.findByRoleIdAndCampusId(roleId, campusId);
     }
 
     /** GET /sigea/api/users/career/{careerId}/active - Obtener usuarios activos en una carrera */

@@ -16,8 +16,8 @@ public interface UserCareerEnrollmentRepository extends JpaRepository<UserCareer
     // Verificar si ya existe una inscripción entre usuario y carrera
     boolean existsByUserIdAndCareerId(Long userId, Long careerId);
 
-    // Verificar si existe una matrícula en un plantel específico
-    boolean existsByRegistrationNumberAndPlantelId(String registrationNumber, Long plantelId);
+    // Verificar si existe una matrícula en un campus específico
+    boolean existsByRegistrationNumberAndCampusId(String registrationNumber, Long campusId);
 
     // Encontrar todas las inscripciones de un usuario
     List<UserCareerEnrollmentEntity> findByUserId(Long userId);
@@ -25,8 +25,8 @@ public interface UserCareerEnrollmentRepository extends JpaRepository<UserCareer
     // Encontrar todas las inscripciones de una carrera
     List<UserCareerEnrollmentEntity> findByCareerId(Long careerId);
 
-    // Encontrar inscripciones por plantel
-    List<UserCareerEnrollmentEntity> findByPlantelId(Long plantelId);
+    // Encontrar inscripciones por campus
+    List<UserCareerEnrollmentEntity> findByCampusId(Long campusId);
 
     // Encontrar inscripciones activas de un usuario
     List<UserCareerEnrollmentEntity> findByUserIdAndStatus(Long userId, EnrollmentStatus status);
@@ -37,8 +37,8 @@ public interface UserCareerEnrollmentRepository extends JpaRepository<UserCareer
     // Encontrar una inscripción específica de usuario en carrera
     Optional<UserCareerEnrollmentEntity> findByUserIdAndCareerId(Long userId, Long careerId);
 
-    // Encontrar por matrícula en un plantel específico
-    Optional<UserCareerEnrollmentEntity> findByRegistrationNumberAndPlantelId(String registrationNumber, Long plantelId);
+    // Encontrar por matrícula en un campus específico
+    Optional<UserCareerEnrollmentEntity> findByRegistrationNumberAndCampusId(String registrationNumber, Long campusId);
 
     // Contar inscripciones en una carrera por estado
     @Query("SELECT COUNT(e) FROM UserCareerEnrollmentEntity e WHERE e.career.id = :careerId AND e.status = :status")

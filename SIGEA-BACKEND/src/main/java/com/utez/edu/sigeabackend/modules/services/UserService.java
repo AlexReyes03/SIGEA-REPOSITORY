@@ -2,12 +2,11 @@ package com.utez.edu.sigeabackend.modules.services;
 
 import com.utez.edu.sigeabackend.modules.entities.UserEntity;
 import com.utez.edu.sigeabackend.modules.entities.UserCareerEnrollmentEntity;
-import com.utez.edu.sigeabackend.modules.entities.dto.CreateUserDto;
-import com.utez.edu.sigeabackend.modules.entities.dto.UpdateUserDto;
-import com.utez.edu.sigeabackend.modules.entities.dto.UserResponseDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.users.*;
 import com.utez.edu.sigeabackend.modules.media.MediaEntity;
 import com.utez.edu.sigeabackend.modules.media.MediaService;
 import com.utez.edu.sigeabackend.modules.media.dto.MediaUploadResponseDto;
+import com.utez.edu.sigeabackend.modules.repositories.CampusRepository;
 import com.utez.edu.sigeabackend.modules.repositories.RoleRepository;
 import com.utez.edu.sigeabackend.modules.repositories.UserRepository;
 import org.springframework.http.HttpStatus;
@@ -27,18 +26,18 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final UserRepository    userRepo;
-    private final PlantelRepository plantelRepo;
+    private final CampusRepository campusRepo;
     private final RoleRepository    roleRepo;
     private final BCryptPasswordEncoder passwordEncoder;
     private final MediaService mediaService;
 
     public UserService(UserRepository userRepo,
-                       PlantelRepository plantelRepo,
+                       CampusRepository campusRepo,
                        RoleRepository roleRepo,
                        BCryptPasswordEncoder passwordEncoder,
                        MediaService mediaService) {
         this.userRepo = userRepo;
-        this.plantelRepo = plantelRepo;
+        this.campusRepo = campusRepo;
         this.roleRepo = roleRepo;
         this.passwordEncoder = passwordEncoder;
         this.mediaService = mediaService;
@@ -50,6 +49,20 @@ public class UserService {
                 ? "/sigea/api/media/raw/" + u.getAvatar().getCode()
                 : null;
 
+        // Obtener campus supervisados si es supervisor
+        List<CampusSupervisionDto> supervisedCampuses = u.isSupervisor()
+                ? u.getCampusSupervisions().stream()
+                .map(supervision -> new CampusSupervisionDto(
+                        supervision.getId(),
+                        supervision.getCampus().getId(),
+                        supervision.getCampus().getName(),
+                        supervision.getSupervisionType(),
+                        supervision.getAssignedAt(),
+                        supervision.getAssignedByUserId()
+                ))
+                .collect(Collectors.toList())
+                : List.of();
+
         return new UserResponseDto(
                 u.getId(),
                 u.getName(),
@@ -59,12 +72,13 @@ public class UserService {
                 u.getPrimaryRegistrationNumber(),
                 u.getAdditionalEnrollmentsCount(),
                 u.getStatus().name(),
-                u.getPlantel().getId(),
-                u.getPlantel().getName(),
+                u.getCampus().getId(),
+                u.getCampus().getName(),
                 u.getRole().getId(),
                 u.getRole().getRoleName(),
                 u.getCreatedAt(),
-                avatarUrl
+                avatarUrl,
+                supervisedCampuses
         );
     }
 
@@ -113,10 +127,10 @@ public class UserService {
         }
     }
 
-    // Obtener usuarios por rol y plantel
-    public ResponseEntity<List<UserResponseDto>> findByRoleIdAndPlantelId(long roleId, long plantelId) {
+    // Obtener usuarios por rol y campus
+    public ResponseEntity<List<UserResponseDto>> findByRoleIdAndCampusId(long roleId, long campusId) {
         try {
-            List<UserEntity> users = userRepo.findByRoleIdAndPlantelId(roleId, plantelId);
+            List<UserEntity> users = userRepo.findByRoleIdAndCampusId(roleId, campusId);
 
             if (users.isEmpty()) {
                 return ResponseEntity.ok(List.of());
@@ -129,7 +143,7 @@ public class UserService {
             return ResponseEntity.ok(usersDto);
 
         } catch (Exception e) {
-            throw new RuntimeException("Error al consultar usuarios por rol y plantel " + e.getMessage(), e);
+            throw new RuntimeException("Error al consultar usuarios por rol y campus " + e.getMessage(), e);
         }
     }
 
@@ -157,10 +171,10 @@ public class UserService {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
 
-        // Verificar que el plantel existe
-        var plantel = plantelRepo.findById(dto.plantelId())
+        // Verificar que el campus existe
+        var campus = campusRepo.findById(dto.campusId())
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "Plantel no existe"
+                        HttpStatus.BAD_REQUEST, "Campus no existe"
                 ));
 
         // Verificar que el rol existe
@@ -175,7 +189,7 @@ public class UserService {
         user.setPaternalSurname(dto.paternalSurname());
         user.setMaternalSurname(dto.maternalSurname());
         user.setEmail(dto.email());
-        user.setPlantel(plantel);
+        user.setCampus(campus);
         user.setRole(role);
         user.setPassword(passwordEncoder.encode(dto.password()));
 
@@ -197,13 +211,13 @@ public class UserService {
                     if (dto.email() != null) existing.setEmail(dto.email());
                     if (dto.status() != null) existing.setStatus(dto.status());
 
-                    // Actualizar plantel
-                    if (dto.plantelId() != null) {
-                        var p = plantelRepo.findById(dto.plantelId())
+                    // Actualizar campus
+                    if (dto.campusId() != null) {
+                        var c = campusRepo.findById(dto.campusId())
                                 .orElseThrow(() -> new ResponseStatusException(
-                                        HttpStatus.BAD_REQUEST, "Plantel no existe"
+                                        HttpStatus.BAD_REQUEST, "Campus no existe"
                                 ));
-                        existing.setPlantel(p);
+                        existing.setCampus(c);
                     }
 
                     // Actualizar rol
@@ -256,6 +270,12 @@ public class UserService {
                     if (hasActiveEnrollments) {
                         throw new ResponseStatusException(HttpStatus.CONFLICT,
                                 "No se puede eliminar el usuario porque tiene inscripciones activas");
+                    }
+
+                    // Verificar si es supervisor con campus asignados
+                    if (u.isSupervisor() && !u.getCampusSupervisions().isEmpty()) {
+                        throw new ResponseStatusException(HttpStatus.CONFLICT,
+                                "No se puede eliminar el supervisor porque tiene campus asignados para supervisión");
                     }
 
                     userRepo.delete(u);

@@ -167,8 +167,8 @@ public class AuthService {
                 "name", user.getRole().getRoleName()
         ));
         userMap.put("campus", Map.of(
-                "id",   user.getPlantel().getId(),
-                "name", user.getPlantel().getName()
+                "id",   user.getCampus().getId(),
+                "name", user.getCampus().getName()
         ));
         userMap.put("avatarUrl", avatarUrl);
         payload.put("statusCode", HttpStatus.OK.value());

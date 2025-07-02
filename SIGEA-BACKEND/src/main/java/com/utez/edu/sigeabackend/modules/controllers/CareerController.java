@@ -31,10 +31,10 @@ public class CareerController {
         return service.findById(id);
     }
 
-    /** GET /sigea/api/careers/plantel/{plantelId} - Obtener carreras por plantel */
-    @GetMapping("/plantel/{plantelId}")
-    public ResponseEntity<List<CareerDto>> findByPlantel(@PathVariable long plantelId) {
-        return service.findByPlantel(plantelId);
+    /** GET /sigea/api/careers/plantel/{campusId} - Obtener carreras por plantel */
+    @GetMapping("/campus/{campusId}")
+    public ResponseEntity<List<CareerDto>> findByCampus(@PathVariable long campusId) {
+        return service.findByCampus(campusId);
     }
 
     /** POST /sigea/api/careers - Crear nueva carrera */

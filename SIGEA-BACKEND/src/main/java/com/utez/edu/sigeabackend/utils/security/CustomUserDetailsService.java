@@ -24,7 +24,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
         user.getRole().getRoleName();
-        user.getPlantel().getName();
+        user.getCampus().getName();
 
         return new UserDetailsImpl(user);
     }

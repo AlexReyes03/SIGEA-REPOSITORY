@@ -6,7 +6,9 @@ import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(
@@ -23,11 +25,11 @@ public class UserEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "campus_id",
+            name = "campus_id", // Mantenemos el nombre de columna en BD
             nullable = false,
             foreignKey = @ForeignKey(name = "fk_user_campus")
     )
-    private PlantelEntity plantel;
+    private CampusEntity campus;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
@@ -79,6 +81,14 @@ public class UserEntity {
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private Set<UserCareerEnrollmentEntity> careerEnrollments = new HashSet<>();
 
+    /**
+     * Relación muchos-a-muchos con CampusEntity a través de UserCampusSupervisionEntity
+     * Para supervisores que pueden supervisar múltiples campus
+     */
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JsonIgnore
+    private Set<UserCampusSupervisionEntity> campusSupervisions = new HashSet<>();
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -113,12 +123,12 @@ public class UserEntity {
         this.id = id;
     }
 
-    public PlantelEntity getPlantel() {
-        return plantel;
+    public CampusEntity getCampus() {
+        return campus;
     }
 
-    public void setPlantel(PlantelEntity plantel) {
-        this.plantel = plantel;
+    public void setCampus(CampusEntity campus) {
+        this.campus = campus;
     }
 
     public RoleEntity getRole() {
@@ -202,7 +212,15 @@ public class UserEntity {
         this.careerEnrollments = careerEnrollments;
     }
 
-    // Helper method to get primary registration number
+    public Set<UserCampusSupervisionEntity> getCampusSupervisions() {
+        return campusSupervisions;
+    }
+
+    public void setCampusSupervisions(Set<UserCampusSupervisionEntity> campusSupervisions) {
+        this.campusSupervisions = campusSupervisions;
+    }
+
+    // Helper methods para career enrollments
     public String getPrimaryRegistrationNumber() {
         return careerEnrollments.stream()
                 .filter(enrollment -> enrollment.getStatus() == UserCareerEnrollmentEntity.EnrollmentStatus.ACTIVE)
@@ -211,12 +229,59 @@ public class UserEntity {
                 .orElse(null);
     }
 
-    // Helper method to get additional enrollments count
     public int getAdditionalEnrollmentsCount() {
         long activeEnrollments = careerEnrollments.stream()
                 .filter(enrollment -> enrollment.getStatus() == UserCareerEnrollmentEntity.EnrollmentStatus.ACTIVE)
                 .count();
         return Math.max(0, (int) activeEnrollments - 1);
+    }
+
+    // Helper methods para campus supervisions
+    /**
+     * Obtiene todos los campus que supervisa este usuario (incluye su campus principal)
+     */
+    public List<CampusEntity> getAllSupervisedCampuses() {
+        List<CampusEntity> supervisedCampuses = campusSupervisions.stream()
+                .map(UserCampusSupervisionEntity::getCampus)
+                .collect(Collectors.toList());
+
+        // Agregar el campus principal si no está ya en la lista
+        if (!supervisedCampuses.contains(this.campus)) {
+            supervisedCampuses.add(0, this.campus); // Agregarlo al inicio
+        }
+
+        return supervisedCampuses;
+    }
+
+    /**
+     * Obtiene solo los campus adicionales (sin incluir el campus principal)
+     */
+    public List<CampusEntity> getAdditionalSupervisedCampuses() {
+        return campusSupervisions.stream()
+                .filter(supervision -> supervision.getSupervisionType() == UserCampusSupervisionEntity.SupervisionType.ADDITIONAL)
+                .map(UserCampusSupervisionEntity::getCampus)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Verifica si el usuario puede supervisar un campus específico
+     */
+    public boolean canSupervise(Long campusId) {
+        // Puede supervisar su campus principal
+        if (this.campus.getId() == campusId) {
+            return true;
+        }
+
+        // O cualquier campus asignado adicional
+        return campusSupervisions.stream()
+                .anyMatch(supervision -> supervision.getCampus().getId() == campusId);
+    }
+
+    /**
+     * Verifica si es supervisor (tiene el rol SUPERVISOR)
+     */
+    public boolean isSupervisor() {
+        return this.role != null && "SUPERVISOR".equals(this.role.getRoleName());
     }
 
     // -- ENUM --

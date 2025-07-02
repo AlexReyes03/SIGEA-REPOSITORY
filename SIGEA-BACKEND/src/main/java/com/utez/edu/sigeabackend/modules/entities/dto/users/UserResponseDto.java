@@ -1,4 +1,4 @@
-package com.utez.edu.sigeabackend.modules.entities.dto;
+package com.utez.edu.sigeabackend.modules.entities.dto.users;
 
 import java.time.LocalDateTime;
 import java.util.List;
