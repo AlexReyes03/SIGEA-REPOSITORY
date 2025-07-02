@@ -28,13 +28,18 @@ public class GroupStudentController {
             String fullName = user.getName() + " " + user.getPaternalSurname() +
                     (user.getMaternalSurname() != null ? " " + user.getMaternalSurname() : "");
 
+            Long careerId = saved.getGroup() != null && saved.getGroup().getCareer() != null
+                    ? saved.getGroup().getCareer().getId()
+                    : null;
+
             GroupStudentDto response = new GroupStudentDto(
                     saved.getId().getGroupId(),
                     saved.getId().getStudentId(),
                     fullName,
                     user.getEmail() != null ? user.getEmail() : "",
                     user.getPrimaryRegistrationNumber() != null ? user.getPrimaryRegistrationNumber() : "",
-                    user.getAdditionalEnrollmentsCount()
+                    user.getAdditionalEnrollmentsCount(),
+                    careerId
             );
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException ex) {

@@ -39,13 +39,19 @@ public class GroupStudentService {
                 + user.getPaternalSurname()
                 + (user.getMaternalSurname() != null ? " " + user.getMaternalSurname() : "");
 
+        // Obtener el careerId del grupo
+        Long careerId = gs.getGroup() != null && gs.getGroup().getCareer() != null
+                ? gs.getGroup().getCareer().getId()
+                : null;
+
         return new GroupStudentDto(
                 gs.getId().getGroupId(),
                 gs.getId().getStudentId(),
                 fullName,
                 user.getEmail() != null ? user.getEmail() : "",
                 user.getPrimaryRegistrationNumber() != null ? user.getPrimaryRegistrationNumber() : "",
-                user.getAdditionalEnrollmentsCount()
+                user.getAdditionalEnrollmentsCount(),
+                careerId
         );
     }
 

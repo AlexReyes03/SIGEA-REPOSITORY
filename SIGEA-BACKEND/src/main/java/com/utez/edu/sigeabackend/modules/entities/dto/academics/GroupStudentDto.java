@@ -6,5 +6,6 @@ public record GroupStudentDto(
         String fullName,
         String email,
         String primaryRegistrationNumber,
-        int additionalEnrollmentsCount
+        int additionalEnrollmentsCount,
+        Long careerId
 ) {}
