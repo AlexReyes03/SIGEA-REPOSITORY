@@ -17,7 +17,7 @@ public record UpdateUserDto(
         @Size(min=8, message="La contraseña debe tener al menos 8 caracteres")
         String password,
 
-        Long plantelId,
+        Long campusId,
         Long roleId,
         UserEntity.Status status
 ) {}

@@ -19,8 +19,8 @@ public record CreateUserDto(
         @Size(min=8, message = "La contraseña debe tener al menos 8 caracteres")
         String password,
 
-        @NotNull(message = "El plantel es obligatorio")
-        Long plantelId,
+        @NotNull(message = "El campus es obligatorio")
+        Long campusId,
 
         @NotNull(message = "El rol es obligatorio")
         Long roleId

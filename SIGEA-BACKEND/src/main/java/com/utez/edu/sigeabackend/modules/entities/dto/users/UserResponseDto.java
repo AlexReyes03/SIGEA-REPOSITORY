@@ -1,6 +1,7 @@
 package com.utez.edu.sigeabackend.modules.entities.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record UserResponseDto(
         Long id,
@@ -11,10 +12,11 @@ public record UserResponseDto(
         String primaryRegistrationNumber,
         int additionalEnrollmentsCount,
         String status,
-        Long plantelId,
-        String plantelName,
+        Long campusId,
+        String campusName,
         Long roleId,
         String roleName,
         LocalDateTime createdAt,
-        String avatarUrl
+        String avatarUrl,
+        List<CampusSupervisionDto> supervisedCampuses
 ) {}
