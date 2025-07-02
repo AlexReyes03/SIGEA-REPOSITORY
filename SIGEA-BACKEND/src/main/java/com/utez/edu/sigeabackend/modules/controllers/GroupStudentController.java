@@ -70,12 +70,10 @@ public class GroupStudentController {
         return ResponseEntity.ok(list);
     }
 
-    @GetMapping("/check-student-groups/{studentId}/career/{careerId}")
-    public ResponseEntity<StudentGroupCheckDto> hasGroupsInCareer(
-            @PathVariable Long studentId,
-            @PathVariable Long careerId) {
+    @GetMapping("/check-user-groups/{userId}/career/{careerId}")
+    public ResponseEntity<StudentGroupCheckDto> hasGroupsInCareer(@PathVariable Long userId, @PathVariable Long careerId) {
         try {
-            StudentGroupCheckDto response = service.checkStudentGroupsInCareer(studentId, careerId);
+            StudentGroupCheckDto response = service.checkStudentGroupsInCareer(userId, careerId);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();

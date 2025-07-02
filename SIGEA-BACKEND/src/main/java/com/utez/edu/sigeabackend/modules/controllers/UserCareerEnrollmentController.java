@@ -3,7 +3,6 @@ package com.utez.edu.sigeabackend.modules.controllers;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.*;
 import com.utez.edu.sigeabackend.modules.services.UserCareerEnrollmentService;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,14 +30,18 @@ public class UserCareerEnrollmentController {
         return service.findByUserId(userId);
     }
 
+    /** GET /sigea/api/enrollments/teachers/career/{careerId} - Obtener maestros por carrera */
     @GetMapping("/teachers/career/{careerId}")
     public ResponseEntity<List<TeacherByCareerzDto>> getTeachersByCareer(@PathVariable Long careerId) {
-        try {
-            List<TeacherByCareerzDto> teachers = service.getTeachersByCareer(careerId);
-            return ResponseEntity.ok(teachers);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        List<TeacherByCareerzDto> teachers = service.getTeachersByCareer(careerId);
+        return ResponseEntity.ok(teachers);
+    }
+
+    /** GET /sigea/api/enrollments/students/career/{careerId} - Obtener estudiantes por carrera */
+    @GetMapping("/students/career/{careerId}")
+    public ResponseEntity<List<UserCareerEnrollmentDto>> getStudentsByCareer(@PathVariable Long careerId) {
+        List<UserCareerEnrollmentDto> students = service.getStudentsByCareer(careerId);
+        return ResponseEntity.ok(students);
     }
 
     /** GET /sigea/api/enrollments/career/{careerId} - Obtener inscripciones de una carrera */
@@ -53,14 +56,10 @@ public class UserCareerEnrollmentController {
         return service.findActiveByCareer(careerId);
     }
 
-    @GetMapping("/students/career/{careerId}")
-    public ResponseEntity<List<UserCareerEnrollmentDto>> getStudentsByCareer(@PathVariable Long careerId) {
-        try {
-            List<UserCareerEnrollmentDto> students = service.getStudentsByCareer(careerId);
-            return ResponseEntity.ok(students);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+    /** GET /sigea/api/enrollments/generate-number/{careerId} - Generar nueva matrícula para una carrera */
+    @GetMapping("/generate-number/{careerId}")
+    public ResponseEntity<String> generateRegistrationNumber(@PathVariable Long careerId) {
+        return service.generateNewRegistrationNumber(careerId);
     }
 
     /** POST /sigea/api/enrollments - Crear nueva inscripción */
@@ -77,21 +76,17 @@ public class UserCareerEnrollmentController {
         return service.updateEnrollment(enrollmentId, dto);
     }
 
+    /** PATCH /sigea/api/enrollments/{enrollmentId}/registration-number - Actualizar solo matrícula */
     @PatchMapping("/{enrollmentId}/registration-number")
     public ResponseEntity<UserCareerEnrollmentDto> updateRegistrationNumber(
             @PathVariable Long enrollmentId,
             @RequestBody UpdateRegistrationNumberRequest request) {
-        try {
-            UserCareerEnrollmentDto updated = service.updateRegistrationNumber(
-                    enrollmentId,
-                    request.newRegistrationNumber()
-            );
-            return ResponseEntity.ok(updated);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        UserCareerEnrollmentDto updated = service.updateRegistrationNumber(
+                enrollmentId,
+                request.newRegistrationNumber()
+        );
+        return ResponseEntity.ok(updated);
     }
-
 
     /** PATCH /sigea/api/enrollments/{enrollmentId}/complete - Marcar inscripción como completada */
     @PatchMapping("/{enrollmentId}/complete")
@@ -115,11 +110,5 @@ public class UserCareerEnrollmentController {
     @DeleteMapping("/{enrollmentId}")
     public ResponseEntity<Void> deleteEnrollment(@PathVariable Long enrollmentId) {
         return service.deleteEnrollment(enrollmentId);
-    }
-
-    /** GET /sigea/api/enrollments/generate-number/{careerId} - Generar nueva matrícula para una carrera */
-    @GetMapping("/generate-number/{careerId}")
-    public ResponseEntity<String> generateRegistrationNumber(@PathVariable Long careerId) {
-        return service.generateNewRegistrationNumber(careerId);
     }
 }

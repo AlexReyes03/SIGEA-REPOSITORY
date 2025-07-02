@@ -58,280 +58,373 @@ public class UserCareerEnrollmentService {
         );
     }
 
-    // Generar matrícula automáticamente
+    // Generar matrícula automáticamente con NUEVO FORMATO: Año + Identificador + 4 dígitos
     private String generateRegistrationNumber(CareerEntity career, PlantelEntity plantel) {
-        String differentiator = career.getDifferentiator();
-        String year = String.valueOf(Year.now().getValue()).substring(2); // Últimos 2 dígitos del año
-        String pattern = differentiator + year + "%";
+        try {
+            String year = String.valueOf(Year.now().getValue()).substring(2); // Últimos 2 dígitos del año
+            String differentiator = career.getDifferentiator();
+            String pattern = year + differentiator + "%"; // NUEVO FORMATO: AñoIdentificador%
 
-        // Obtener la última matrícula generada para este patrón
-        List<String> existingNumbers = enrollmentRepo.findLastRegistrationNumberByCareerAndPattern(
-                career.getId(), pattern);
+            // Obtener la última matrícula generada para este patrón
+            List<String> existingNumbers = enrollmentRepo.findLastRegistrationNumberByCareerAndPattern(
+                    career.getId(), pattern);
 
-        int nextNumber = 1;
-        if (!existingNumbers.isEmpty()) {
-            String lastNumber = existingNumbers.get(0);
-            String numberPart = lastNumber.substring(differentiator.length() + 2); // Quitar diferenciador + año
-            try {
-                nextNumber = Integer.parseInt(numberPart) + 1;
-            } catch (NumberFormatException e) {
-                // Si hay error, empezar desde 1
-                nextNumber = 1;
+            int nextNumber = 1;
+            if (!existingNumbers.isEmpty()) {
+                String lastNumber = existingNumbers.get(0);
+                // Quitar año + diferenciador para obtener solo los 4 dígitos
+                String numberPart = lastNumber.substring(year.length() + differentiator.length());
+                try {
+                    nextNumber = Integer.parseInt(numberPart) + 1;
+                } catch (NumberFormatException e) {
+                    nextNumber = 1; // Si hay error, empezar desde 1
+                }
             }
-        }
 
-        String baseRegistrationNumber;
-        String finalRegistrationNumber;
-        int attempts = 0;
-        final int maxAttempts = 1000;
+            String finalRegistrationNumber;
+            int attempts = 0;
+            final int maxAttempts = 1000;
 
-        do {
-            if (attempts < 10) {
-                // Primeros 10 intentos: usar número secuencial
-                finalRegistrationNumber = String.format("%s%s%04d", differentiator, year, nextNumber + attempts);
-            } else {
-                // Después de 10 intentos: usar números aleatorios
-                int randomNumber = random.nextInt(9999) + 1;
-                finalRegistrationNumber = String.format("%s%s%04d", differentiator, year, randomNumber);
+            do {
+                if (attempts < 10) {
+                    // Primeros 10 intentos: usar número secuencial
+                    finalRegistrationNumber = String.format("%s%s%04d", year, differentiator, nextNumber + attempts);
+                } else {
+                    // Después de 10 intentos: usar números aleatorios
+                    int randomNumber = random.nextInt(9999) + 1;
+                    finalRegistrationNumber = String.format("%s%s%04d", year, differentiator, randomNumber);
+                }
+                attempts++;
+            } while (enrollmentRepo.existsByRegistrationNumberAndPlantelId(finalRegistrationNumber, plantel.getId())
+                    && attempts < maxAttempts);
+
+            if (attempts >= maxAttempts) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "No se pudo generar una matrícula única después de " + maxAttempts + " intentos");
             }
-            attempts++;
-        } while (enrollmentRepo.existsByRegistrationNumberAndPlantelId(finalRegistrationNumber, plantel.getId())
-                && attempts < maxAttempts);
 
-        if (attempts >= maxAttempts) {
+            return finalRegistrationNumber;
+        } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "No se pudo generar una matrícula única después de " + maxAttempts + " intentos");
+                    "Error al generar matrícula: " + e.getMessage());
         }
-
-        return finalRegistrationNumber;
     }
 
     // Validar matrícula personalizada
     private void validateCustomRegistrationNumber(String registrationNumber, PlantelEntity plantel, Long excludeEnrollmentId) {
-        if (registrationNumber == null || registrationNumber.trim().isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La matrícula no puede estar vacía");
-        }
+        try {
+            if (registrationNumber == null || registrationNumber.trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La matrícula no puede estar vacía");
+            }
 
-        if (registrationNumber.length() > 15) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La matrícula no puede exceder 15 caracteres");
-        }
+            if (registrationNumber.length() > 15) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La matrícula no puede exceder 15 caracteres");
+            }
 
-        // Verificar unicidad en el plantel (excluyendo la inscripción actual si es una actualización)
-        boolean exists = enrollmentRepo.findByRegistrationNumberAndPlantelId(registrationNumber, plantel.getId())
-                .map(existing -> !existing.getId().equals(excludeEnrollmentId))
-                .orElse(false);
+            // Verificar unicidad en el plantel (excluyendo la inscripción actual si es una actualización)
+            boolean exists = enrollmentRepo.findByRegistrationNumberAndPlantelId(registrationNumber, plantel.getId())
+                    .map(existing -> !existing.getId().equals(excludeEnrollmentId))
+                    .orElse(false);
 
-        if (exists) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Ya existe un estudiante con esta matrícula en el plantel");
+            if (exists) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Ya existe un estudiante con esta matrícula en el plantel");
+            }
+        } catch (ResponseStatusException e) {
+            throw e; // Re-lanzar excepciones de validación
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al validar matrícula: " + e.getMessage());
         }
     }
 
     // Obtener todas las inscripciones
     public ResponseEntity<List<UserCareerEnrollmentDto>> findAll() {
-        List<UserCareerEnrollmentDto> dtos = enrollmentRepo.findAll()
-                .stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(dtos);
+        try {
+            List<UserCareerEnrollmentDto> dtos = enrollmentRepo.findAll()
+                    .stream()
+                    .map(this::toDto)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(dtos);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al obtener inscripciones: " + e.getMessage());
+        }
     }
 
     // Obtener inscripciones por usuario
     public ResponseEntity<List<UserCareerEnrollmentDto>> findByUserId(Long userId) {
-        List<UserCareerEnrollmentDto> dtos = enrollmentRepo.findByUserId(userId)
-                .stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(dtos);
+        try {
+            List<UserCareerEnrollmentDto> dtos = enrollmentRepo.findByUserId(userId)
+                    .stream()
+                    .map(this::toDto)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(dtos);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al obtener inscripciones del usuario: " + e.getMessage());
+        }
     }
 
     public List<TeacherByCareerzDto> getTeachersByCareer(Long careerId) {
-        List<UserCareerEnrollmentEntity> enrollments = enrollmentRepo.findActiveByCareerId(careerId);
+        try {
+            List<UserCareerEnrollmentEntity> enrollments = enrollmentRepo.findActiveByCareerId(careerId);
 
-        return enrollments.stream()
-                .filter(enrollment -> "TEACHER".equals(enrollment.getUser().getRole().getRoleName()))
-                .map(enrollment -> new TeacherByCareerzDto(
-                        enrollment.getUser().getId(),
-                        enrollment.getUser().getName(),
-                        enrollment.getUser().getPaternalSurname(),
-                        enrollment.getUser().getMaternalSurname(),
-                        enrollment.getUser().getEmail(),
-                        enrollment.getUser().getRole().getRoleName(),
-                        enrollment.getRegistrationNumber(),
-                        enrollment.getCareer().getId(),
-                        enrollment.getCareer().getName()
-                ))
-                .distinct()
-                .collect(Collectors.toList());
+            return enrollments.stream()
+                    .filter(enrollment -> "TEACHER".equals(enrollment.getUser().getRole().getRoleName()))
+                    .map(enrollment -> new TeacherByCareerzDto(
+                            enrollment.getUser().getId(),
+                            enrollment.getUser().getName(),
+                            enrollment.getUser().getPaternalSurname(),
+                            enrollment.getUser().getMaternalSurname(),
+                            enrollment.getUser().getEmail(),
+                            enrollment.getUser().getRole().getRoleName(),
+                            enrollment.getRegistrationNumber(),
+                            enrollment.getCareer().getId(),
+                            enrollment.getCareer().getName()
+                    ))
+                    .distinct()
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al obtener maestros por carrera: " + e.getMessage());
+        }
     }
 
-    @Transactional(readOnly = true)
     public List<UserCareerEnrollmentDto> getStudentsByCareer(Long careerId) {
-        List<UserCareerEnrollmentEntity> enrollments = enrollmentRepo.findActiveByCareerId(careerId);
+        try {
+            List<UserCareerEnrollmentEntity> enrollments = enrollmentRepo.findActiveByCareerId(careerId);
 
-        return enrollments.stream()
-                .filter(enrollment -> "STUDENT".equals(enrollment.getUser().getRole().getRoleName()))
-                .map(this::toDto)
-                .collect(Collectors.toList());
+            return enrollments.stream()
+                    .filter(enrollment -> "STUDENT".equals(enrollment.getUser().getRole().getRoleName()))
+                    .map(this::toDto)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al obtener estudiantes por carrera: " + e.getMessage());
+        }
     }
 
     // Obtener inscripciones por carrera
     public ResponseEntity<List<UserCareerEnrollmentDto>> findByCareerId(Long careerId) {
-        List<UserCareerEnrollmentDto> dtos = enrollmentRepo.findByCareerId(careerId)
-                .stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(dtos);
+        try {
+            List<UserCareerEnrollmentDto> dtos = enrollmentRepo.findByCareerId(careerId)
+                    .stream()
+                    .map(this::toDto)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(dtos);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al obtener inscripciones por carrera: " + e.getMessage());
+        }
     }
 
     // Obtener inscripciones activas por carrera
     public ResponseEntity<List<UserCareerEnrollmentDto>> findActiveByCareer(Long careerId) {
-        List<UserCareerEnrollmentDto> dtos = enrollmentRepo.findByCareerIdAndStatus(
-                        careerId, UserCareerEnrollmentEntity.EnrollmentStatus.ACTIVE)
-                .stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(dtos);
+        try {
+            List<UserCareerEnrollmentDto> dtos = enrollmentRepo.findByCareerIdAndStatus(
+                            careerId, UserCareerEnrollmentEntity.EnrollmentStatus.ACTIVE)
+                    .stream()
+                    .map(this::toDto)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(dtos);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al obtener inscripciones activas: " + e.getMessage());
+        }
     }
 
     // Crear nueva inscripción
     @Transactional
     public ResponseEntity<UserCareerEnrollmentDto> createEnrollment(CreateEnrollmentDto dto) {
-        // Verificar que el usuario existe
-        UserEntity user = userRepo.findById(dto.userId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+        try {
+            // Verificar que el usuario existe
+            UserEntity user = userRepo.findById(dto.userId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
 
-        // Verificar que la carrera existe
-        CareerEntity career = careerRepo.findById(dto.careerId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Carrera no encontrada"));
+            // Verificar que la carrera existe
+            CareerEntity career = careerRepo.findById(dto.careerId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Carrera no encontrada"));
 
-        // Verificar que no existe ya una inscripción entre este usuario y carrera
-        if (enrollmentRepo.existsByUserIdAndCareerId(dto.userId(), dto.careerId())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "El usuario ya está inscrito en esta carrera");
+            // Verificar que no existe ya una inscripción entre este usuario y carrera
+            if (enrollmentRepo.existsByUserIdAndCareerId(dto.userId(), dto.careerId())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "El usuario ya está inscrito en esta carrera");
+            }
+
+            // Usar el plantel del usuario
+            PlantelEntity plantel = user.getPlantel();
+
+            // Verificar que la carrera pertenece al mismo plantel que el usuario
+            if (!Long.valueOf(career.getPlantel().getId()).equals(plantel.getId())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "La carrera no pertenece al plantel del usuario");
+            }
+
+            // Generar o validar matrícula
+            String registrationNumber;
+            if (dto.customRegistrationNumber() != null && !dto.customRegistrationNumber().trim().isEmpty()) {
+                // Usar matrícula personalizada
+                validateCustomRegistrationNumber(dto.customRegistrationNumber(), plantel, null);
+                registrationNumber = dto.customRegistrationNumber().trim();
+            } else {
+                // Generar matrícula automáticamente con NUEVO FORMATO
+                registrationNumber = generateRegistrationNumber(career, plantel);
+            }
+
+            // Crear la inscripción
+            UserCareerEnrollmentEntity enrollment = new UserCareerEnrollmentEntity(user, career, plantel, registrationNumber);
+            UserCareerEnrollmentEntity saved = enrollmentRepo.save(enrollment);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(toDto(saved));
+        } catch (ResponseStatusException e) {
+            throw e; // Re-lanzar excepciones de validación
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al crear inscripción: " + e.getMessage());
         }
-
-        // Usar el plantel del usuario
-        PlantelEntity plantel = user.getPlantel();
-
-        // Verificar que la carrera pertenece al mismo plantel que el usuario
-        if (career.getPlantel().getId() != plantel.getId()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "La carrera no pertenece al plantel del usuario");
-        }
-
-        // Generar o validar matrícula
-        String registrationNumber;
-        if (dto.customRegistrationNumber() != null && !dto.customRegistrationNumber().trim().isEmpty()) {
-            // Usar matrícula personalizada
-            validateCustomRegistrationNumber(dto.customRegistrationNumber(), plantel, null);
-            registrationNumber = dto.customRegistrationNumber().trim();
-        } else {
-            // Generar matrícula automáticamente
-            registrationNumber = generateRegistrationNumber(career, plantel);
-        }
-
-        // Crear la inscripción
-        UserCareerEnrollmentEntity enrollment = new UserCareerEnrollmentEntity(user, career, plantel, registrationNumber);
-        UserCareerEnrollmentEntity saved = enrollmentRepo.save(enrollment);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(toDto(saved));
     }
 
     // Actualizar inscripción
     @Transactional
     public ResponseEntity<UserCareerEnrollmentDto> updateEnrollment(Long enrollmentId, UpdateEnrollmentDto dto) {
-        UserCareerEnrollmentEntity enrollment = enrollmentRepo.findById(enrollmentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inscripción no encontrada"));
+        try {
+            UserCareerEnrollmentEntity enrollment = enrollmentRepo.findById(enrollmentId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inscripción no encontrada"));
 
-        // Actualizar matrícula si se proporciona
-        if (dto.registrationNumber() != null && !dto.registrationNumber().trim().isEmpty()) {
-            validateCustomRegistrationNumber(dto.registrationNumber(), enrollment.getPlantel(), enrollmentId);
-            enrollment.setRegistrationNumber(dto.registrationNumber().trim());
+            // Actualizar matrícula si se proporciona
+            if (dto.registrationNumber() != null && !dto.registrationNumber().trim().isEmpty()) {
+                validateCustomRegistrationNumber(dto.registrationNumber(), enrollment.getPlantel(), enrollmentId);
+                enrollment.setRegistrationNumber(dto.registrationNumber().trim());
+            }
+
+            // Actualizar estado si se proporciona
+            if (dto.status() != null) {
+                enrollment.setStatus(dto.status());
+            }
+
+            UserCareerEnrollmentEntity updated = enrollmentRepo.save(enrollment);
+            return ResponseEntity.ok(toDto(updated));
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al actualizar inscripción: " + e.getMessage());
         }
-
-        // Actualizar estado si se proporciona
-        if (dto.status() != null) {
-            enrollment.setStatus(dto.status());
-        }
-
-        UserCareerEnrollmentEntity updated = enrollmentRepo.save(enrollment);
-        return ResponseEntity.ok(toDto(updated));
     }
 
     @Transactional
     public UserCareerEnrollmentDto updateRegistrationNumber(Long enrollmentId, String newRegistrationNumber) {
-        UserCareerEnrollmentEntity enrollment = enrollmentRepo.findById(enrollmentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inscripción no encontrada"));
+        try {
+            UserCareerEnrollmentEntity enrollment = enrollmentRepo.findById(enrollmentId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inscripción no encontrada"));
 
-        // Validar que la nueva matrícula no esté en uso
-        if (enrollmentRepo.existsByRegistrationNumberAndPlantelId(newRegistrationNumber, enrollment.getPlantel().getId())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Ya existe esta matrícula en el plantel");
+            // Validar que la nueva matrícula no esté en uso
+            if (enrollmentRepo.existsByRegistrationNumberAndPlantelId(newRegistrationNumber, enrollment.getPlantel().getId())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Ya existe esta matrícula en el plantel");
+            }
+
+            enrollment.setRegistrationNumber(newRegistrationNumber);
+            UserCareerEnrollmentEntity saved = enrollmentRepo.save(enrollment);
+
+            return toDto(saved);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al actualizar matrícula: " + e.getMessage());
         }
-
-        enrollment.setRegistrationNumber(newRegistrationNumber);
-        UserCareerEnrollmentEntity saved = enrollmentRepo.save(enrollment);
-
-        return toDto(saved);
     }
 
     // Completar inscripción (marcar como terminada)
     @Transactional
     public ResponseEntity<UserCareerEnrollmentDto> completeEnrollment(Long enrollmentId) {
-        UserCareerEnrollmentEntity enrollment = enrollmentRepo.findById(enrollmentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inscripción no encontrada"));
+        try {
+            UserCareerEnrollmentEntity enrollment = enrollmentRepo.findById(enrollmentId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inscripción no encontrada"));
 
-        enrollment.setStatus(UserCareerEnrollmentEntity.EnrollmentStatus.COMPLETED);
-        enrollment.setCompletedAt(LocalDateTime.now());
+            enrollment.setStatus(UserCareerEnrollmentEntity.EnrollmentStatus.COMPLETED);
+            enrollment.setCompletedAt(LocalDateTime.now());
 
-        UserCareerEnrollmentEntity updated = enrollmentRepo.save(enrollment);
-        return ResponseEntity.ok(toDto(updated));
+            UserCareerEnrollmentEntity updated = enrollmentRepo.save(enrollment);
+            return ResponseEntity.ok(toDto(updated));
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al completar inscripción: " + e.getMessage());
+        }
     }
 
     // Desactivar inscripción
     @Transactional
     public ResponseEntity<UserCareerEnrollmentDto> deactivateEnrollment(Long enrollmentId) {
-        UserCareerEnrollmentEntity enrollment = enrollmentRepo.findById(enrollmentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inscripción no encontrada"));
+        try {
+            UserCareerEnrollmentEntity enrollment = enrollmentRepo.findById(enrollmentId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inscripción no encontrada"));
 
-        enrollment.setStatus(UserCareerEnrollmentEntity.EnrollmentStatus.INACTIVE);
+            enrollment.setStatus(UserCareerEnrollmentEntity.EnrollmentStatus.INACTIVE);
 
-        UserCareerEnrollmentEntity updated = enrollmentRepo.save(enrollment);
-        return ResponseEntity.ok(toDto(updated));
+            UserCareerEnrollmentEntity updated = enrollmentRepo.save(enrollment);
+            return ResponseEntity.ok(toDto(updated));
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al desactivar inscripción: " + e.getMessage());
+        }
     }
 
     // Reactivar inscripción
     @Transactional
     public ResponseEntity<UserCareerEnrollmentDto> reactivateEnrollment(Long enrollmentId) {
-        UserCareerEnrollmentEntity enrollment = enrollmentRepo.findById(enrollmentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inscripción no encontrada"));
+        try {
+            UserCareerEnrollmentEntity enrollment = enrollmentRepo.findById(enrollmentId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inscripción no encontrada"));
 
-        enrollment.setStatus(UserCareerEnrollmentEntity.EnrollmentStatus.ACTIVE);
+            enrollment.setStatus(UserCareerEnrollmentEntity.EnrollmentStatus.ACTIVE);
 
-        UserCareerEnrollmentEntity updated = enrollmentRepo.save(enrollment);
-        return ResponseEntity.ok(toDto(updated));
+            UserCareerEnrollmentEntity updated = enrollmentRepo.save(enrollment);
+            return ResponseEntity.ok(toDto(updated));
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al reactivar inscripción: " + e.getMessage());
+        }
     }
 
-    // Eliminar inscripción (soft delete - solo cambiar a INACTIVE)
+    // Eliminar inscripción
     @Transactional
     public ResponseEntity<Void> deleteEnrollment(Long enrollmentId) {
-        UserCareerEnrollmentEntity enrollment = enrollmentRepo.findById(enrollmentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inscripción no encontrada"));
+        try {
+            UserCareerEnrollmentEntity enrollment = enrollmentRepo.findById(enrollmentId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inscripción no encontrada"));
+            enrollmentRepo.delete(enrollment);
 
-        // En lugar de eliminar físicamente, marcar como INACTIVE
-        enrollment.setStatus(UserCareerEnrollmentEntity.EnrollmentStatus.INACTIVE);
-        enrollmentRepo.save(enrollment);
-
-        return ResponseEntity.noContent().build();
+            return ResponseEntity.noContent().build();
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al eliminar inscripción: " + e.getMessage());
+        }
     }
 
     // Generar nueva matrícula para una carrera específica (endpoint de utilidad)
     public ResponseEntity<String> generateNewRegistrationNumber(Long careerId) {
-        CareerEntity career = careerRepo.findById(careerId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Carrera no encontrada"));
+        try {
+            CareerEntity career = careerRepo.findById(careerId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Carrera no encontrada"));
 
-        String newRegistrationNumber = generateRegistrationNumber(career, career.getPlantel());
-        return ResponseEntity.ok(newRegistrationNumber);
+            String newRegistrationNumber = generateRegistrationNumber(career, career.getPlantel());
+            return ResponseEntity.ok(newRegistrationNumber);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al generar matrícula: " + e.getMessage());
+        }
     }
 }

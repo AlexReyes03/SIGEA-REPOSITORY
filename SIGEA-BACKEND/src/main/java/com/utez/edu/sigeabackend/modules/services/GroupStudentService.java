@@ -105,9 +105,13 @@ public class GroupStudentService {
     }
 
     @Transactional(readOnly = true)
-    public StudentGroupCheckDto checkStudentGroupsInCareer(Long studentId, Long careerId) {
-        long groupCount = studentRepo.countGroupsByStudentAndCareer(studentId, careerId);
-        boolean hasActiveGroups = groupCount > 0;
+    public StudentGroupCheckDto checkStudentGroupsInCareer(Long userId, Long careerId) {
+        long studentGroupCount = studentRepo.countGroupsByStudentAndCareer(userId, careerId);
+
+        long teacherGroupCount = studentRepo.countGroupsByTeacherAndCareer(userId, careerId);
+
+        long totalGroupCount = studentGroupCount + teacherGroupCount;
+        boolean hasActiveGroups = totalGroupCount > 0;
 
         String careerName = "N/A";
         if (careerId != null) {
@@ -115,10 +119,10 @@ public class GroupStudentService {
         }
 
         return new StudentGroupCheckDto(
-                studentId,
+                userId,
                 careerId,
                 hasActiveGroups,
-                groupCount,
+                totalGroupCount,
                 careerName
         );
     }

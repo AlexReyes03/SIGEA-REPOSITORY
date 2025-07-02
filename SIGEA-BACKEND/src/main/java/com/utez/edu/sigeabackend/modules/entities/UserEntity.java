@@ -43,7 +43,7 @@ public class UserEntity {
     @Column(name = "paternal_surname", length = 80, nullable = false)
     private String paternalSurname;
 
-    @Column(name = "maternal_surname", length = 80, nullable = false)
+    @Column(name = "maternal_surname", length = 80)
     private String maternalSurname;
 
     @Column(length = 120, nullable = false)
