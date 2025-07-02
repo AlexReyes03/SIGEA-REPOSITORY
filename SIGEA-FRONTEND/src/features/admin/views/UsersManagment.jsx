@@ -188,35 +188,45 @@ export default function UsersManagement() {
     }));
   };
 
-  const processedUsers = useMemo(() => {
-    if (!Array.isArray(users)) return [];
+const processedUsers = useMemo(() => {
+  if (!Array.isArray(users)) return [];
 
-    return users
-      .filter((userItem) => userItem.id !== user.id)
-      .map((userItem) => {
-        const roleLabel = getRoleLabel(userItem.roleName, userItem.roleId);
-        const statusLabel = getStatusConfig(userItem.status).label;
-        const fullName = `${userItem.name || ''} ${userItem.paternalSurname || ''} ${userItem.maternalSurname || ''}`.trim();
+  return users
+    .filter((userItem) => userItem.id !== user.id)
+    .map((userItem) => {
+      const roleLabel = getRoleLabel(userItem.roleName, userItem.roleId);
+      const statusLabel = getStatusConfig(userItem.status).label;
+      const fullName = `${userItem.name || ''} ${userItem.paternalSurname || ''} ${userItem.maternalSurname || ''}`.trim();
 
-        let displayRegistration = '';
-        if (userItem.primaryRegistrationNumber) {
-          displayRegistration = userItem.primaryRegistrationNumber;
-          if (userItem.additionalEnrollmentsCount > 0) {
-            displayRegistration += ` +${userItem.additionalEnrollmentsCount}`;
-          }
+      let displayRegistration = '';
+      if (userItem.primaryRegistrationNumber) {
+        displayRegistration = userItem.primaryRegistrationNumber;
+        if (userItem.additionalEnrollmentsCount > 0) {
+          displayRegistration += ` +${userItem.additionalEnrollmentsCount}`;
         }
+      }
 
-        return {
-          ...userItem,
-          fullName,
-          roleLabel,
-          statusLabel,
-          displayRegistration,
-          searchableRole: `${userItem.roleName || ''} ${roleLabel}`.toLowerCase(),
-          searchableStatus: `${userItem.status || ''} ${statusLabel}`.toLowerCase(),
-        };
-      });
-  }, [users, getRoleLabel, user.id]);
+      const displayCreatedAt = userItem.createdAt
+        ? new Date(userItem.createdAt).toLocaleDateString('es-MX', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+          })
+        : '';
+
+      return {
+        ...userItem,
+        fullName,
+        roleLabel,
+        statusLabel,
+        displayRegistration,
+        searchableRole: `${userItem.roleName || ''} ${roleLabel}`.toLowerCase(),
+        searchableStatus: `${userItem.status || ''} ${statusLabel}`.toLowerCase(),
+        displayCreatedAt,
+      };
+    });
+}, [users, getRoleLabel, user.id]);
+
 
   const generateMatriculaForCareer = async (careerId) => {
     try {
@@ -716,7 +726,7 @@ export default function UsersManagement() {
   const openModal = useCallback(
     async (userData = null) => {
       if (userData) {
-        setEditingUser(userData);
+        setEditingUser(userData); 
         setFormData({
           id: userData.id,
           name: userData.name || '',
@@ -962,7 +972,7 @@ export default function UsersManagement() {
         </div>
         <div className="d-flex align-items-center gap-2">
           <InputText placeholder="Buscar ..." value={globalFilter} onChange={(e) => setGlobalFilter(e.target.value)} disabled={loading} className="me-2" style={{ minWidth: '250px' }} />
-          <Button icon={refreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} className="cetec-btn-secondary" onClick={refreshCurrentView} disabled={loading || refreshing || !selectedTipoUsuario} tooltip="Actualizar datos" tooltipOptions={{ position: 'top' }} />
+          <Button icon={refreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} severity="primary" onClick={refreshCurrentView} disabled={loading || refreshing || !selectedTipoUsuario} tooltip="Actualizar datos" tooltipOptions={{ position: 'top' }} />
           <Button icon="pi pi-upload" outlined={loading || !processedUsers.length} severity="help" onClick={() => dt.current?.exportCSV()} disabled={loading || !processedUsers.length}>
             <span className="d-none d-sm-inline ms-2">Exportar</span>
           </Button>
@@ -992,7 +1002,7 @@ export default function UsersManagement() {
 
       return (
         <>
-          <Button icon="pi pi-pencil" rounded outlined className="me-2" disabled={loading} tooltip="Editar usuario" tooltipOptions={{ position: 'top' }} onClick={() => openModal(row)} />
+          <Button icon="pi pi-pencil" rounded outlined className="me-2" severity="info" disabled={loading} tooltip="Editar usuario" tooltipOptions={{ position: 'top' }} onClick={() => openModal(row)} />
           <Button icon={toggleIcon} rounded outlined severity={toggleSeverity} disabled={loading} tooltip={toggleTooltip} tooltipOptions={{ position: 'top' }} onClick={() => handleToggleStatus(row.id, row)} />
         </>
       );
@@ -1126,7 +1136,7 @@ export default function UsersManagement() {
             <div className="d-flex align-items-center gap-2">
               {selected.length > 0 && (
                 <Button icon="pi pi-toggle-off" severity="warning" className="me-2" onClick={() => handleToggleStatus(selected.map((u) => u.id))} disabled={loading}>
-                  <span className="d-none d-sm-inline ms-1">Toggle Estado ({selected.length})</span>
+                  <span className="d-none d-sm-inline ms-1">Deshabilitar ({selected.length})</span>
                 </Button>
               )}
               <Button icon="pi pi-user-plus" className="cetec-btn-blue" onClick={() => openModal()} ref={openModalBtnRef} disabled={loading}>
@@ -1154,7 +1164,7 @@ export default function UsersManagement() {
             rowsPerPageOptions={[5, 10, 25, 50]}
             filterDisplay="menu"
             globalFilter={globalFilter}
-            globalFilterFields={['name', 'paternalSurname', 'maternalSurname', 'fullName', 'email', 'displayRegistration', 'plantelName', 'roleName', 'roleLabel', 'searchableRole', 'statusLabel', 'searchableStatus']}
+            globalFilterFields={['name', 'paternalSurname', 'maternalSurname', 'fullName', 'email', 'displayRegistration', 'plantelName', 'roleName', 'roleLabel', 'searchableRole', 'statusLabel', 'createdAt','searchableStatus', 'displayCreatedAt']}
             header={header}
             className="text-nowrap"
             emptyMessage={
