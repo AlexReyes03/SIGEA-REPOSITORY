@@ -1,13 +1,11 @@
 package com.utez.edu.sigeabackend.modules.services;
 
 import com.utez.edu.sigeabackend.modules.entities.CareerEntity;
-import com.utez.edu.sigeabackend.modules.entities.PlantelEntity;
 import com.utez.edu.sigeabackend.modules.entities.UserCareerEnrollmentEntity;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.CareerDto;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.CreateCareerDto;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.UpdateCareerDto;
 import com.utez.edu.sigeabackend.modules.repositories.CareerRepository;
-import com.utez.edu.sigeabackend.modules.repositories.PlantelRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;

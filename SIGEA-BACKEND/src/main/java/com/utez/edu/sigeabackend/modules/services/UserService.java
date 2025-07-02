@@ -8,7 +8,6 @@ import com.utez.edu.sigeabackend.modules.entities.dto.UserResponseDto;
 import com.utez.edu.sigeabackend.modules.media.MediaEntity;
 import com.utez.edu.sigeabackend.modules.media.MediaService;
 import com.utez.edu.sigeabackend.modules.media.dto.MediaUploadResponseDto;
-import com.utez.edu.sigeabackend.modules.repositories.PlantelRepository;
 import com.utez.edu.sigeabackend.modules.repositories.RoleRepository;
 import com.utez.edu.sigeabackend.modules.repositories.UserRepository;
 import org.springframework.http.HttpStatus;
