@@ -32,7 +32,7 @@ export default function Careers() {
   const [careers, setCareers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingCareer, setEditing] = useState(null);
-  
+
   // NUEVOS ESTADOS PARA LOADING
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -62,7 +62,7 @@ export default function Careers() {
   const generatePreview = (differentiator) => {
     if (!differentiator) return '';
     const year = new Date().getFullYear().toString().slice(-2);
-    return `${differentiator.toUpperCase()}${year}0001`;
+    return `${year}${differentiator.toUpperCase()}0001`;
   };
 
   const handleDifferentiatorChange = (value) => {
@@ -89,7 +89,7 @@ export default function Careers() {
   // CREAR CARRERA - CON LOADING STATE
   const handleCreate = async (e) => {
     e.preventDefault();
-    
+
     // Prevenir doble envío
     if (isCreating) return;
 
@@ -114,20 +114,19 @@ export default function Careers() {
       setIsCreating(true);
       await createCareer(payload);
       showSuccess('Éxito', 'Carrera creada correctamente');
-      
+
       // Cerrar modal correctamente
       const modalInstance = Modal.getInstance(createModalRef.current);
       if (modalInstance) {
         modalInstance.hide();
       }
-      
+
       // Limpiar formulario
       setFormData({ name: '', differentiator: '' });
       setDifferentiatorPreview('');
-      
+
       // Recargar datos
       await loadCareers();
-      
     } catch (err) {
       console.error('Error creating career:', err);
       const message = err.message || 'Error al crear la carrera';
@@ -140,7 +139,7 @@ export default function Careers() {
   // ACTUALIZAR CARRERA - CON LOADING STATE
   const handleUpdate = async (e) => {
     e.preventDefault();
-    
+
     // Prevenir doble envío
     if (isUpdating) return;
 
@@ -165,16 +164,15 @@ export default function Careers() {
       setIsUpdating(true);
       await updateCareer(editingCareer.id, payload);
       showSuccess('Éxito', 'Carrera actualizada correctamente');
-      
+
       // Cerrar modal correctamente
       const modalInstance = Modal.getInstance(editModalRef.current);
       if (modalInstance) {
         modalInstance.hide();
       }
-      
+
       // Recargar datos
       await loadCareers();
-      
     } catch (err) {
       console.error('Error updating career:', err);
       const message = err.message || 'Error al actualizar la carrera';
@@ -259,14 +257,7 @@ export default function Careers() {
       <div className="bg-white rounded-top p-2 d-flex align-items-center">
         <h3 className="text-blue-500 fw-semibold mx-3 my-1">Carreras</h3>
         <div className="ms-auto d-flex align-items-center gap-2">
-          <Button 
-            ref={createButtonRef} 
-            icon="pi pi-plus" 
-            severity="primary" 
-            rounded 
-            onClick={() => openModal(createModalRef)}
-            disabled={isCreating || isUpdating || isDeleting}
-          >
+          <Button ref={createButtonRef} icon="pi pi-plus" severity="primary" rounded onClick={() => openModal(createModalRef)} disabled={isCreating || isUpdating || isDeleting}>
             <span className="d-none d-sm-inline ms-2">Crear carrera</span>
           </Button>
         </div>
@@ -382,43 +373,21 @@ export default function Careers() {
           <div className="modal-content">
             <div className="modal-header">
               <h5 className="modal-title">Crear carrera</h5>
-              <button 
-                type="button" 
-                className="btn-close" 
-                data-bs-dismiss="modal"
-                disabled={isCreating}
-              />
+              <button type="button" className="btn-close" data-bs-dismiss="modal" disabled={isCreating} />
             </div>
 
             <form onSubmit={handleCreate}>
               <div className="modal-body">
                 <div className="mb-3">
                   <label className="form-label">Nombre *</label>
-                  <input 
-                    className="form-control" 
-                    value={formData.name} 
-                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} 
-                    autoComplete="off" 
-                    spellCheck="false" 
-                    placeholder="Carrera Técnica en..." 
-                    required 
-                    disabled={isCreating}
-                  />
+                  <input className="form-control" value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} autoComplete="off" spellCheck="false" placeholder="Carrera Técnica en..." required disabled={isCreating} />
                 </div>
 
                 <div className="mb-3">
                   <label className="form-label">
                     Diferenciador * <small className="text-muted">(2-5 caracteres, solo mayúsculas y números)</small>
                   </label>
-                  <InputText 
-                    className="form-control" 
-                    value={formData.differentiator} 
-                    onChange={(e) => handleDifferentiatorChange(e.target.value)} 
-                    placeholder="CO, IN, MEC..." 
-                    maxLength={5} 
-                    required 
-                    disabled={isCreating}
-                  />
+                  <InputText className="form-control" value={formData.differentiator} onChange={(e) => handleDifferentiatorChange(e.target.value)} placeholder="CO, IN, MEC..." maxLength={5} required disabled={isCreating} />
                   {differentiatorPreview && (
                     <small className="text-muted">
                       Previsualizar matrícula: <strong>{differentiatorPreview}</strong>
@@ -427,22 +396,10 @@ export default function Careers() {
                 </div>
               </div>
               <div className="modal-footer">
-                <Button 
-                  type="button" 
-                  icon="pi pi-times" 
-                  severity="secondary" 
-                  outlined 
-                  data-bs-dismiss="modal"
-                  disabled={isCreating}
-                >
+                <Button type="button" icon="pi pi-times" severity="secondary" outlined data-bs-dismiss="modal" disabled={isCreating}>
                   <span className="ms-1">Cancelar</span>
                 </Button>
-                <Button 
-                  type="submit" 
-                  icon={isCreating ? "pi pi-spin pi-spinner" : "pi pi-check"} 
-                  severity="primary"
-                  disabled={isCreating}
-                >
+                <Button type="submit" icon={isCreating ? 'pi pi-spin pi-spinner' : 'pi pi-check'} severity="primary" disabled={isCreating}>
                   <span className="ms-1">{isCreating ? 'Creando...' : 'Guardar'}</span>
                 </Button>
               </div>
@@ -457,42 +414,20 @@ export default function Careers() {
           <div className="modal-content">
             <div className="modal-header">
               <h5 className="modal-title">Modificar carrera</h5>
-              <button 
-                type="button" 
-                className="btn-close" 
-                data-bs-dismiss="modal"
-                disabled={isUpdating}
-              />
+              <button type="button" className="btn-close" data-bs-dismiss="modal" disabled={isUpdating} />
             </div>
             <form onSubmit={handleUpdate}>
               <div className="modal-body">
                 <div className="mb-3">
                   <label className="form-label">Nombre *</label>
-                  <input 
-                    className="form-control" 
-                    value={formData.name} 
-                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} 
-                    placeholder="Carrera Técnica en..." 
-                    autoComplete="off" 
-                    spellCheck="false" 
-                    required 
-                    disabled={isUpdating}
-                  />
+                  <input className="form-control" value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} placeholder="Carrera Técnica en..." autoComplete="off" spellCheck="false" required disabled={isUpdating} />
                 </div>
 
                 <div className="mb-3">
                   <label className="form-label">
                     Diferenciador * <small className="text-muted">(2-5 caracteres, solo mayúsculas y números)</small>
                   </label>
-                  <InputText 
-                    className="form-control" 
-                    value={formData.differentiator} 
-                    onChange={(e) => handleDifferentiatorChange(e.target.value)} 
-                    placeholder="CO, IN, MEC..." 
-                    maxLength={5} 
-                    required 
-                    disabled={isUpdating}
-                  />
+                  <InputText className="form-control" value={formData.differentiator} onChange={(e) => handleDifferentiatorChange(e.target.value)} placeholder="CO, IN, MEC..." maxLength={5} required disabled={isUpdating} />
                   {differentiatorPreview && (
                     <small className="text-muted">
                       Previsualizar matrícula: <strong>{differentiatorPreview}</strong>
@@ -527,22 +462,10 @@ export default function Careers() {
                 )}
               </div>
               <div className="modal-footer">
-                <Button 
-                  type="button" 
-                  icon="pi pi-times" 
-                  severity="secondary" 
-                  outlined 
-                  data-bs-dismiss="modal"
-                  disabled={isUpdating}
-                >
+                <Button type="button" icon="pi pi-times" severity="secondary" outlined data-bs-dismiss="modal" disabled={isUpdating}>
                   <span className="ms-1">Cancelar</span>
                 </Button>
-                <Button 
-                  type="submit" 
-                  icon={isUpdating ? "pi pi-spin pi-spinner" : "pi pi-check"} 
-                  severity="primary"
-                  disabled={isUpdating}
-                >
+                <Button type="submit" icon={isUpdating ? 'pi pi-spin pi-spinner' : 'pi pi-check'} severity="primary" disabled={isUpdating}>
                   <span className="ms-1">{isUpdating ? 'Modificando...' : 'Modificar'}</span>
                 </Button>
               </div>

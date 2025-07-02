@@ -40,6 +40,27 @@ export const deleteUser = async (id) => {
   });
 };
 
+export const deactivateUser = async (id) => {
+  return await request(`/api/users/${id}/deactivate`, {
+    method: 'PATCH',
+  });
+};
+
+export const reactivateUser = async (id) => {
+  return await request(`/api/users/${id}/reactivate`, {
+    method: 'PATCH',
+  });
+};
+
+// Método auxiliar para toggle del estado de usuario
+export const toggleUserStatus = async (id, currentStatus) => {
+  if (currentStatus === 'ACTIVE') {
+    return await deactivateUser(id);
+  } else {
+    return await reactivateUser(id);
+  }
+};
+
 export const getActiveUsers = async () => {
   const { activeUsers } = await request('/auth/active-users');
   return activeUsers;

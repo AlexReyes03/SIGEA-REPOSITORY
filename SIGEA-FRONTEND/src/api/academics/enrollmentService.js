@@ -77,8 +77,8 @@ export const getTeachersByCareer = async (careerId) => {
 };
 
 // Verificar grupos de estudiante en carrera
-export const checkStudentGroupsInCareer = async (studentId, careerId) => {
-  const res = await request(`/api/group-students/check-student-groups/${studentId}/career/${careerId}`);
+export const checkStudentGroupsInCareer = async (userId, careerId) => {
+  const res = await request(`/api/group-students/check-user-groups/${userId}/career/${careerId}`);
   return res;
 };
 
@@ -104,7 +104,7 @@ export const canRemoveUserFromCareer = async (userId, careerId) => {
     return !groupCheck.hasActiveGroups;
   } catch (error) {
     console.error('Error checking user groups:', error);
-    return false; // Por seguridad, no permitir remover si hay error
+    return false;
   }
 };
 

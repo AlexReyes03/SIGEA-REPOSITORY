@@ -12,14 +12,14 @@ import { ProgressSpinner } from 'primereact/progressspinner';
 import { Message } from 'primereact/message';
 import { MdOutlineGroup } from 'react-icons/md';
 import { Toast } from 'primereact/toast';
-import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import * as bootstrap from 'bootstrap';
 
-import { getUserByRole, getUserByRoleAndPlantel, createUser, deleteUser, updateUser } from '../../../api/userService';
+import { getUserByRole, getUserByRoleAndPlantel, createUser, updateUser, toggleUserStatus } from '../../../api/userService';
 import { getAllRoles } from '../../../api/roleService';
 import { getCareerByPlantelId } from '../../../api/academics/careerService';
 import { createEnrollment, generateRegistrationNumber, getEnrollmentsByUser, updateEnrollmentRegistration, deleteEnrollment, canRemoveUserFromCareer } from '../../../api/academics/enrollmentService';
 import { useToast } from '../../../components/providers/ToastProvider';
+import { useConfirmDialog } from '../../../components/providers/ConfirmDialogProvider';
 import { useAuth } from '../../../contexts/AuthContext';
 import useBootstrapModalFocus from '../../../utils/hooks/useBootstrapModalFocus';
 
@@ -55,9 +55,49 @@ const INITIAL_USER_STATE = {
   status: 'ACTIVE',
 };
 
-// Helper functions
 const getStatusConfig = (status) => STATUS_CONFIG[status] || { name: status, label: status, severity: 'info' };
 const getRoleFriendlyName = (roleName) => ROLE_LABELS[roleName] || roleName;
+
+const extractMatriculaParts = (registrationNumber) => {
+  if (!registrationNumber) return { year: '', differentiator: '', last4: '' };
+
+  const match = registrationNumber.match(/^(\d{2})([A-Z0-9]+)(\d{4})$/);
+  if (match) {
+    return {
+      year: match[1],
+      differentiator: match[2],
+      last4: match[3],
+    };
+  }
+
+  if (registrationNumber.length >= 4) {
+    return {
+      year: new Date().getFullYear().toString().slice(-2),
+      differentiator: '',
+      last4: registrationNumber.slice(-4),
+    };
+  }
+
+  return { year: new Date().getFullYear().toString().slice(-2), differentiator: '', last4: '0001' };
+};
+
+const buildFullRegistrationNumber = (year, differentiator, last4) => {
+  return `${year}${differentiator}${last4.padStart(4, '0')}`;
+};
+
+const extractLast4Digits = (registrationNumber) => {
+  if (!registrationNumber) return '';
+  const match = registrationNumber.match(/(\d{4})$/);
+  return match ? match[1] : '';
+};
+
+const buildFullRegistrationNumberForEdit = (enrollment, newLast4) => {
+  const { registrationNumber } = enrollment;
+  if (!registrationNumber) return '';
+
+  const prefix = registrationNumber.replace(/\d{4}$/, '');
+  return `${prefix}${newLast4.padStart(4, '0')}`;
+};
 
 export default function UsersManagement() {
   const dt = useRef(null);
@@ -67,10 +107,12 @@ export default function UsersManagement() {
   const openModalBtnRef = useRef(null);
   const { user } = useAuth();
   const { showError, showSuccess, showWarn } = useToast();
+  const { confirmAction } = useConfirmDialog();
 
   const [users, setUsers] = useState([]);
   const [cachedUsersByRole, setCachedUsersByRole] = useState({});
   const [userEnrollments, setUserEnrollments] = useState([]);
+  const [originalUserEnrollments, setOriginalUserEnrollments] = useState([]);
   const [enrollmentInputs, setEnrollmentInputs] = useState({});
   const [roles, setRoles] = useState([]);
   const [careers, setCareers] = useState([]);
@@ -84,6 +126,7 @@ export default function UsersManagement() {
   const [editingUser, setEditingUser] = useState(null);
   const [selectedCareers, setSelectedCareers] = useState([]);
   const [careerChips, setCareerChips] = useState([]);
+  const [editCareerChips, setEditCareerChips] = useState([]);
   const [registerMore, setRegisterMore] = useState(false);
   const [generatingMatriculas, setGeneratingMatriculas] = useState(false);
 
@@ -119,7 +162,6 @@ export default function UsersManagement() {
     return ROLE_NEEDS_CAREERS.includes(getCurrentRole.roleName);
   }, [getCurrentRole]);
 
-  // Opciones de carrera con formato "Nombre - Identificador"
   const careerOptions = useMemo(
     () =>
       careers.map((career) => ({
@@ -139,25 +181,11 @@ export default function UsersManagement() {
     [rolesMap]
   );
 
-  const extractLast4Digits = (registrationNumber) => {
-    if (!registrationNumber) return '';
-    const match = registrationNumber.match(/(\d{4})$/);
-    return match ? match[1] : '';
-  };
-
   const updateLast4Digits = (enrollmentId, newLast4) => {
     setEnrollmentInputs((prev) => ({
       ...prev,
       [enrollmentId]: newLast4,
     }));
-  };
-
-  const buildFullRegistrationNumber = (enrollment, newLast4) => {
-    const { registrationNumber } = enrollment;
-    if (!registrationNumber) return '';
-
-    const prefix = registrationNumber.replace(/\d{4}$/, '');
-    return `${prefix}${newLast4.padStart(4, '0')}`;
   };
 
   const processedUsers = useMemo(() => {
@@ -212,21 +240,28 @@ export default function UsersManagement() {
         if (career) {
           try {
             const matricula = await generateMatriculaForCareer(careerId);
+            const parts = extractMatriculaParts(matricula);
+
             newChips.push({
               careerId: careerId,
               careerName: career.name,
               differentiator: career.differentiator,
               matricula: matricula,
+              year: parts.year,
+              last4: parts.last4,
               editable: false,
             });
           } catch (error) {
-            const year = new Date().getFullYear().toString().slice(-2);
-            const defaultMatricula = `${career.differentiator}${year}0001`;
+            const currentYear = new Date().getFullYear().toString().slice(-2);
+            const defaultMatricula = buildFullRegistrationNumber(currentYear, career.differentiator, '0001');
+
             newChips.push({
               careerId: careerId,
               careerName: career.name,
               differentiator: career.differentiator,
               matricula: defaultMatricula,
+              year: currentYear,
+              last4: '0001',
               editable: true,
               hasError: true,
             });
@@ -242,13 +277,21 @@ export default function UsersManagement() {
     }
   };
 
-  const updateChipLast4Digits = (careerId, newLast4) => {
+  const updateChipMatricula = (careerId, newYear, newLast4) => {
     setCareerChips((prev) =>
       prev.map((chip) => {
         if (chip.careerId === careerId) {
-          const prefix = chip.matricula.replace(/\d{4}$/, '');
-          const newMatricula = `${prefix}${newLast4.padStart(4, '0')}`;
-          return { ...chip, matricula: newMatricula, hasError: false };
+          const year = newYear !== undefined ? newYear : chip.year;
+          const last4 = newLast4 !== undefined ? newLast4 : chip.last4;
+          const newMatricula = buildFullRegistrationNumber(year, chip.differentiator, last4);
+
+          return {
+            ...chip,
+            matricula: newMatricula,
+            year: year,
+            last4: last4,
+            hasError: false,
+          };
         }
         return chip;
       })
@@ -331,7 +374,16 @@ export default function UsersManagement() {
     if (selectedTipoUsuario && user?.campus?.id) {
       const cacheKey = `${selectedTipoUsuario}_${user.campus.id}`;
 
-      // Limpiar cache para este rol específico y recargar
+      if (editingUser) {
+        setCachedUsersByRole((prev) => {
+          const newCache = { ...prev };
+          if (newCache[cacheKey]) {
+            newCache[cacheKey] = newCache[cacheKey].map((cachedUser) => (cachedUser.id === editingUser.id ? { ...cachedUser, needsRefresh: true } : cachedUser));
+          }
+          return newCache;
+        });
+      }
+
       setCachedUsersByRole((prev) => {
         const newCache = { ...prev };
         delete newCache[cacheKey];
@@ -340,7 +392,7 @@ export default function UsersManagement() {
 
       loadUsersByRoleAndPlantel(selectedTipoUsuario, user.campus.id);
     }
-  }, [selectedTipoUsuario, user?.campus?.id, loadUsersByRoleAndPlantel]);
+  }, [selectedTipoUsuario, user?.campus?.id, loadUsersByRoleAndPlantel, editingUser]);
 
   const loadCareers = useCallback(async () => {
     try {
@@ -384,6 +436,30 @@ export default function UsersManagement() {
     }
   }, [selectedTipoUsuario, isInitialLoad, user?.campus?.id, loadUsersByRoleAndPlantel]);
 
+  // función para manejar confirmación de eliminación de carreras
+  const handleCareerRemovalWithConfirmation = useCallback(
+    (removedCareerIds, onConfirm) => {
+      if (removedCareerIds.length === 0) {
+        onConfirm();
+        return;
+      }
+
+      const removedCareers = careers.filter((career) => removedCareerIds.includes(career.id));
+      const careerNames = removedCareers.map((c) => c.name).join(', ');
+
+      confirmAction({
+        message: `¿Estás seguro de que deseas eliminar las siguientes carreras del usuario?\n\n${careerNames}\n\nEsta acción no se puede deshacer.`,
+        header: 'Confirmar eliminación de carreras',
+        icon: 'pi pi-exclamation-triangle',
+        acceptClassName: 'p-button-danger',
+        acceptLabel: 'Sí, eliminar',
+        rejectLabel: 'Cancelar',
+        onAccept: onConfirm,
+      });
+    },
+    [careers, confirmAction]
+  );
+
   const handleFormSubmit = useCallback(
     async (e, isEdit = false) => {
       e.preventDefault();
@@ -415,80 +491,22 @@ export default function UsersManagement() {
 
         let savedUser;
         if (isEdit) {
-          savedUser = await updateUser(formData.id, userData);
+          // Detectar carreras que se van a eliminar antes de proceder
+          if (currentRoleNeedsCareers && originalUserEnrollments.length > 0) {
+            const originalCareerIds = originalUserEnrollments.map((e) => e.careerId);
+            const removedCareerIds = originalCareerIds.filter((careerId) => !selectedCareers.includes(careerId));
 
-          if (currentRoleNeedsCareers) {
-            const updatePromises = userEnrollments
-              .filter((enrollment) => selectedCareers.includes(enrollment.careerId))
-              .map(async (enrollment) => {
-                const newLast4 = enrollmentInputs[enrollment.id];
-                if (newLast4 && newLast4 !== extractLast4Digits(enrollment.registrationNumber)) {
-                  const newFullRegistration = buildFullRegistrationNumber(enrollment, newLast4);
-                  return updateEnrollmentRegistration(enrollment.id, newFullRegistration);
-                }
-                return null;
-              })
-              .filter((promise) => promise !== null);
-
-            await Promise.all(updatePromises);
-
-            // Agregar nuevas carreras
-            const existingCareerIds = userEnrollments.map((e) => e.careerId);
-            const newCareerIds = selectedCareers.filter((careerId) => !existingCareerIds.includes(careerId));
-
-            for (const careerId of newCareerIds) {
-              try {
-                const matricula = await generateMatriculaForCareer(careerId);
-                await createEnrollment({
-                  userId: savedUser.id,
-                  careerId: careerId,
-                  customRegistrationNumber: matricula,
-                });
-              } catch (enrollmentError) {
-                console.error('Error creating new enrollment:', enrollmentError);
-                const career = careers.find((c) => c.id === careerId);
-                showWarn('Advertencia', `Error al inscribir en ${career?.name || 'carrera'}`);
-              }
-            }
-
-            // Remover carreras (con validación de grupos)
-            const removedCareerIds = existingCareerIds.filter((careerId) => !selectedCareers.includes(careerId));
-
-            for (const careerId of removedCareerIds) {
-              try {
-                const canRemove = await canRemoveUserFromCareer(savedUser.id, careerId);
-                if (!canRemove) {
-                  const career = careers.find((c) => c.id === careerId);
-                  showWarn('Advertencia', `No se puede quitar ${career?.name} porque el usuario tiene grupos activos`);
-                  continue;
-                }
-
-                const enrollment = userEnrollments.find((e) => e.careerId === careerId);
-                if (enrollment) {
-                  await deleteEnrollment(enrollment.id);
-                }
-              } catch (error) {
-                console.error('Error removing enrollment:', error);
-                const career = careers.find((c) => c.id === careerId);
-                showWarn('Advertencia', `Error al quitar ${career?.name || 'carrera'}`);
-              }
+            if (removedCareerIds.length > 0) {
+              handleCareerRemovalWithConfirmation(removedCareerIds, async () => {
+                await proceedWithUserUpdate();
+              });
+              return;
             }
           }
-
-          showSuccess('Éxito', `Usuario ${formData.name} actualizado correctamente`);
+          await proceedWithUserUpdate();
         } else {
           if (!formData.plantelId) {
             showWarn('Campos incompletos', 'Por favor llena todos los campos obligatorios.');
-            return;
-          }
-
-          if (currentRoleNeedsCareers && careerChips.length === 0) {
-            showWarn('Carreras requeridas', `Los ${getRoleFriendlyName(getCurrentRole.roleName)}s deben tener al menos una carrera asignada.`);
-            return;
-          }
-
-          if (careerChips.some((chip) => !chip.matricula || chip.matricula.trim() === '')) {
-            showWarn('Matrículas incompletas', 'Todas las carreras deben tener una matrícula válida.');
             return;
           }
 
@@ -510,27 +528,93 @@ export default function UsersManagement() {
           }
 
           showSuccess('Éxito', 'Usuario registrado correctamente');
+
+          if (registerMore) {
+            setFormData({ ...INITIAL_USER_STATE, plantelId: user?.campus?.id || '', roleId: finalRoleId });
+            setSelectedCareers([]);
+            setCareerChips([]);
+            setEditCareerChips([]);
+            setUserEnrollments([]);
+            setOriginalUserEnrollments([]);
+            setEnrollmentInputs({});
+          } else {
+            bootstrap.Modal.getInstance(createModalRef.current)?.hide();
+            resetAllStates();
+          }
+
+          reloadCurrentView();
         }
 
-        if (!isEdit && registerMore) {
-          setFormData({ ...INITIAL_USER_STATE, plantelId: user?.campus?.id || '', roleId: finalRoleId });
-          setSelectedCareers([]);
-          setCareerChips([]);
-          setUserEnrollments([]);
-          setEnrollmentInputs({});
-        } else {
-          const modalRef = isEdit ? editModalRef : createModalRef;
-          bootstrap.Modal.getInstance(modalRef.current)?.hide();
-          setFormData({ ...INITIAL_USER_STATE, plantelId: user?.campus?.id || '' });
-          setSelectedCareers([]);
-          setCareerChips([]);
-          setRegisterMore(false);
-          setEditingUser(null);
-          setUserEnrollments([]);
-          setEnrollmentInputs({});
-        }
+        async function proceedWithUserUpdate() {
+          try {
+            savedUser = await updateUser(formData.id, userData);
 
-        reloadCurrentView();
+            if (currentRoleNeedsCareers) {
+              const updatePromises = userEnrollments
+                .filter((enrollment) => selectedCareers.includes(enrollment.careerId))
+                .map(async (enrollment) => {
+                  const fullMatricula = enrollmentInputs[`${enrollment.id}_full`];
+                  if (fullMatricula && fullMatricula !== enrollment.registrationNumber) {
+                    return updateEnrollmentRegistration(enrollment.id, fullMatricula);
+                  }
+                  const newLast4 = enrollmentInputs[enrollment.id];
+                  if (newLast4 && newLast4 !== extractLast4Digits(enrollment.registrationNumber)) {
+                    const newFullRegistration = buildFullRegistrationNumberForEdit(enrollment, newLast4);
+                    return updateEnrollmentRegistration(enrollment.id, newFullRegistration);
+                  }
+                  return null;
+                })
+                .filter((promise) => promise !== null);
+
+              await Promise.all(updatePromises);
+
+              for (const chip of editCareerChips) {
+                try {
+                  await createEnrollment({
+                    userId: savedUser.id,
+                    careerId: chip.careerId,
+                    customRegistrationNumber: chip.matricula,
+                  });
+                } catch (enrollmentError) {
+                  console.error('Error creating new enrollment:', enrollmentError);
+                  showWarn('Advertencia', `Error al inscribir en ${chip.careerName}`);
+                }
+              }
+
+              // Remover carreras (con validación de grupos)
+              const existingCareerIds = originalUserEnrollments.map((e) => e.careerId);
+              const removedCareerIds = existingCareerIds.filter((careerId) => !selectedCareers.includes(careerId));
+
+              for (const careerId of removedCareerIds) {
+                try {
+                  const canRemove = await canRemoveUserFromCareer(savedUser.id, careerId);
+                  if (!canRemove) {
+                    const career = careers.find((c) => c.id === careerId);
+                    showWarn('Advertencia', `No se puede quitar ${career?.name} porque el usuario tiene grupos activos`);
+                    return;
+                  }
+
+                  const enrollment = originalUserEnrollments.find((e) => e.careerId === careerId);
+                  if (enrollment) {
+                    await deleteEnrollment(enrollment.id);
+                  }
+                } catch (error) {
+                  console.error('Error removing enrollment:', error);
+                  const career = careers.find((c) => c.id === careerId);
+                  showWarn('Advertencia', `Error al quitar ${career?.name || 'carrera'}`);
+                }
+              }
+            }
+
+            showSuccess('Éxito', `Usuario ${formData.name} actualizado correctamente`);
+            bootstrap.Modal.getInstance(editModalRef.current)?.hide();
+            resetAllStates();
+            reloadCurrentView();
+          } catch (updateError) {
+            console.error('Error updating user:', updateError);
+            throw updateError;
+          }
+        }
       } catch (err) {
         console.error(`Error ${isEdit ? 'updating' : 'creating'} user:`, err);
         const message = err.response?.data?.message || `No se pudo ${isEdit ? 'actualizar' : 'registrar'} el usuario`;
@@ -539,38 +623,95 @@ export default function UsersManagement() {
         setLoading(false);
       }
     },
-    [formData, selectedTipoUsuario, user?.campus?.id, currentRoleNeedsCareers, careerChips, registerMore, getCurrentRole, userEnrollments, enrollmentInputs, selectedCareers, careers, showWarn, showSuccess, showError, reloadCurrentView]
+    [
+      formData,
+      selectedTipoUsuario,
+      user?.campus?.id,
+      currentRoleNeedsCareers,
+      careerChips,
+      editCareerChips,
+      registerMore,
+      userEnrollments,
+      originalUserEnrollments,
+      enrollmentInputs,
+      selectedCareers,
+      careers,
+      showWarn,
+      showSuccess,
+      showError,
+      reloadCurrentView,
+      handleCareerRemovalWithConfirmation,
+    ]
   );
 
-  const handleDelete = useCallback(
-    async (userIds, userName) => {
+  const handleToggleStatus = useCallback(
+    async (userIds, userData) => {
       const isMultiple = Array.isArray(userIds);
-      const message = isMultiple ? `¿Estás seguro de que deseas eliminar ${userIds.length} usuario(s) seleccionado(s)?` : `¿Estás seguro de que deseas eliminar al usuario ${userName}?`;
 
-      confirmDialog({
-        message,
-        header: isMultiple ? 'Confirmar eliminación múltiple' : 'Confirmar eliminación',
-        icon: 'pi pi-exclamation-triangle',
-        acceptClassName: 'p-button-danger',
-        accept: async () => {
-          try {
-            if (isMultiple) {
-              await Promise.all(userIds.map((id) => deleteUser(id)));
+      if (isMultiple) {
+        const firstUser = processedUsers.find((u) => u.id === userIds[0]);
+        const action = firstUser?.status === 'ACTIVE' ? 'desactivar' : 'activar';
+
+        confirmAction({
+          message: `¿Estás seguro de que deseas ${action} ${userIds.length} usuario(s) seleccionado(s)?`,
+          header: `Confirmar ${action} múltiple`,
+          icon: 'pi pi-exclamation-triangle',
+          acceptClassName: firstUser?.status === 'ACTIVE' ? 'p-button-warning' : 'p-button-success',
+          acceptLabel: action === 'desactivar' ? 'Sí, desactivar' : 'Sí, activar',
+          onAccept: async () => {
+            try {
+              const promises = userIds.map(async (id) => {
+                const targetUser = processedUsers.find((u) => u.id === id);
+                return toggleUserStatus(id, targetUser?.status);
+              });
+
+              await Promise.all(promises);
               setSelected([]);
-              showSuccess('Éxito', `${userIds.length} usuario(s) eliminado(s) correctamente`);
-            } else {
-              await deleteUser(userIds);
-              showSuccess('Éxito', `Usuario ${userName} eliminado correctamente`);
+              showSuccess('Éxito', `${userIds.length} usuario(s) ${action === 'desactivar' ? 'desactivados' : 'activados'} correctamente`);
+              reloadCurrentView();
+            } catch (error) {
+              showError('Error', `Error al ${action} los usuarios`);
             }
-            reloadCurrentView();
-          } catch (error) {
-            showError('Error', 'Error al eliminar el/los usuario(s)');
-          }
-        },
-      });
+          },
+        });
+      } else {
+        const currentStatus = userData.status;
+        const action = currentStatus === 'ACTIVE' ? 'desactivar' : 'activar';
+        const actionPast = currentStatus === 'ACTIVE' ? 'desactivado' : 'activado';
+
+        confirmAction({
+          message: `¿Estás seguro de que deseas ${action} al usuario ${userData.fullName}?`,
+          header: `Confirmar ${action} usuario`,
+          icon: 'pi pi-exclamation-triangle',
+          acceptClassName: currentStatus === 'ACTIVE' ? 'p-button-warning' : 'p-button-success',
+          acceptLabel: action === 'desactivar' ? 'Sí, desactivar' : 'Sí, activar',
+          onAccept: async () => {
+            try {
+              await toggleUserStatus(userIds, currentStatus);
+              showSuccess('Éxito', `Usuario ${userData.fullName} ${actionPast} correctamente`);
+              reloadCurrentView();
+            } catch (error) {
+              showError('Error', `Error al ${action} el usuario`);
+            }
+          },
+        });
+      }
     },
-    [showSuccess, showError, reloadCurrentView]
+    [processedUsers, confirmAction, showSuccess, showError, reloadCurrentView]
   );
+
+  // Función para resetear todos los estados
+  const resetAllStates = () => {
+    setFormData({ ...INITIAL_USER_STATE, plantelId: user?.campus?.id || '' });
+    setSelectedCareers([]);
+    setCareerChips([]);
+    setEditCareerChips([]);
+    setRegisterMore(false);
+    setEditingUser(null);
+    setUserEnrollments([]);
+    setOriginalUserEnrollments([]);
+    setEnrollmentInputs({});
+  };
 
   const openModal = useCallback(
     async (userData = null) => {
@@ -589,20 +730,33 @@ export default function UsersManagement() {
 
         try {
           const enrollments = await getEnrollmentsByUser(userData.id);
-          setUserEnrollments(enrollments);
+          const activeEnrollments = enrollments.filter((e) => e.status === 'ACTIVE');
+
+          console.log('Total enrollments:', enrollments.length);
+          console.log('Active enrollments:', activeEnrollments.length);
+          console.log(
+            'Enrollments:',
+            enrollments.map((e) => ({ id: e.id, careerName: e.careerName, status: e.status }))
+          );
+
+          setUserEnrollments(activeEnrollments);
+          setOriginalUserEnrollments([...activeEnrollments]);
 
           const initialInputs = {};
-          enrollments.forEach((enrollment) => {
+          activeEnrollments.forEach((enrollment) => {
             initialInputs[enrollment.id] = extractLast4Digits(enrollment.registrationNumber);
           });
           setEnrollmentInputs(initialInputs);
 
-          setSelectedCareers(enrollments.map((e) => e.careerId));
+          setSelectedCareers(activeEnrollments.map((e) => e.careerId));
+          setEditCareerChips([]);
         } catch (error) {
           console.error('Error loading user enrollments:', error);
           setUserEnrollments([]);
+          setOriginalUserEnrollments([]);
           setEnrollmentInputs({});
           setSelectedCareers([]);
+          setEditCareerChips([]);
         }
 
         new bootstrap.Modal(editModalRef.current).show();
@@ -621,6 +775,7 @@ export default function UsersManagement() {
         setCareerChips([]);
         setRegisterMore(false);
         setUserEnrollments([]);
+        setOriginalUserEnrollments([]);
         setEnrollmentInputs({});
         new bootstrap.Modal(createModalRef.current).show();
       }
@@ -628,18 +783,137 @@ export default function UsersManagement() {
     [user?.campus?.id, selectedTipoUsuario]
   );
 
-  const handleEditCareerSelection = (newSelectedCareerIds) => {
+  const handleEditCareerSelection = async (newSelectedCareerIds) => {
     setSelectedCareers(newSelectedCareerIds);
 
     const removedCareers = userEnrollments.filter((e) => !newSelectedCareerIds.includes(e.careerId)).map((e) => e.id);
-
     setEnrollmentInputs((prev) => {
       const updated = { ...prev };
       removedCareers.forEach((enrollmentId) => {
         delete updated[enrollmentId];
+        delete updated[`${enrollmentId}_full`];
+        delete updated[`${enrollmentId}_year`];
       });
       return updated;
     });
+
+    const existingCareerIds = originalUserEnrollments.map((e) => e.careerId);
+    const newCareerIds = newSelectedCareerIds.filter((careerId) => !existingCareerIds.includes(careerId));
+
+    if (newCareerIds.length > 0) {
+      const newChips = [];
+
+      for (const careerId of newCareerIds) {
+        const career = careers.find((c) => c.id === careerId);
+        if (career) {
+          try {
+            const matricula = await generateMatriculaForCareer(careerId);
+            const parts = extractMatriculaParts(matricula);
+
+            newChips.push({
+              careerId: careerId,
+              careerName: career.name,
+              differentiator: career.differentiator,
+              matricula: matricula,
+              year: parts.year,
+              last4: parts.last4,
+              isNew: true,
+            });
+          } catch (error) {
+            const currentYear = new Date().getFullYear().toString().slice(-2);
+            const defaultMatricula = buildFullRegistrationNumber(currentYear, career.differentiator, '0001');
+
+            newChips.push({
+              careerId: careerId,
+              careerName: career.name,
+              differentiator: career.differentiator,
+              matricula: defaultMatricula,
+              year: currentYear,
+              last4: '0001',
+              isNew: true,
+              hasError: true,
+            });
+          }
+        }
+      }
+
+      setEditCareerChips(newChips);
+    } else {
+      setEditCareerChips([]);
+    }
+  };
+
+  const updateEditChipMatricula = (careerId, newYear, newLast4) => {
+    setEditCareerChips((prev) =>
+      prev.map((chip) => {
+        if (chip.careerId === careerId) {
+          const year = newYear !== undefined ? newYear : chip.year;
+          const last4 = newLast4 !== undefined ? newLast4 : chip.last4;
+          const newMatricula = buildFullRegistrationNumber(year, chip.differentiator, last4);
+
+          return {
+            ...chip,
+            matricula: newMatricula,
+            year: year,
+            last4: last4,
+            hasError: false,
+          };
+        }
+        return chip;
+      })
+    );
+  };
+
+  const removeEditCareerChip = (careerId) => {
+    setEditCareerChips((prev) => prev.filter((chip) => chip.careerId !== careerId));
+    setSelectedCareers((prev) => prev.filter((id) => id !== careerId));
+  };
+
+  const updateExistingCareerMatricula = (enrollmentId, field, value) => {
+    if (field === 'year') {
+      // Para cambiar año de una carrera existente, necesitamos reconstruir toda la matrícula
+      const enrollment = userEnrollments.find((e) => e.id === enrollmentId);
+      if (enrollment) {
+        const parts = extractMatriculaParts(enrollment.registrationNumber);
+        const newYear = value || parts.year;
+        const currentLast4 = enrollmentInputs[enrollmentId] || parts.last4;
+        const newMatricula = buildFullRegistrationNumber(newYear, parts.differentiator, currentLast4);
+
+        // Guardar toda la nueva matrícula, no solo los últimos 4 dígitos
+        setEnrollmentInputs((prev) => ({
+          ...prev,
+          [`${enrollmentId}_full`]: newMatricula,
+          [`${enrollmentId}_year`]: newYear,
+          [enrollmentId]: currentLast4,
+        }));
+      }
+    } else if (field === 'last4') {
+      updateLast4Digits(enrollmentId, value);
+    }
+  };
+
+  // Función para obtener preview de matrícula existente
+  const getExistingCareerPreview = (enrollment) => {
+    const fullMatricula = enrollmentInputs[`${enrollment.id}_full`];
+    if (fullMatricula) {
+      return fullMatricula;
+    }
+
+    const currentLast4 = enrollmentInputs[enrollment.id] || '';
+    if (currentLast4) {
+      return buildFullRegistrationNumberForEdit(enrollment, currentLast4);
+    }
+
+    return enrollment.registrationNumber;
+  };
+
+  const resetEditModal = () => {
+    setEditCareerChips([]);
+    setUserEnrollments([]);
+    setOriginalUserEnrollments([]);
+    setEnrollmentInputs({});
+    setSelectedCareers([]);
+    setEditingUser(null);
   };
 
   // Computed values
@@ -710,13 +984,20 @@ export default function UsersManagement() {
   }, []);
 
   const actionsTemplate = useCallback(
-    (row) => (
-      <>
-        <Button icon="pi pi-pencil" rounded outlined className="me-2" disabled={loading} tooltip="Editar usuario" tooltipOptions={{ position: 'top' }} onClick={() => openModal(row)} />
-        <Button icon="pi pi-trash" rounded outlined severity="danger" disabled={loading} tooltip="Deshabilitar usuario" tooltipOptions={{ position: 'top' }} onClick={() => handleDelete(row.id, row.fullName)} />
-      </>
-    ),
-    [loading, openModal, handleDelete]
+    (row) => {
+      const isActive = row.status === 'ACTIVE';
+      const toggleIcon = isActive ? 'pi pi-ban' : 'pi pi-check';
+      const toggleSeverity = isActive ? 'warning' : 'success';
+      const toggleTooltip = isActive ? 'Desactivar usuario' : 'Activar usuario';
+
+      return (
+        <>
+          <Button icon="pi pi-pencil" rounded outlined className="me-2" disabled={loading} tooltip="Editar usuario" tooltipOptions={{ position: 'top' }} onClick={() => openModal(row)} />
+          <Button icon={toggleIcon} rounded outlined severity={toggleSeverity} disabled={loading} tooltip={toggleTooltip} tooltipOptions={{ position: 'top' }} onClick={() => handleToggleStatus(row.id, row)} />
+        </>
+      );
+    },
+    [loading, openModal, handleToggleStatus]
   );
 
   const dateTemplate = useCallback(
@@ -748,10 +1029,79 @@ export default function UsersManagement() {
     [formData, updateFormField, handleKeyDown]
   );
 
+  // Componente de chip de carrera para el modal de crear
+  const CareerChipComponent = useCallback(
+    ({ chip, onUpdateYear, onUpdateLast4, onRemove }) => (
+      <div className="col-md-6 mb-3">
+        <div className="border rounded p-3">
+          <div className="d-flex justify-content-between align-items-start mb-2">
+            <small className="text-muted fw-bold">{chip.careerName}</small>
+            <button type="button" className="btn btn-sm btn-light border-0 p-1" onClick={() => onRemove(chip.careerId)} title={`Quitar ${chip.careerName}`}>
+              <i className="pi pi-times"></i>
+            </button>
+          </div>
+
+          <div className="row g-2">
+            {/* Input para año */}
+            <div className="col-3">
+              <label className="form-label small">Año</label>
+              <input
+                type="text"
+                className="form-control form-control-sm"
+                value={chip.year}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 2);
+                  onUpdateYear(chip.careerId, value);
+                }}
+                placeholder="25"
+                maxLength="2"
+              />
+            </div>
+
+            {/* Diferenciador (solo lectura) */}
+            <div className="col-4">
+              <label className="form-label small">Carrera</label>
+              <input type="text" className="form-control form-control-sm" value={chip.differentiator} disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }} />
+            </div>
+
+            {/* Input para últimos 4 dígitos */}
+            <div className="col-5">
+              <label className="form-label small">Número</label>
+              <input
+                type="text"
+                className="form-control form-control-sm"
+                value={chip.last4}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                  onUpdateLast4(chip.careerId, value);
+                }}
+                placeholder="0001"
+                maxLength="4"
+              />
+            </div>
+          </div>
+
+          {/* Preview de matrícula */}
+          <div className="mt-2">
+            <small className="text-muted">
+              Matrícula: <strong className="font-monospace">{chip.matricula}</strong>
+            </small>
+            {chip.hasError && (
+              <div className="text-danger small mt-1">
+                <i className="pi pi-exclamation-triangle me-1"></i>
+                Error al generar automáticamente
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    ),
+    []
+  );
+
   return (
     <>
       <Toast ref={toast} />
-      <ConfirmDialog />
 
       <div className="bg-white rounded-top p-2">
         <h3 className="text-blue-500 fw-semibold mx-3 my-1 mb-0">Usuarios</h3>
@@ -775,8 +1125,8 @@ export default function UsersManagement() {
           end={() => (
             <div className="d-flex align-items-center gap-2">
               {selected.length > 0 && (
-                <Button icon="pi pi-trash" severity="danger" className="me-2" onClick={() => handleDelete(selected.map((u) => u.id))} disabled={loading}>
-                  <span className="d-none d-sm-inline ms-1">Deshabilitar ({selected.length})</span>
+                <Button icon="pi pi-toggle-off" severity="warning" className="me-2" onClick={() => handleToggleStatus(selected.map((u) => u.id))} disabled={loading}>
+                  <span className="d-none d-sm-inline ms-1">Toggle Estado ({selected.length})</span>
                 </Button>
               )}
               <Button icon="pi pi-user-plus" className="cetec-btn-blue" onClick={() => openModal()} ref={openModalBtnRef} disabled={loading}>
@@ -831,7 +1181,7 @@ export default function UsersManagement() {
           <div className="modal-content">
             <div className="modal-header">
               <h5 className="modal-title">{getModalTitle()}</h5>
-              <button type="button" className="btn-close" data-bs-dismiss="modal" />
+              <button type="button" className="btn-close" data-bs-dismiss="modal" onClick={resetAllStates} />
             </div>
             <form onSubmit={(e) => handleFormSubmit(e, false)}>
               <div className="modal-body row g-3 px-3">
@@ -840,7 +1190,7 @@ export default function UsersManagement() {
                 {renderFormField('Apellido materno', 'maternalSurname', { autoComplete: 'family-name' })}
                 {renderFormField('Correo electrónico *', 'email', { required: true, type: 'email', autoComplete: 'email', placeholder: 'usuario@ejemplo.com' })}
 
-                <div className="col-md-6">
+                <div className="col-md-6 mb-4">
                   <label className="form-label">Rol *</label>
                   {selectedTipoUsuario ? (
                     <input className="form-control" value={getRoleFriendlyName(rolesMap[selectedTipoUsuario]?.roleName || '')} disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }} />
@@ -849,10 +1199,12 @@ export default function UsersManagement() {
                   )}
                 </div>
 
+                <hr />
+
                 {currentRoleNeedsCareers && (
-                  <div className="col-6">
+                  <div className="col-12">
                     <label className="form-label">
-                      Carreras *<small className="text-muted ms-2">(matrícula autogenerada)</small>
+                      Carreras <small className="text-muted">(opcional)</small>
                     </label>
                     <MultiSelect
                       value={selectedCareers}
@@ -876,35 +1228,16 @@ export default function UsersManagement() {
 
                     {careerChips.length > 0 && (
                       <div className="mt-3">
-                        <small className="text-muted d-block mb-2">Matrículas generadas (editables últimos 4 dígitos):</small>
                         <div className="row g-2">
-                          {careerChips.map((chip) => {
-                            const prefix = chip.matricula.replace(/\d{4}$/, '');
-                            const last4 = extractLast4Digits(chip.matricula);
-
-                            return (
-                              <div key={chip.careerId} className="col-md-6">
-                                <div className="input-group" style={{ maxWidth: '280px' }}>
-                                  <span className="input-group-text">{prefix}</span>
-                                  <input
-                                    type="text"
-                                    className="form-control"
-                                    value={last4}
-                                    onChange={(e) => {
-                                      const value = e.target.value.replace(/\D/g, '').slice(0, 4);
-                                      updateChipLast4Digits(chip.careerId, value);
-                                    }}
-                                    placeholder="0000"
-                                    maxLength="4"
-                                    style={{ width: '70px' }}
-                                  />
-                                  <button type="button" className="btn btn-light border border-start-0" onClick={() => removeCareerChip(chip.careerId)} title={`Quitar ${chip.careerName}`}>
-                                    <i className="pi pi-times"></i>
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          })}
+                          {careerChips.map((chip) => (
+                            <CareerChipComponent
+                              key={chip.careerId}
+                              chip={chip}
+                              onUpdateYear={(careerId, newYear) => updateChipMatricula(careerId, newYear, chip.last4)}
+                              onUpdateLast4={(careerId, newLast4) => updateChipMatricula(careerId, chip.year, newLast4)}
+                              onRemove={removeCareerChip}
+                            />
+                          ))}
                         </div>
                       </div>
                     )}
@@ -919,7 +1252,7 @@ export default function UsersManagement() {
                   </label>
                 </div>
                 <div>
-                  <Button type="button" outlined className="me-2" severity="secondary" data-bs-dismiss="modal">
+                  <Button type="button" outlined className="me-2" severity="secondary" data-bs-dismiss="modal" onClick={resetAllStates}>
                     Cancelar
                   </Button>
                   <Button type="submit" severity="primary" disabled={loading || generatingMatriculas}>
@@ -945,7 +1278,7 @@ export default function UsersManagement() {
           <div className="modal-content">
             <div className="modal-header">
               <h5 className="modal-title">Editar usuario</h5>
-              <button type="button" className="btn-close" data-bs-dismiss="modal" />
+              <button type="button" className="btn-close" data-bs-dismiss="modal" onClick={resetEditModal} />
             </div>
             <form onSubmit={(e) => handleFormSubmit(e, true)}>
               <div className="modal-body row g-3 px-3">
@@ -959,87 +1292,186 @@ export default function UsersManagement() {
                   <input className="form-control" value={getRoleFriendlyName(rolesMap[formData.roleId]?.roleName || '')} disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }} />
                 </div>
 
-                <div className="col-md-6">
-                  <label className="form-label">Estado *</label>
-                  <Dropdown
-                    value={formData.status}
-                    options={[
-                      { label: 'Activo', value: 'ACTIVE' },
-                      { label: 'Inactivo', value: 'INACTIVE' },
-                    ]}
-                    onChange={(e) => updateFormField('status', e.value)}
-                    className="w-100"
-                    required
-                  />
-                </div>
+                {/* ESTADO REMOVIDO - Solo se puede cambiar desde el DataTable */}
+
+                <hr />
 
                 {currentRoleNeedsCareers && (
-                  <>
-                    <div className="col-12">
-                      <label className="form-label">Carreras asignadas</label>
-                      <MultiSelect
-                        value={selectedCareers}
-                        options={careerOptions}
-                        onChange={(e) => handleEditCareerSelection(e.value)}
-                        optionLabel="label"
-                        optionValue="value"
-                        placeholder="Selecciona las carreras"
-                        className="w-100"
-                        maxSelectedLabels={3}
-                        selectedItemsLabel="{0} carreras seleccionadas"
-                      />
-                    </div>
+                  <div className="col-12">
+                    <label className="form-label">Carreras asignadas</label>
+                    <MultiSelect
+                      value={selectedCareers}
+                      options={careerOptions}
+                      onChange={(e) => handleEditCareerSelection(e.value)}
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Selecciona las carreras"
+                      className="w-100"
+                      maxSelectedLabels={0}
+                      selectedItemsLabel="{0} carreras seleccionadas"
+                    />
 
-                    {/* Editar últimos 4 dígitos de matrículas */}
+                    {/* CARRERAS EXISTENTES */}
                     {userEnrollments.length > 0 && (
-                      <div className="col-12">
-                        <label className="form-label">Editar matrículas</label>
-                        <small className="text-muted d-block mb-2">Solo puedes modificar los últimos 4 dígitos de cada matrícula</small>
-
+                      <div className="mt-3">
+                        <small className="text-muted d-block mb-2">
+                          <strong>Carreras actuales:</strong>
+                        </small>
                         <div className="row g-2">
                           {userEnrollments
                             .filter((enrollment) => selectedCareers.includes(enrollment.careerId))
                             .map((enrollment) => {
                               const career = careers.find((c) => c.id === enrollment.careerId);
-                              const currentLast4 = enrollmentInputs[enrollment.id] || '';
-                              const preview = buildFullRegistrationNumber(enrollment, currentLast4);
+                              const parts = extractMatriculaParts(enrollment.registrationNumber);
+                              const currentYear = enrollmentInputs[`${enrollment.id}_year`] || parts.year;
+                              const currentLast4 = enrollmentInputs[enrollment.id] || parts.last4;
+                              const preview = getExistingCareerPreview(enrollment);
 
                               return (
-                                <div key={enrollment.id} className="col-md-6 mb-2">
-                                  <label className="form-label small">{career?.name || enrollment.careerName}</label>
-                                  <div className="input-group">
-                                    <span className="input-group-text small">{enrollment.registrationNumber?.slice(0, -4) || ''}</span>
-                                    <input
-                                      type="text"
-                                      className="form-control"
-                                      value={currentLast4}
-                                      onChange={(e) => {
-                                        const value = e.target.value.replace(/\D/g, '').slice(0, 4);
-                                        updateLast4Digits(enrollment.id, value);
-                                      }}
-                                      placeholder="0000"
-                                      maxLength="4"
-                                      style={{ width: '80px' }}
-                                    />
+                                <div key={enrollment.id} className="col-md-6 mb-3">
+                                  <div className="border rounded p-3 bg-light">
+                                    <div className="d-flex justify-content-between align-items-start mb-2">
+                                      <small className="text-muted fw-bold">{career?.name || enrollment.careerName}</small>
+                                      <span className="badge bg-info">Existente</span>
+                                    </div>
+
+                                    <div className="row g-2">
+                                      {/* Input para año */}
+                                      <div className="col-3">
+                                        <label className="form-label small">Año</label>
+                                        <input
+                                          type="text"
+                                          className="form-control form-control-sm"
+                                          value={currentYear}
+                                          onChange={(e) => {
+                                            const value = e.target.value.replace(/\D/g, '').slice(0, 2);
+                                            updateExistingCareerMatricula(enrollment.id, 'year', value);
+                                          }}
+                                          placeholder="25"
+                                          maxLength="2"
+                                        />
+                                      </div>
+
+                                      {/* Diferenciador (solo lectura) */}
+                                      <div className="col-4">
+                                        <label className="form-label small">Carrera</label>
+                                        <input type="text" className="form-control form-control-sm" value={parts.differentiator || career?.differentiator || ''} disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }} />
+                                      </div>
+
+                                      {/* Input para últimos 4 dígitos */}
+                                      <div className="col-5">
+                                        <label className="form-label small">Número</label>
+                                        <input
+                                          type="text"
+                                          className="form-control form-control-sm"
+                                          value={currentLast4}
+                                          onChange={(e) => {
+                                            const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                            updateExistingCareerMatricula(enrollment.id, 'last4', value);
+                                          }}
+                                          placeholder="0001"
+                                          maxLength="4"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    {/* Preview de matrícula */}
+                                    <div className="mt-2">
+                                      <small className="text-muted">
+                                        Matrícula: <strong className="font-monospace">{preview}</strong>
+                                      </small>
+                                    </div>
                                   </div>
-                                  <small className="text-muted">Previsualizar: {preview}</small>
                                 </div>
                               );
                             })}
                         </div>
                       </div>
                     )}
-                    {selectedCareers.length > userEnrollments.length && (
-                      <div className="col-12">
-                        <Message severity="info" text={`Se agregarán ${selectedCareers.length - userEnrollments.length} nueva(s) carrera(s) con matrícula autogenerada.`} />
+
+                    {/* NUEVAS CARRERAS */}
+                    {editCareerChips.length > 0 && (
+                      <div className="mt-3">
+                        <small className="text-muted d-block mb-2">
+                          <strong>Nuevas carreras:</strong>
+                        </small>
+                        <div className="row g-2">
+                          {editCareerChips.map((chip) => (
+                            <div key={chip.careerId} className="col-md-6 mb-3">
+                              <div className="border rounded p-3 bg-success bg-opacity-10">
+                                <div className="d-flex justify-content-between align-items-start mb-2">
+                                  <small className="text-muted fw-bold">{chip.careerName}</small>
+                                  <div className="d-flex gap-1">
+                                    <button type="button" className="btn btn-sm btn-light border-0 p-1" onClick={() => removeEditCareerChip(chip.careerId)} title={`Quitar ${chip.careerName}`}>
+                                      <i className="pi pi-times"></i>
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className="row g-2">
+                                  {/* Input para año */}
+                                  <div className="col-3">
+                                    <label className="form-label small">Año</label>
+                                    <input
+                                      type="text"
+                                      className="form-control form-control-sm"
+                                      value={chip.year}
+                                      onChange={(e) => {
+                                        const value = e.target.value.replace(/\D/g, '').slice(0, 2);
+                                        updateEditChipMatricula(chip.careerId, value, chip.last4);
+                                      }}
+                                      placeholder="25"
+                                      maxLength="2"
+                                    />
+                                  </div>
+
+                                  {/* Diferenciador (solo lectura) */}
+                                  <div className="col-4">
+                                    <label className="form-label small">Carrera</label>
+                                    <input type="text" className="form-control form-control-sm" value={chip.differentiator} disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }} />
+                                  </div>
+
+                                  {/* Input para últimos 4 dígitos */}
+                                  <div className="col-5">
+                                    <label className="form-label small">Número</label>
+                                    <input
+                                      type="text"
+                                      className="form-control form-control-sm"
+                                      value={chip.last4}
+                                      onChange={(e) => {
+                                        const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                        updateEditChipMatricula(chip.careerId, chip.year, value);
+                                      }}
+                                      placeholder="0001"
+                                      maxLength="4"
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Preview de matrícula */}
+                                <div className="mt-2">
+                                  <small className="text-muted">
+                                    Matrícula: <strong className="font-monospace">{chip.matricula}</strong>
+                                  </small>
+                                  {chip.hasError && (
+                                    <div className="text-danger small mt-1">
+                                      <i className="pi pi-exclamation-triangle me-1"></i>
+                                      Error al generar automáticamente
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
 
               <div className="modal-footer">
-                <Button type="button" outlined severity="secondary" data-bs-dismiss="modal">
+                <Button type="button" outlined severity="secondary" data-bs-dismiss="modal" onClick={resetEditModal}>
                   Cancelar
                 </Button>
                 <Button type="submit" severity="primary" disabled={loading}>

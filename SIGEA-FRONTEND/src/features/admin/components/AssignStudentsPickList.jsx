@@ -34,10 +34,10 @@ export default function AssignStudentsPickList({ group }) {
       return {
         id: student.studentId,
         fullName: student.fullName,
-        registrationNumber: student.registrationNumber || '',
+        registrationNumber: student.primaryRegistrationNumber || '', // CAMBIO: usar primaryRegistrationNumber
         email: student.email || '',
         groupId: student.groupId,
-        searchText: `${student.fullName} ${student.registrationNumber || ''} ${student.email || ''}`.toLowerCase(),
+        searchText: `${student.fullName} ${student.primaryRegistrationNumber || ''} ${student.email || ''}`.toLowerCase(),
       };
     } else {
       const fullName = `${student.userName || student.name} ${student.userPaternalSurname || student.paternalSurname} ${student.userMaternalSurname || student.maternalSurname}`.trim();
@@ -57,13 +57,14 @@ export default function AssignStudentsPickList({ group }) {
     if (loading || !selectedMode?.code) return;
 
     const currentGroupStudentIds = currentGroupStudents.map((s) => s.studentId);
-    const allStudentsWithGroupIds = studentsWithGroup.map((s) => s.studentId);
+    const careerStudentIds = careerStudents.map((s) => s.userId || s.id); // IDs de estudiantes de esta carrera
 
     let originalSource = [];
 
     switch (selectedMode.code) {
       case 'ADD':
         // Solo estudiantes de la carrera que NO tienen NINGÚN grupo asignado
+        const allStudentsWithGroupIds = studentsWithGroup.map((s) => s.studentId);
         originalSource = careerStudents
           .filter((student) => {
             const studentId = student.userId || student.id;
@@ -73,8 +74,12 @@ export default function AssignStudentsPickList({ group }) {
         break;
 
       case 'MOVE':
-        // Solo estudiantes que SÍ tienen grupo pero NO están en el grupo actual
-        originalSource = studentsWithGroup.filter((student) => student.groupId !== group.groupId).map((student) => normalizeStudent(student, true));
+        // CORRECCIÓN: Solo estudiantes de la MISMA CARRERA que tienen grupo pero NO están en el grupo actual
+        originalSource = studentsWithGroup
+          .filter(
+            (student) => student.groupId !== group.groupId && careerStudentIds.includes(student.studentId) // FILTRAR por carrera
+          )
+          .map((student) => normalizeStudent(student, true));
         break;
 
       case 'REMOVE':
