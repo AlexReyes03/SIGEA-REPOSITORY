@@ -34,9 +34,10 @@ export default function AssignStudentsPickList({ group }) {
       return {
         id: student.studentId,
         fullName: student.fullName,
-        registrationNumber: student.primaryRegistrationNumber || '', // CAMBIO: usar primaryRegistrationNumber
+        registrationNumber: student.primaryRegistrationNumber || '',
         email: student.email || '',
         groupId: student.groupId,
+        careerId: student.careerId,
         searchText: `${student.fullName} ${student.primaryRegistrationNumber || ''} ${student.email || ''}`.toLowerCase(),
       };
     } else {
@@ -48,6 +49,7 @@ export default function AssignStudentsPickList({ group }) {
         registrationNumber: student.registrationNumber || '',
         email: student.userEmail || student.email || '',
         groupId: null,
+        careerId: student.careerId,
         searchText: `${fullName} ${student.registrationNumber || ''} ${student.userEmail || student.email || ''}`.toLowerCase(),
       };
     }
@@ -56,30 +58,25 @@ export default function AssignStudentsPickList({ group }) {
   const resetToOriginalState = useCallback(() => {
     if (loading || !selectedMode?.code) return;
 
-    const currentGroupStudentIds = currentGroupStudents.map((s) => s.studentId);
-    const careerStudentIds = careerStudents.map((s) => s.userId || s.id); // IDs de estudiantes de esta carrera
+    const studentsWithGroupInCurrentCareer = studentsWithGroup.filter((student) => student.careerId === group.careerId);
+    const studentsWithGroupInCurrentCareerIds = studentsWithGroupInCurrentCareer.map((s) => s.studentId);
 
     let originalSource = [];
 
     switch (selectedMode.code) {
       case 'ADD':
-        // Solo estudiantes de la carrera que NO tienen NINGÚN grupo asignado
-        const allStudentsWithGroupIds = studentsWithGroup.map((s) => s.studentId);
+        // Estudiantes de la carrera que NO tienen grupo EN ESTA CARRERA
         originalSource = careerStudents
           .filter((student) => {
             const studentId = student.userId || student.id;
-            return !currentGroupStudentIds.includes(studentId) && !allStudentsWithGroupIds.includes(studentId);
+            return !studentsWithGroupInCurrentCareerIds.includes(studentId);
           })
           .map((student) => normalizeStudent(student, false));
         break;
 
       case 'MOVE':
-        // CORRECCIÓN: Solo estudiantes de la MISMA CARRERA que tienen grupo pero NO están en el grupo actual
-        originalSource = studentsWithGroup
-          .filter(
-            (student) => student.groupId !== group.groupId && careerStudentIds.includes(student.studentId) // FILTRAR por carrera
-          )
-          .map((student) => normalizeStudent(student, true));
+        // Solo estudiantes que tienen grupo EN ESTA CARRERA pero NO en el grupo actual
+        originalSource = studentsWithGroupInCurrentCareer.filter((student) => student.groupId !== group.groupId).map((student) => normalizeStudent(student, true));
         break;
 
       case 'REMOVE':
@@ -93,7 +90,7 @@ export default function AssignStudentsPickList({ group }) {
 
     setSource(originalSource);
     setTarget([]);
-  }, [selectedMode, careerStudents, currentGroupStudents, studentsWithGroup, loading, group?.groupId]);
+  }, [selectedMode, careerStudents, currentGroupStudents, studentsWithGroup, loading, group?.groupId, group?.careerId]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -262,10 +259,15 @@ export default function AssignStudentsPickList({ group }) {
     }
   };
 
+  // Cálculos corregidos usando careerId
   const sourceCount = source.length;
   const targetCount = target.length;
   const hasSelectedStudents = targetCount > 0;
-  const studentsWithoutGroup = careerStudents.length - studentsWithGroup.filter((s) => careerStudents.some((cs) => (cs.userId || cs.id) === s.studentId)).length;
+  const careerStudentIds = careerStudents.map((s) => s.userId || s.id);
+
+  // CAMBIO: Filtrar por careerId
+  const studentsWithGroupInCurrentCareer = studentsWithGroup.filter((s) => s.careerId === group.careerId);
+  const studentsWithoutGroupInCurrentCareer = careerStudents.length - studentsWithGroupInCurrentCareer.length;
 
   const toolbarRight = () => (
     <div className="flex flex-wrap">
@@ -322,12 +324,12 @@ export default function AssignStudentsPickList({ group }) {
 
     switch (selectedMode?.code) {
       case 'ADD':
-        text = 'Estudiantes sin grupo ';
+        text = 'Sin grupo en esta carrera ';
         icon = 'pi pi-user-plus';
         severity = 'success';
         break;
       case 'MOVE':
-        text = 'Estudiantes en otros grupos ';
+        text = 'En otros grupos de esta carrera ';
         icon = 'pi pi-arrows-h';
         severity = 'info';
         break;
@@ -365,10 +367,10 @@ export default function AssignStudentsPickList({ group }) {
   const getInfoMessage = () => {
     switch (selectedMode?.code) {
       case 'ADD':
-        if (sourceCount === 0 && studentsWithoutGroup === 0) {
+        if (sourceCount === 0 && studentsWithoutGroupInCurrentCareer === 0) {
           return {
             severity: 'info',
-            text: 'Todos los estudiantes de esta carrera ya tienen un grupo asignado. No hay estudiantes disponibles para añadir.',
+            text: 'Todos los estudiantes de esta carrera ya tienen un grupo asignado en esta carrera. No hay estudiantes disponibles para añadir.',
           };
         }
         if (careerStudents.length === 0) {
@@ -428,12 +430,12 @@ export default function AssignStudentsPickList({ group }) {
             <strong className="text-secondary">{currentGroupStudents.length}</strong>
           </div>
           <div className="col-md-3">
-            <small className="text-muted d-block">En otros grupos</small>
-            <strong className="text-secondary">{studentsWithGroup.filter((s) => careerStudents.some((cs) => (cs.userId || cs.id) === s.studentId) && s.groupId !== group.groupId).length}</strong>
+            <small className="text-muted d-block">Otros grupos</small>
+            <strong className="text-secondary">{studentsWithGroupInCurrentCareer.filter((s) => s.groupId !== group.groupId).length}</strong>
           </div>
           <div className="col-md-3">
             <small className="text-muted d-block">Sin grupo</small>
-            <strong className="text-secondary">{studentsWithoutGroup}</strong>
+            <strong className="text-secondary">{studentsWithoutGroupInCurrentCareer}</strong>
           </div>
         </div>
       </div>
