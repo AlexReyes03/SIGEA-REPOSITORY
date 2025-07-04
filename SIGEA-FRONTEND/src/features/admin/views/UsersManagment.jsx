@@ -1164,7 +1164,7 @@ const processedUsers = useMemo(() => {
             rowsPerPageOptions={[5, 10, 25, 50]}
             filterDisplay="menu"
             globalFilter={globalFilter}
-            globalFilterFields={['name', 'paternalSurname', 'maternalSurname', 'fullName', 'email', 'displayRegistration', 'plantelName', 'roleName', 'roleLabel', 'searchableRole', 'statusLabel', 'createdAt','searchableStatus', 'displayCreatedAt']}
+            globalFilterFields={['name', 'paternalSurname', 'maternalSurname', 'fullName', 'email', 'displayRegistration', 'plantelName', 'roleName', 'roleLabel', 'searchableRole', 'statusLabel','searchableStatus', 'displayCreatedAt']}
             header={header}
             className="text-nowrap"
             emptyMessage={
