@@ -15,8 +15,8 @@ export const getUserByRole = async (roleId) => {
   return res;
 };
 
-export const getUserByRoleAndPlantel = async (roleId, plantelId) => {
-  const res = await request(`/api/users/role/${roleId}/plantel/${plantelId}`);
+export const getUserByRoleAndPlantel = async (roleId, campusId) => {
+  const res = await request(`/api/users/role/${roleId}/campus/${campusId}`);
   return res;
 };
 

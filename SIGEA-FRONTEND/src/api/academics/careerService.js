@@ -10,8 +10,8 @@ export const getCareerById = async (id) => {
   return res;
 };
 
-export const getCareerByPlantelId = async (plantelId) => {
-  const res = await request(`/api/careers/plantel/${plantelId}`);
+export const getCareerByPlantelId = async (campusId) => {
+  const res = await request(`/api/careers/campus/${campusId}`);
   return res;
 };
 
@@ -35,7 +35,7 @@ export const deleteCareer = async (id) => {
   });
 };
 
-export const checkDifferentiatorAvailability = async (differentiator, plantelId) => {
-  const res = await request(`/api/careers/check-differentiator?differentiator=${differentiator}&plantelId=${plantelId}`);
+export const checkDifferentiatorAvailability = async (differentiator, campusId) => {
+  const res = await request(`/api/careers/check-differentiator?differentiator=${differentiator}&campusId=${campusId}`);
   return res;
 };

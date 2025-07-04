@@ -107,7 +107,7 @@ export default function Careers() {
     const payload = {
       name: formData.name.trim(),
       differentiator: formData.differentiator,
-      plantelId: user.campus.id,
+      campusId: user.campus.id,
     };
 
     try {
@@ -157,7 +157,7 @@ export default function Careers() {
     const payload = {
       name: formData.name.trim(),
       differentiator: formData.differentiator,
-      plantelId: user.campus.id,
+      campusId: user.campus.id,
     };
 
     try {
