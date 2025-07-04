@@ -22,8 +22,11 @@ import AdminCareerCurriculums from '../features/admin/views/Curriculums';
 import AdminGroupDetail from '../features/admin/views/GroupDetail';
 
 import SupervisorDashboard from '../features/supervisor/views/Dashboard';
+import SupervisorCampuses from '../features/supervisor/views/Campuses'
 import SupervisorTeachersScore from '../features/supervisor/views/TeachersScore';
 import SupervisorCareers from '../features/supervisor/views/Careers';
+import SupervisorGroups from '../features/supervisor/views/Groups'
+import SupervisorGroupDetails from '../features/supervisor/views/GroupDetails'
 
 import TeacherDashboard from '../features/teacher/views/Dashboard';
 import TeacherGroups from '../features/teacher/views/Groups';
@@ -100,7 +103,10 @@ export default function AppRouter() {
         <Route element={<AppLayout />}>
           {/* SUPERVISOR */}
           <Route path="supervisor" element={<SupervisorDashboard />} />
-          <Route path="supervisor/careers" element={<SupervisorCareers />} />
+          <Route path="supervisor/campuses" element={<SupervisorCampuses />} />
+          <Route path="supervisor/campuses/careers" element={<SupervisorCareers />} />
+          <Route path="supervisor/campuses/careers/groups" element={<SupervisorGroups />} />
+          <Route path="supervisor/campuses/careers/group-details" element={<SupervisorGroupDetails />} />
           <Route path="supervisor/teacher-score" element={<SupervisorTeachersScore />} />
           <Route path="supervisor/profile" element={<Profile />} />
         </Route>
