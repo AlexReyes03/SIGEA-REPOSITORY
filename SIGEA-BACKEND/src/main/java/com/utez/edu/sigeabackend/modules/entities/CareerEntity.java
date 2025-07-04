@@ -6,8 +6,8 @@ import java.util.Set;
 
 @Entity
 @Table(name = "career", uniqueConstraints = {
-        @UniqueConstraint(name = "uq_career_differentiator_plantel",
-                columnNames = {"differentiator", "plantel_id"})
+        @UniqueConstraint(name = "uq_career_differentiator_campus",
+                columnNames = {"differentiator", "campus_id"})
 })
 public class CareerEntity {
 
@@ -24,11 +24,11 @@ public class CareerEntity {
 
     // ******* RELACIONES ********
     /**
-     * Relación muchos-a-uno con plantel
-     * Nueva columna relacionada "plantel_id"
+     * Relación muchos-a-uno con campus
+     * Nueva columna relacionada "campus_id"
      */
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "plantel_id", nullable = false)
+    @JoinColumn(name = "campus_id", nullable = false)
     private CampusEntity campus;
 
     /**

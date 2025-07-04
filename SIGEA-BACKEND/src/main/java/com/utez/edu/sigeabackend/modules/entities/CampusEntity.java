@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "plantel") // Mantenemos el nombre de tabla en BD
+@Table(name = "campus")
 public class CampusEntity {
 
     @Id

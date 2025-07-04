@@ -6,8 +6,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "user_career_enrollment", uniqueConstraints = {
         @UniqueConstraint(name = "uq_user_career", columnNames = {"user_id", "career_id"}),
-        @UniqueConstraint(name = "uq_registration_number_plantel",
-                columnNames = {"registration_number", "plantel_id"})
+        @UniqueConstraint(name = "uq_registration_number_campus",
+                columnNames = {"registration_number", "campus_id"})
 })
 public class UserCareerEnrollmentEntity {
 
@@ -27,8 +27,8 @@ public class UserCareerEnrollmentEntity {
     private CareerEntity career;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "plantel_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_enrollment_plantel"))
+    @JoinColumn(name = "campus_id", nullable = false,
+            foreignKey = @ForeignKey(name = "fk_enrollment_campus"))
     private CampusEntity campus;
 
     @Column(name = "registration_number", nullable = false, length = 15)
