@@ -9,7 +9,6 @@ import { Tag } from 'primereact/tag';
 import { Checkbox } from 'primereact/checkbox';
 import { Toolbar } from 'primereact/toolbar';
 import { ProgressSpinner } from 'primereact/progressspinner';
-import { Message } from 'primereact/message';
 import { MdOutlineGroup } from 'react-icons/md';
 import { Toast } from 'primereact/toast';
 import * as bootstrap from 'bootstrap';
@@ -122,7 +121,7 @@ export default function UsersManagement() {
   const [selectedTipoUsuario, setSelectedTipoUsuario] = useState(null);
   const [selected, setSelected] = useState([]);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [formData, setFormData] = useState({ ...INITIAL_USER_STATE, plantelId: user?.campus?.id || '' });
+  const [formData, setFormData] = useState({ ...INITIAL_USER_STATE, campusId: user?.campus?.id || '' });
   const [editingUser, setEditingUser] = useState(null);
   const [selectedCareers, setSelectedCareers] = useState([]);
   const [careerChips, setCareerChips] = useState([]);
@@ -313,10 +312,10 @@ const processedUsers = useMemo(() => {
     setSelectedCareers((prev) => prev.filter((id) => id !== careerId));
   };
 
-  // Función optimizada para cargar usuarios por rol y plantel con cache
+  // Función optimizada para cargar usuarios por rol y campus con cache
   const loadUsersByRoleAndPlantel = useCallback(
-    async (roleId, plantelId) => {
-      const cacheKey = `${roleId}_${plantelId}`;
+    async (roleId, campusId) => {
+      const cacheKey = `${roleId}_${campusId}`;
 
       // Verificar si ya tenemos los datos en cache
       if (cachedUsersByRole[cacheKey]) {
@@ -326,7 +325,7 @@ const processedUsers = useMemo(() => {
 
       try {
         setLoading(true);
-        const data = await getUserByRoleAndPlantel(roleId, plantelId);
+        const data = await getUserByRoleAndPlantel(roleId, campusId);
         const usersArray = Array.isArray(data) ? data : [];
 
         // Guardar en cache
@@ -492,7 +491,7 @@ const processedUsers = useMemo(() => {
           ...formData,
           roleId: finalRoleId,
           maternalSurname: formData.maternalSurname || null,
-          plantelId: formData.plantelId || null,
+          campusId: formData.campusId || null,
         };
 
         if (!isEdit) {
@@ -515,7 +514,7 @@ const processedUsers = useMemo(() => {
           }
           await proceedWithUserUpdate();
         } else {
-          if (!formData.plantelId) {
+          if (!formData.campusId) {
             showWarn('Campos incompletos', 'Por favor llena todos los campos obligatorios.');
             return;
           }
@@ -540,7 +539,7 @@ const processedUsers = useMemo(() => {
           showSuccess('Éxito', 'Usuario registrado correctamente');
 
           if (registerMore) {
-            setFormData({ ...INITIAL_USER_STATE, plantelId: user?.campus?.id || '', roleId: finalRoleId });
+            setFormData({ ...INITIAL_USER_STATE, campusId: user?.campus?.id || '', roleId: finalRoleId });
             setSelectedCareers([]);
             setCareerChips([]);
             setEditCareerChips([]);
@@ -712,7 +711,7 @@ const processedUsers = useMemo(() => {
 
   // Función para resetear todos los estados
   const resetAllStates = () => {
-    setFormData({ ...INITIAL_USER_STATE, plantelId: user?.campus?.id || '' });
+    setFormData({ ...INITIAL_USER_STATE, campusId: user?.campus?.id || '' });
     setSelectedCareers([]);
     setCareerChips([]);
     setEditCareerChips([]);
@@ -734,7 +733,7 @@ const processedUsers = useMemo(() => {
           maternalSurname: userData.maternalSurname || '',
           email: userData.email || '',
           roleId: userData.roleId || '',
-          plantelId: userData.plantelId || '',
+          campusId: userData.campusId || '',
           status: userData.status || 'ACTIVE',
         });
 
@@ -773,7 +772,7 @@ const processedUsers = useMemo(() => {
       } else {
         const initialFormData = {
           ...INITIAL_USER_STATE,
-          plantelId: user?.campus?.id || '',
+          campusId: user?.campus?.id || '',
         };
 
         if (selectedTipoUsuario) {
@@ -1164,7 +1163,7 @@ const processedUsers = useMemo(() => {
             rowsPerPageOptions={[5, 10, 25, 50]}
             filterDisplay="menu"
             globalFilter={globalFilter}
-            globalFilterFields={['name', 'paternalSurname', 'maternalSurname', 'fullName', 'email', 'displayRegistration', 'plantelName', 'roleName', 'roleLabel', 'searchableRole', 'statusLabel','searchableStatus', 'displayCreatedAt']}
+            globalFilterFields={['name', 'paternalSurname', 'maternalSurname', 'fullName', 'email', 'displayRegistration', 'campusName', 'roleName', 'roleLabel', 'searchableRole', 'statusLabel', 'createdAt','searchableStatus', 'displayCreatedAt']}
             header={header}
             className="text-nowrap"
             emptyMessage={
