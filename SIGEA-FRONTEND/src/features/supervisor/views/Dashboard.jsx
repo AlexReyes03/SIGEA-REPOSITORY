@@ -19,7 +19,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [ratingValue, setRatingValue] = useState(4.6);
   const [isUp, setIsUp] = useState(true);
-  
+
   // Estados para estadísticas
   const [supervisorData, setSupervisorData] = useState(null);
   const [totalStudents, setTotalStudents] = useState(0);
@@ -59,20 +59,20 @@ export default function Dashboard() {
       const [careers, students, teachers] = await Promise.all([
         getCareerByPlantelId(campusId),
         getUserByRoleAndPlantel(4, campusId), // 4 = STUDENT
-        getUserByRoleAndPlantel(3, campusId)  // 3 = TEACHER
+        getUserByRoleAndPlantel(3, campusId), // 3 = TEACHER
       ]);
 
       return {
         careersCount: Array.isArray(careers) ? careers.length : 0,
         studentsCount: Array.isArray(students) ? students.length : 0,
-        teachersCount: Array.isArray(teachers) ? teachers.length : 0
+        teachersCount: Array.isArray(teachers) ? teachers.length : 0,
       };
     } catch (error) {
       console.error(`Error loading stats for campus ${campusId}:`, error);
       return {
         careersCount: 0,
         studentsCount: 0,
-        teachersCount: 0
+        teachersCount: 0,
       };
     }
   }, []);
@@ -80,27 +80,27 @@ export default function Dashboard() {
   // Función principal para cargar datos del supervisor
   const loadSupervisorData = useCallback(async () => {
     if (!user?.id) return;
-    
+
     try {
       setLoading(true);
       const data = await getSupervisorCampuses(user.id);
       setSupervisorData(data);
-      
+
       // Preparar array de todos los campus
       const allCampus = [
         {
           id: data.primaryCampusId,
           name: data.primaryCampusName,
           type: 'PRIMARY',
-          isPrimary: true
+          isPrimary: true,
         },
-        ...data.additionalCampuses.map(campus => ({
+        ...data.additionalCampuses.map((campus) => ({
           id: campus.campusId,
           name: campus.campusName,
           type: 'ADDITIONAL',
           isPrimary: false,
-          assignedAt: campus.assignedAt
-        }))
+          assignedAt: campus.assignedAt,
+        })),
       ];
 
       // Cargar estadísticas para cada campus
@@ -108,7 +108,7 @@ export default function Dashboard() {
         const stats = await loadCampusStats(campus.id);
         return {
           ...campus,
-          ...stats
+          ...stats,
         };
       });
 
@@ -120,7 +120,7 @@ export default function Dashboard() {
         (acc, campus) => ({
           students: acc.students + campus.studentsCount,
           teachers: acc.teachers + campus.teachersCount,
-          careers: acc.careers + campus.careersCount
+          careers: acc.careers + campus.careersCount,
         }),
         { students: 0, teachers: 0, careers: 0 }
       );
@@ -128,7 +128,6 @@ export default function Dashboard() {
       setTotalStudents(totals.students);
       setTotalTeachers(totals.teachers);
       setTotalCareers(totals.careers);
-      
     } catch (err) {
       console.error('Error loading supervisor data:', err);
       showError('Error', 'Error al cargar los datos del supervisor');
@@ -147,15 +146,18 @@ export default function Dashboard() {
   }, [loadSupervisorData]);
 
   // Función para navegar a un campus específico
-  const handleCampusClick = useCallback((campus) => {
-    navigate('/supervisor/campuses/careers', { 
-      state: { 
-        campusId: campus.id, 
-        campusName: campus.name,
-        isPrimary: campus.isPrimary
-      } 
-    });
-  }, [navigate]);
+  const handleCampusClick = useCallback(
+    (campus) => {
+      navigate('/supervisor/campuses/careers', {
+        state: {
+          campusId: campus.id,
+          campusName: campus.name,
+          isPrimary: campus.isPrimary,
+        },
+      });
+    },
+    [navigate]
+  );
 
   if (loading) {
     return (
@@ -195,9 +197,7 @@ export default function Dashboard() {
                     <h6 className="text-secondary ms-2 mb-0">Campus supervisados</h6>
                   </div>
                   <div className="d-flex flex-column align-items-center">
-                    <p className="fs-1 fw-bold text-blue-500 mb-0">
-                      {supervisorData ? (1 + supervisorData.additionalCampuses.length) : 0}
-                    </p>
+                    <p className="fs-1 fw-bold text-blue-500 mb-0">{supervisorData ? 1 + supervisorData.additionalCampuses.length : 0}</p>
                   </div>
                 </div>
               </div>
@@ -275,9 +275,7 @@ export default function Dashboard() {
                     </div>
                     <div className="d-flex flex-row align-items-center mt-3">
                       <p className="fs-1 fw-bold text-blue-500 me-3 mb-0">{ratingValue.toFixed(1)}</p>
-                      <div className={`${isUp ? 'icon-average-up' : 'icon-average-down'} rounded-circle`}>
-                        {isUp ? <MdArrowDropUp size={40} /> : <MdArrowDropDown size={40} />}
-                      </div>
+                      <div className={`${isUp ? 'icon-average-up' : 'icon-average-down'} rounded-circle`}>{isUp ? <MdArrowDropUp size={40} /> : <MdArrowDropDown size={40} />}</div>
                     </div>
                   </div>
                 </div>
@@ -296,7 +294,7 @@ export default function Dashboard() {
                     </div>
                     <h6 className="text-secondary ms-2 mb-0">Mis campus</h6>
                   </div>
-                  
+
                   <div className="d-grid gap-2 px-2 overflow-auto" style={{ maxHeight: '250px', cursor: 'pointer' }}>
                     {campusWithStats.length === 0 ? (
                       <div className="text-center mt-3">
@@ -304,20 +302,12 @@ export default function Dashboard() {
                       </div>
                     ) : (
                       campusWithStats.map((campus) => (
-                        <div 
-                          key={campus.id} 
-                          className="d-flex flex-column p-3 border rounded my-1 hovereable"
-                          onClick={() => handleCampusClick(campus)}
-                        >
+                        <div key={campus.id} className="d-flex flex-column p-3 border rounded my-1 hovereable" onClick={() => handleCampusClick(campus)}>
                           <div className="d-flex justify-content-between align-items-start mb-2">
                             <span className="fw-medium text-truncate me-2">{campus.name}</span>
-                            {campus.isPrimary ? (
-                              <span className="badge bg-primary">Principal</span>
-                            ) : (
-                              <span className="badge bg-secondary">Supervisado</span>
-                            )}
+                            {campus.isPrimary ? <span className="badge bg-primary">Principal</span> : <span className="badge bg-secondary">Supervisado</span>}
                           </div>
-                          
+
                           <div className="d-flex justify-content-between text-muted small">
                             <span>
                               <MdOutlineSchool size={16} className="me-1" />
@@ -339,10 +329,7 @@ export default function Dashboard() {
 
                   {campusWithStats.length > 0 && (
                     <div className="text-center mt-2">
-                      <button 
-                        className="btn btn-outline-primary btn-sm"
-                        onClick={() => navigate('/supervisor/campuses')}
-                      >
+                      <button className="btn btn-outline-primary btn-sm" onClick={() => navigate('/supervisor/campuses')}>
                         Ver todos los campus
                       </button>
                     </div>

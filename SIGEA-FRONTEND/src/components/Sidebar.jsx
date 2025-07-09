@@ -64,7 +64,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
       case 'SUPERVISOR':
         return [
           { label: 'Inicio', path: '/supervisor', Icon: MdHome },
-          { label: 'Carreras', path: '/supervisor/campuses', Icon: MdSchool },
+          { label: 'Planteles', path: '/supervisor/campuses', Icon: MdSchool },
           { label: 'Desempeño', path: '/supervisor/teacher-score', Icon: MdLeaderboard },
           { label: 'Perfil', path: '/supervisor/profile', Icon: MdPerson },
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },

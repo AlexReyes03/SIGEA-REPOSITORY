@@ -46,7 +46,7 @@ export default function GroupDetails() {
   useEffect(() => {
     if (!group) {
       navigate('/supervisor/campuses/careers/groups', {
-        state: { career, campusId, campusName, isPrimary }
+        state: { career, campusId, campusName, isPrimary },
       });
       return;
     }
@@ -93,30 +93,32 @@ export default function GroupDetails() {
 
   // Breadcrumb para supervisor
   const breadcrumbItems = [
-    { 
-      label: 'Campus', 
-      command: () => navigate('/supervisor/campuses') 
+    {
+      label: 'Campus',
+      command: () => navigate('/supervisor/campuses'),
     },
-    { 
+    {
       label: campusName,
-      command: () => navigate('/supervisor/campuses/careers', { 
-        state: { campusId, campusName, isPrimary } 
-      })
+      command: () =>
+        navigate('/supervisor/campuses/careers', {
+          state: { campusId, campusName, isPrimary },
+        }),
     },
-    { 
+    {
       label: career?.name || 'Carrera',
-      command: () => navigate('/supervisor/campuses/careers/groups', {
-        state: { career, campusId, campusName, isPrimary }
-      })
+      command: () =>
+        navigate('/supervisor/campuses/careers/groups', {
+          state: { career, campusId, campusName, isPrimary },
+        }),
     },
-    { 
-      label: `Grupo ${group?.name}` || 'Grupo' 
-    }
+    {
+      label: `Grupo ${group?.name}` || 'Grupo',
+    },
   ];
 
-  const breadcrumbHome = { 
-    icon: 'pi pi-home', 
-    command: () => navigate('/supervisor/campuses') 
+  const breadcrumbHome = {
+    icon: 'pi pi-home',
+    command: () => navigate('/supervisor/campuses'),
   };
 
   if (loading) {
@@ -144,11 +146,7 @@ export default function GroupDetails() {
       </div>
 
       {/* Breadcrumb */}
-      <BreadCrumb
-        model={breadcrumbItems}
-        home={breadcrumbHome}
-        className="mt-2 pb-0 ps-0 text-nowrap"
-      />
+      <BreadCrumb model={breadcrumbItems} home={breadcrumbHome} className="mt-2 pb-0 ps-0 text-nowrap" />
 
       {/* Información del grupo y docente */}
       <div className="row my-3">
@@ -163,17 +161,8 @@ export default function GroupDetails() {
               </div>
               <div className="d-flex align-items-center justify-content-center fw-medium">
                 <div className="d-flex flex-column align-items-center text-center">
-                  <img 
-                    alt="Avatar docente" 
-                    src={getAvatarUrl(teacher?.avatarUrl)} 
-                    className="rounded-circle shadow-sm mb-3" 
-                    width={140} 
-                    height={140} 
-                    style={{ objectFit: 'cover' }} 
-                  />
-                  <span className="text-muted text-uppercase">
-                    {teacher ? `${teacher.name} ${teacher.paternalSurname} ${teacher.maternalSurname}` : 'No asignado'}
-                  </span>
+                  <img alt="Avatar docente" src={getAvatarUrl(teacher?.avatarUrl)} className="rounded-circle shadow-sm mb-3" width={140} height={140} style={{ objectFit: 'cover' }} />
+                  <span className="text-muted text-uppercase">{teacher ? `${teacher.name} ${teacher.paternalSurname} ${teacher.maternalSurname}` : 'No asignado'}</span>
                   <span className="text-muted mb-2">{teacher?.email || 'No asignado'}</span>
                   <Rating value={5} readOnly cancel={false} />
                 </div>

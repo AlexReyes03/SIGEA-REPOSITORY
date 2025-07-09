@@ -35,8 +35,8 @@ export default function Groups() {
   const loadGroups = useCallback(async () => {
     if (!career?.id) {
       showError('Error', 'No se especificó la carrera a consultar');
-      navigate('/supervisor/campuses/careers', { 
-        state: { campusId, campusName, isPrimary } 
+      navigate('/supervisor/campuses/careers', {
+        state: { campusId, campusName, isPrimary },
       });
       return;
     }
@@ -60,40 +60,44 @@ export default function Groups() {
     if (career?.id) {
       loadGroups();
     } else {
-      navigate('/supervisor/campuses/careers', { 
-        state: { campusId, campusName, isPrimary } 
+      navigate('/supervisor/campuses/careers', {
+        state: { campusId, campusName, isPrimary },
       });
     }
   }, [loadGroups, career?.id, navigate, campusId, campusName, isPrimary]);
 
   // Breadcrumb items
   const breadcrumbItems = [
-    { 
-      label: 'Campus', 
-      command: () => navigate('/supervisor/campuses') 
+    {
+      label: 'Campus',
+      command: () => navigate('/supervisor/campuses'),
     },
-    { 
+    {
       label: campusName,
-      command: () => navigate('/supervisor/campuses/careers', { 
-        state: { campusId, campusName, isPrimary } 
-      })
+      command: () =>
+        navigate('/supervisor/campuses/careers', {
+          state: { campusId, campusName, isPrimary },
+        }),
     },
-    { 
-      label: career?.name || 'Carrera' 
-    }
+    {
+      label: career?.name || 'Carrera',
+    },
   ];
 
-  const breadcrumbHome = { 
-    icon: 'pi pi-home', 
-    command: () => navigate('/supervisor/campuses') 
+  const breadcrumbHome = {
+    icon: 'pi pi-home',
+    command: () => navigate('/supervisor/campuses'),
   };
 
   // Función para navegar a detalles del grupo
-  const handleGroupClick = useCallback((group) => {
-    navigate('/supervisor/campuses/careers/group-details', {
-      state: { group, career, campusId, campusName, isPrimary }
-    });
-  }, [navigate, career, campusId, campusName, isPrimary]);
+  const handleGroupClick = useCallback(
+    (group) => {
+      navigate('/supervisor/campuses/careers/group-details', {
+        state: { group, career, campusId, campusName, isPrimary },
+      });
+    },
+    [navigate, career, campusId, campusName, isPrimary]
+  );
 
   if (loading) {
     return (
@@ -118,11 +122,7 @@ export default function Groups() {
         <h3 className="text-blue-500 fw-semibold mx-3 my-1">Grupos - {career?.name}</h3>
       </div>
 
-      <BreadCrumb
-        model={breadcrumbItems}
-        home={breadcrumbHome}
-        className="mt-2 pb-0 ps-0 text-nowrap"
-      />
+      <BreadCrumb model={breadcrumbItems} home={breadcrumbHome} className="mt-2 pb-0 ps-0 text-nowrap" />
 
       {groups.length === 0 ? (
         <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 300 }}>
@@ -130,14 +130,16 @@ export default function Groups() {
             <MdOutlineGroup className="text-secondary" size={70} />
             <h5 className="mt-3 text-muted">No hay grupos registrados</h5>
             <p className="text-muted">Esta carrera no tiene grupos configurados</p>
-            <Button 
-              label="Volver a carreras" 
-              icon="pi pi-arrow-left" 
-              severity="secondary" 
+            <Button
+              label="Volver a carreras"
+              icon="pi pi-arrow-left"
+              severity="secondary"
               outlined
-              onClick={() => navigate('/supervisor/campuses/careers', { 
-                state: { campusId, campusName, isPrimary } 
-              })}
+              onClick={() =>
+                navigate('/supervisor/campuses/careers', {
+                  state: { campusId, campusName, isPrimary },
+                })
+              }
             />
           </div>
         </div>
@@ -151,9 +153,7 @@ export default function Groups() {
                     <div className="flex-grow-1 text-truncate">
                       <h6 className="fw-semibold lh-sm mb-2 text-dark text-truncate">{group.name}</h6>
                       <div className="d-flex align-items-center gap-2">
-                        <span className="badge bg-light text-dark border">
-                          {getWeekLabel(group.weekDay)}
-                        </span>
+                        <span className="badge bg-light text-dark border">{getWeekLabel(group.weekDay)}</span>
                         <span className="badge bg-light text-dark border">
                           {group.startTime} - {group.endTime}
                         </span>
@@ -171,7 +171,6 @@ export default function Groups() {
                         </small>
                       </div>
                     </div>
-
                   </div>
 
                   <div className="row g-2 text-center">
@@ -185,9 +184,7 @@ export default function Groups() {
                     <div className="col-6">
                       <div className="p-2 rounded bg-light h-100 text-truncate">
                         <MdOutlineAccessTime className="text-secondary mb-1" size={24} />
-                        <div className="fw-bold text-secondary">
-                          {group.studentsCount > 0 ? 'Activo' : 'Vacío'}
-                        </div>
+                        <div className="fw-bold text-secondary">{group.studentsCount > 0 ? 'Activo' : 'Vacío'}</div>
                         <small className="text-muted">Estado</small>
                       </div>
                     </div>
