@@ -50,7 +50,7 @@ export default function Groups() {
           ) : (
             groups.map((group) => (
               <div key={group.groupId} className="col-12 col-sm-6 col-lg-4 col-xl-3 mb-3" style={{ maxWidth: '25rem' }}>
-                <div className="card border-0 h-100 hovereable" onClick={() => navigate('/teacher/groups/details', { state: { group, user } })}>
+                <div className="card border-0 h-100 hovereable up" onClick={() => navigate('/teacher/groups/details', { state: { group, user } })}>
                   <div className="card-body">
                     <div className="d-flex align-items-center bg-light rounded p-2">
                       <div className="title-icon p-1 rounded-circle ">

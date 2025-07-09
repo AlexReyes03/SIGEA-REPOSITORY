@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Button } from 'primereact/button';
@@ -33,7 +33,7 @@ export default function Careers() {
   const [loading, setLoading] = useState(true);
   const [editingCareer, setEditing] = useState(null);
 
-  // NUEVOS ESTADOS PARA LOADING
+  // ESTADOS PARA LOADING OPTIMIZADOS
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -44,7 +44,13 @@ export default function Careers() {
   });
   const [differentiatorPreview, setDifferentiatorPreview] = useState('');
 
-  const loadCareers = async () => {
+  // FUNCIÓN OPTIMIZADA PARA CARGAR CARRERAS
+  const loadCareers = useCallback(async () => {
+    if (!user?.campus?.id) {
+      showError('Error', 'No se pudo identificar el campus del usuario');
+      return;
+    }
+
     try {
       setLoading(true);
       const list = await getCareerByPlantelId(user.campus.id);
@@ -56,179 +62,216 @@ export default function Careers() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.campus?.id, showError]);
 
   // Generar preview de matrícula
-  const generatePreview = (differentiator) => {
+  const generatePreview = useCallback((differentiator) => {
     if (!differentiator) return '';
     const year = new Date().getFullYear().toString().slice(-2);
     return `${year}${differentiator.toUpperCase()}0001`;
-  };
+  }, []);
 
-  const handleDifferentiatorChange = (value) => {
-    const upperValue = value
-      .toUpperCase()
-      .replace(/[^A-Z0-9]/g, '')
-      .slice(0, 5);
-    setFormData((prev) => ({ ...prev, differentiator: upperValue }));
-    setDifferentiatorPreview(generatePreview(upperValue));
-  };
+  const handleDifferentiatorChange = useCallback(
+    (value) => {
+      const upperValue = value
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
+        .slice(0, 5);
+      setFormData((prev) => ({ ...prev, differentiator: upperValue }));
+      setDifferentiatorPreview(generatePreview(upperValue));
+    },
+    [generatePreview]
+  );
 
-  const validateDifferentiator = (differentiator) => {
+  const validateDifferentiator = useCallback((differentiator) => {
     if (!differentiator) return 'El diferenciador es obligatorio';
     if (differentiator.length < 2) return 'Mínimo 2 caracteres';
     if (differentiator.length > 5) return 'Máximo 5 caracteres';
     if (!/^[A-Z0-9]+$/.test(differentiator)) return 'Solo letras mayúsculas y números';
     return null;
-  };
-
-  useEffect(() => {
-    loadCareers();
   }, []);
 
-  // CREAR CARRERA - CON LOADING STATE
-  const handleCreate = async (e) => {
-    e.preventDefault();
-
-    // Prevenir doble envío
-    if (isCreating) return;
-
-    const differentiatorError = validateDifferentiator(formData.differentiator);
-    if (differentiatorError) {
-      showWarn('Error de validación', differentiatorError);
-      return;
+  // EFECTO OPTIMIZADO - Solo se ejecuta cuando user.campus.id cambia
+  useEffect(() => {
+    if (user?.campus?.id) {
+      loadCareers();
     }
+  }, [loadCareers]);
 
-    if (!formData.name.trim()) {
-      showWarn('Error de validación', 'El nombre es obligatorio');
-      return;
-    }
-
-    const payload = {
-      name: formData.name.trim(),
-      differentiator: formData.differentiator,
-      campusId: user.campus.id,
+  // CLEANUP EFFECT - Limpiar estados al desmontar
+  useEffect(() => {
+    return () => {
+      // Cleanup: cerrar modales si están abiertos al desmontar
+      const createModal = Modal.getInstance(createModalRef.current);
+      const editModal = Modal.getInstance(editModalRef.current);
+      if (createModal) createModal.hide();
+      if (editModal) editModal.hide();
     };
+  }, []);
 
-    try {
-      setIsCreating(true);
-      await createCareer(payload);
-      showSuccess('Éxito', 'Carrera creada correctamente');
+  // CREAR CARRERA - CON LOADING STATE OPTIMIZADO
+  const handleCreate = useCallback(
+    async (e) => {
+      e.preventDefault();
 
-      // Cerrar modal correctamente
-      const modalInstance = Modal.getInstance(createModalRef.current);
-      if (modalInstance) {
-        modalInstance.hide();
+      // Prevenir doble envío
+      if (isCreating) return;
+
+      const differentiatorError = validateDifferentiator(formData.differentiator);
+      if (differentiatorError) {
+        showWarn('Error de validación', differentiatorError);
+        return;
       }
 
-      // Limpiar formulario
-      setFormData({ name: '', differentiator: '' });
-      setDifferentiatorPreview('');
-
-      // Recargar datos
-      await loadCareers();
-    } catch (err) {
-      console.error('Error creating career:', err);
-      const message = err.message || 'Error al crear la carrera';
-      showError('Error', message);
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  // ACTUALIZAR CARRERA - CON LOADING STATE
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-
-    // Prevenir doble envío
-    if (isUpdating) return;
-
-    const differentiatorError = validateDifferentiator(formData.differentiator);
-    if (differentiatorError) {
-      showWarn('Error de validación', differentiatorError);
-      return;
-    }
-
-    if (!formData.name.trim()) {
-      showWarn('Error de validación', 'El nombre es obligatorio');
-      return;
-    }
-
-    const payload = {
-      name: formData.name.trim(),
-      differentiator: formData.differentiator,
-      campusId: user.campus.id,
-    };
-
-    try {
-      setIsUpdating(true);
-      await updateCareer(editingCareer.id, payload);
-      showSuccess('Éxito', 'Carrera actualizada correctamente');
-
-      // Cerrar modal correctamente
-      const modalInstance = Modal.getInstance(editModalRef.current);
-      if (modalInstance) {
-        modalInstance.hide();
+      if (!formData.name.trim()) {
+        showWarn('Error de validación', 'El nombre es obligatorio');
+        return;
       }
 
-      // Recargar datos
-      await loadCareers();
-    } catch (err) {
-      console.error('Error updating career:', err);
-      const message = err.message || 'Error al actualizar la carrera';
-      showError('Error', message);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
+      const payload = {
+        name: formData.name.trim(),
+        differentiator: formData.differentiator,
+        campusId: user.campus.id,
+      };
 
-  // ELIMINAR CARRERA - CON LOADING STATE
-  const handleDelete = (careerToDelete) => {
-    if (isDeleting) return;
+      try {
+        setIsCreating(true);
+        await createCareer(payload);
+        showSuccess('Éxito', 'Carrera creada correctamente');
 
-    confirmAction({
-      message: '¿Estás seguro de eliminar esta carrera?',
-      header: 'Eliminar carrera',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Sí, eliminar',
-      rejectLabel: 'Cancelar',
-      acceptClassName: 'p-button-danger',
-      onAccept: async () => {
-        try {
-          setIsDeleting(true);
-          await deleteCareer(careerToDelete.id);
-          showSuccess('Hecho', `Carrera "${careerToDelete.name}" eliminada`);
-          await loadCareers();
-        } catch (err) {
-          console.error('Error deleting career:', err);
-          const message = err.message || 'Error al eliminar la carrera';
-          showError('Error', message);
-        } finally {
-          setIsDeleting(false);
+        // Cerrar modal correctamente
+        const modalInstance = Modal.getInstance(createModalRef.current);
+        if (modalInstance) {
+          modalInstance.hide();
         }
-      },
-    });
-  };
+
+        // Limpiar formulario
+        setFormData({ name: '', differentiator: '' });
+        setDifferentiatorPreview('');
+
+        // Recargar datos
+        await loadCareers();
+      } catch (err) {
+        console.error('Error creating career:', err);
+        const message = err.message || 'Error al crear la carrera';
+        showError('Error', message);
+      } finally {
+        setIsCreating(false);
+      }
+    },
+    [isCreating, validateDifferentiator, formData, user?.campus?.id, showWarn, showSuccess, showError, loadCareers]
+  );
+
+  // ACTUALIZAR CARRERA - CON LOADING STATE OPTIMIZADO
+  const handleUpdate = useCallback(
+    async (e) => {
+      e.preventDefault();
+
+      // Prevenir doble envío
+      if (isUpdating) return;
+
+      const differentiatorError = validateDifferentiator(formData.differentiator);
+      if (differentiatorError) {
+        showWarn('Error de validación', differentiatorError);
+        return;
+      }
+
+      if (!formData.name.trim()) {
+        showWarn('Error de validación', 'El nombre es obligatorio');
+        return;
+      }
+
+      const payload = {
+        name: formData.name.trim(),
+        differentiator: formData.differentiator,
+        campusId: user.campus.id,
+      };
+
+      try {
+        setIsUpdating(true);
+        await updateCareer(editingCareer.id, payload);
+        showSuccess('Éxito', 'Carrera actualizada correctamente');
+
+        // Cerrar modal correctamente
+        const modalInstance = Modal.getInstance(editModalRef.current);
+        if (modalInstance) {
+          modalInstance.hide();
+        }
+
+        // Recargar datos
+        await loadCareers();
+      } catch (err) {
+        console.error('Error updating career:', err);
+        const message = err.message || 'Error al actualizar la carrera';
+        showError('Error', message);
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    [isUpdating, validateDifferentiator, formData, editingCareer?.id, user?.campus?.id, showWarn, showSuccess, showError, loadCareers]
+  );
+
+  // ELIMINAR CARRERA - CON LOADING STATE OPTIMIZADO
+  const handleDelete = useCallback(
+    (careerToDelete) => {
+      if (isDeleting) return;
+
+      confirmAction({
+        message: '¿Estás seguro de eliminar esta carrera?',
+        header: 'Eliminar carrera',
+        icon: 'pi pi-exclamation-triangle',
+        acceptLabel: 'Sí, eliminar',
+        rejectLabel: 'Cancelar',
+        acceptClassName: 'p-button-danger',
+        onAccept: async () => {
+          try {
+            setIsDeleting(true);
+            await deleteCareer(careerToDelete.id);
+            showSuccess('Hecho', `Carrera "${careerToDelete.name}" eliminada`);
+            await loadCareers();
+          } catch (err) {
+            console.error('Error deleting career:', err);
+            const message = err.message || 'Error al eliminar la carrera';
+            showError('Error', message);
+          } finally {
+            setIsDeleting(false);
+          }
+        },
+      });
+    },
+    [isDeleting, confirmAction, showSuccess, showError, loadCareers]
+  );
 
   // Abre cualquiera de los dos modales
-  const openModal = (ref, career = null) => {
-    if (career) {
-      setEditing(career);
-      setFormData({
-        name: career.name || '',
-        differentiator: career.differentiator || '',
-      });
-      setDifferentiatorPreview(generatePreview(career.differentiator || ''));
-    } else {
-      setFormData({ name: '', differentiator: '' });
-      setDifferentiatorPreview('');
-    }
-    if (ref.current) new Modal(ref.current).show();
-  };
+  const openModal = useCallback(
+    (ref, career = null) => {
+      if (career) {
+        setEditing(career);
+        setFormData({
+          name: career.name || '',
+          differentiator: career.differentiator || '',
+        });
+        setDifferentiatorPreview(generatePreview(career.differentiator || ''));
+      } else {
+        setFormData({ name: '', differentiator: '' });
+        setDifferentiatorPreview('');
+      }
+      if (ref.current) new Modal(ref.current).show();
+    },
+    [generatePreview]
+  );
 
-  const isCareerActive = (career) => {
+  const isCareerActive = useCallback((career) => {
     return career.studentsCount > 0 || career.groupsCount > 0 || career.teachersCount > 0;
-  };
+  }, []);
+
+  // Función para navegar a curriculums
+  const handleCareerClick = useCallback(
+    (career) => {
+      navigate('/admin/careers/curriculums', { state: { career } });
+    },
+    [navigate]
+  );
 
   if (loading) {
     return (
@@ -257,6 +300,7 @@ export default function Careers() {
       <div className="bg-white rounded-top p-2 d-flex align-items-center">
         <h3 className="text-blue-500 fw-semibold mx-3 my-1">Carreras</h3>
         <div className="ms-auto d-flex align-items-center gap-2">
+          <Button icon="pi pi-refresh" severity="secondary" text onClick={loadCareers} disabled={loading || isCreating || isUpdating || isDeleting} tooltip="Actualizar" tooltipOptions={{ position: 'bottom' }} />
           <Button ref={createButtonRef} icon="pi pi-plus" severity="primary" rounded onClick={() => openModal(createModalRef)} disabled={isCreating || isUpdating || isDeleting}>
             <span className="d-none d-sm-inline ms-2">Crear carrera</span>
           </Button>
@@ -275,7 +319,7 @@ export default function Careers() {
         <div className="row mt-3">
           {careers.map((career) => (
             <div key={career.id} className="col-12 col-sm-6 col-lg-4 col-xl-3 mb-3" style={{ maxWidth: '25rem' }}>
-              <div className="card border-0 h-100 hovereable shadow-sm" onClick={() => navigate('/admin/careers/curriculums', { state: { career } })}>
+              <div className="card border-0 h-100 hovereable up shadow-sm" onClick={() => handleCareerClick(career)}>
                 <div className="card-body">
                   <div className="d-flex justify-content-between align-items-start mb-3">
                     <div className="flex-grow-1 text-truncate">
@@ -367,7 +411,7 @@ export default function Careers() {
         </button>
       </OverlayPanel>
 
-      {/* Modal CREAR */}
+      {/* Modal CREAR - Igual que antes pero con callbacks optimizados */}
       <div className="modal fade" ref={createModalRef} tabIndex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
@@ -380,14 +424,14 @@ export default function Careers() {
               <div className="modal-body">
                 <div className="mb-3">
                   <label className="form-label">Nombre *</label>
-                  <input className="form-control" value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} autoComplete="off" spellCheck="false" placeholder="Carrera Técnica en..." required disabled={isCreating} />
+                  <input className="form-control" value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} autoComplete="off" spellCheck="false" placeholder="Solo letras" required disabled={isCreating} />
                 </div>
 
                 <div className="mb-3">
                   <label className="form-label">
-                    Diferenciador * <small className="text-muted">(2-5 caracteres, solo mayúsculas y números)</small>
+                    Diferenciador * <small className="text-muted"></small>
                   </label>
-                  <InputText className="form-control" value={formData.differentiator} onChange={(e) => handleDifferentiatorChange(e.target.value)} placeholder="CO, IN, MEC..." maxLength={5} required disabled={isCreating} />
+                  <InputText className="form-control" value={formData.differentiator} onChange={(e) => handleDifferentiatorChange(e.target.value)} placeholder="2-5 caracteres, solo mayúsculas y números" maxLength={5} required disabled={isCreating} />
                   {differentiatorPreview && (
                     <small className="text-muted">
                       Previsualizar matrícula: <strong>{differentiatorPreview}</strong>
@@ -408,7 +452,7 @@ export default function Careers() {
         </div>
       </div>
 
-      {/* Modal EDITAR */}
+      {/* Modal EDITAR - Igual que antes pero con callbacks optimizados */}
       <div className="modal fade" ref={editModalRef} tabIndex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">

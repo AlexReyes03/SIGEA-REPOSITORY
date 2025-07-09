@@ -63,21 +63,23 @@ export default function Curriculums() {
   const [newModName, setNewModName] = useState('');
   const [newSubName, setNewSubName] = useState('');
   const [weeksNumber, setWeeksNumber] = useState(1);
-  
+
   // Calcular duración de un módulo específico
   const getModuleDuration = useMemo(() => {
     return (module) => {
       if (!module?.subjects || module.subjects.length === 0) {
         return { weeks: 0, months: 0, text: 'Sin materias' };
       }
-      
+
       const totalWeeks = module.subjects.reduce((acc, subject) => acc + (subject.weeks || 0), 0);
       const months = totalWeeks / 4;
-      
+      const monthsRounded = parseFloat(months.toFixed(2));
+      const monthsText = monthsRounded === 1 ? 'mes' : 'meses';
+
       return {
         weeks: totalWeeks,
         months: months,
-        text: `${totalWeeks} semanas (${months.toFixed(2)} meses)`
+        text: `${totalWeeks} ${totalWeeks === 1 ? 'semana' : 'semanas'} (${monthsRounded} ${monthsText})`,
       };
     };
   }, [data]);
@@ -88,16 +90,16 @@ export default function Curriculums() {
       if (!curriculum?.modules || curriculum.modules.length === 0) {
         return { weeks: 0, months: 0, years: 0, text: 'Sin módulos' };
       }
-      
+
       const totalWeeks = curriculum.modules.reduce((acc, module) => {
         if (!module.subjects) return acc;
         return acc + module.subjects.reduce((subAcc, subject) => subAcc + (subject.weeks || 0), 0);
       }, 0);
-      
+
       const totalMonths = totalWeeks / 4;
       const years = Math.floor(totalMonths / 12);
       const remainingMonths = Math.floor(totalMonths % 12);
-      
+
       let text = '';
       if (years > 0 && remainingMonths > 0) {
         text = `${years} año${years > 1 ? 's' : ''} y ${remainingMonths} mes${remainingMonths > 1 ? 'es' : ''}`;
@@ -106,15 +108,15 @@ export default function Curriculums() {
       } else if (remainingMonths > 0) {
         text = `${remainingMonths} mes${remainingMonths > 1 ? 'es' : ''}`;
       } else {
-        text = `${totalWeeks} semanas`;
+        text = `${totalWeeks} ${totalWeeks === 1 ? 'semana' : 'semanas'}`;
       }
-      
+
       return {
         weeks: totalWeeks,
         months: totalMonths,
         years: years,
         remainingMonths: remainingMonths,
-        text: text
+        text: text,
       };
     };
   }, [data]);
@@ -165,7 +167,7 @@ export default function Curriculums() {
         name: newCurrName,
         career: { id: career.id },
       });
-      showSuccess('Plan de estudios creado');
+      showSuccess('Hecho', 'Plan de estudios creado exitosamente');
       setNewCurrName('');
       await loadCurriculums();
       Modal.getInstance(modalCurrRef.current).hide();
@@ -187,7 +189,7 @@ export default function Curriculums() {
         name: newModName,
         curriculum: { id: selectedCurriculum.id },
       });
-      showSuccess('Módulo creado');
+      showSuccess('Hecho', 'Módulo creado exitosamente');
       setNewModName('');
       await loadCurriculums();
       Modal.getInstance(modalModRef.current).hide();
@@ -210,8 +212,9 @@ export default function Curriculums() {
         module: { id: selectedModule.id },
         weeks: weeksNumber,
       });
-      showSuccess('Materia creada');
+      showSuccess('Hecho', 'Materia creada exitosamente');
       setNewSubName('');
+      setWeeksNumber(1);
       await loadCurriculums();
       Modal.getInstance(modalSubRef.current).hide();
     } catch (err) {
@@ -228,7 +231,7 @@ export default function Curriculums() {
         name: newCurrName,
         career: { id: career.id },
       });
-      showSuccess('Plan de estudios actualizado');
+      showSuccess('Hecho', 'Plan de estudios actualizado exitosamente');
       setNewCurrName('');
       setEditingCurriculum(null);
       setIsEditingCurriculum(false);
@@ -248,7 +251,7 @@ export default function Curriculums() {
         name: newModName,
         curriculum: { id: selectedCurriculum.id },
       });
-      showSuccess('Módulo actualizado');
+      showSuccess('Hecho', 'Módulo actualizado exitosamente');
       setNewModName('');
       setEditingModule(null);
       setIsEditingModule(false);
@@ -269,7 +272,7 @@ export default function Curriculums() {
         module: { id: selectedModule.id },
         weeks: weeksNumber,
       });
-      showSuccess('Materia actualizada');
+      showSuccess('Hecho', 'Materia actualizada exitosamente');
       setNewSubName('');
       setEditingSubject(null);
       setIsEditingSubject(false);
@@ -401,9 +404,7 @@ export default function Curriculums() {
                             >
                               <div className="flex-grow-1 text-truncate">
                                 <div className="text-truncate fw-semibold">{curriculum.name}</div>
-                                <small className={`${selectedCurriculumId === curriculum.id ? 'text-white-50' : 'text-muted'}`}>
-                                  {duration.text}
-                                </small>
+                                <small className={`${selectedCurriculumId === curriculum.id ? 'text-white-50' : 'text-muted'}`}>{duration.text}</small>
                               </div>
                               <button
                                 className={`btn border-0 p-1 ms-2 ${selectedCurriculumId === curriculum.id && 'text-white'}`}
@@ -445,7 +446,7 @@ export default function Curriculums() {
                                     acceptLabel: 'Confirmar',
                                     onAccept: async () => {
                                       await deleteCurriculum(editingCurriculum.id);
-                                      showSuccess('Plan eliminado');
+                                      showSuccess('Hecho', 'Plan eliminado exitosamente');
                                       await loadCurriculums();
                                     },
                                   });
@@ -522,9 +523,7 @@ export default function Curriculums() {
                           >
                             <div className="flex-grow-1 text-truncate">
                               <div className="text-truncate fw-semibold">{module.name}</div>
-                              <small className={`${selectedModuleId === module.id ? 'text-white-50' : 'text-muted'}`}>
-                                {duration.text}
-                              </small>
+                              <small className={`${selectedModuleId === module.id ? 'text-white-50' : 'text-muted'}`}>{duration.text}</small>
                             </div>
                             <button
                               className={`btn border-0 p-1 ms-2 ${selectedModuleId === module.id && 'text-white'}`}
@@ -566,7 +565,7 @@ export default function Curriculums() {
                                   acceptLabel: 'Confirmar',
                                   onAccept: async () => {
                                     deleteModule(editingModule.id);
-                                    showSuccess('Módulo eliminado');
+                                    showSuccess('Hecho', 'Módulo eliminado exitosamente');
                                     await loadCurriculums();
                                   },
                                 });
@@ -640,7 +639,7 @@ export default function Curriculums() {
                           <div className="flex-grow-1 text-truncate">
                             <div className="text-truncate fw-semibold">{subject.name}</div>
                             <small className={`${selectedSubjectId === subject.id ? 'text-white-50' : 'text-muted'}`}>
-                              {subject.weeks} semanas
+                              {subject.weeks} {subject.weeks === 1 ? 'semana' : 'semanas'}
                             </small>
                           </div>
                           <button
@@ -678,7 +677,7 @@ export default function Curriculums() {
                                 acceptLabel: 'Confirmar',
                                 onAccept: async () => {
                                   await deleteSubject(editingSubject.id);
-                                  showSuccess('Materia eliminada');
+                                  showSuccess('Hecho', 'Materia eliminada exitosamente');
                                   await loadCurriculums();
                                 },
                               });

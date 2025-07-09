@@ -312,10 +312,16 @@ Button {
   height: 2rem !important;
 }
 
-.hovereable:hover {
-  box-shadow: 0 0px 0.5rem rgba(0, 0, 0, 0.2) !important;
-  transition: box-shadow 0.2s ease-in-out;
+.hovereable {
+  transition: box-shadow 0.2s ease-in-out, transform 0.2s;
   cursor: pointer;
+}
+.hovereable:hover {
+  box-shadow: 0 3px 0.5rem rgba(0, 0, 0, 0.2) !important;
+}
+
+.up:hover {
+  transform: translateY(-6px);
 }
 
 /* Anular margin/padding/decoration SOLO en menús de PrimeReact */

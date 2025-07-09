@@ -41,7 +41,7 @@ export default function AssignStudentsPickList({ group }) {
         searchText: `${student.fullName} ${student.primaryRegistrationNumber || ''} ${student.email || ''}`.toLowerCase(),
       };
     } else {
-      const fullName = `${student.userName || student.name} ${student.userPaternalSurname || student.paternalSurname} ${student.userMaternalSurname || student.maternalSurname}`.trim();
+      const fullName = `${student.userName || student.name || ''} ${student.userPaternalSurname || student.paternalSurname || ''} ${student.userMaternalSurname || student.maternalSurname || ''}`.trim();
 
       return {
         id: student.userId || student.id,

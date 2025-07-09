@@ -31,8 +31,8 @@ export default function GroupModulesTable({ group }) {
   const [qualificationDetails, setQualificationDetails] = useState({});
   const [showQualificationDetails, setShowQualificationDetails] = useState({});
 
-  // Cache optimizado para getCurrentValue
-  const getCurrentValueCache = useMemo(() => new Map(), [editedGrades]);
+  // Nuevo estado para forzar re-render cuando sea necesario
+  const [forceUpdate, setForceUpdate] = useState(0);
 
   const loadData = useCallback(async () => {
     try {
@@ -72,6 +72,11 @@ export default function GroupModulesTable({ group }) {
       });
 
       setTableData(rows);
+
+      // Forzar actualización para resolver bugs de renderizado
+      setTimeout(() => {
+        setForceUpdate((prev) => prev + 1);
+      }, 100);
     } catch (err) {
       showError('Error', 'Error al cargar los datos');
     } finally {
@@ -86,7 +91,7 @@ export default function GroupModulesTable({ group }) {
     }
   }, [group, loadData]);
 
-  // Funciones memoizadas fuera del render loop
+  // Funciones mejoradas para evitar problemas de caché
   const hasInvalidValues = useCallback(
     (moduleId) => {
       const moduleInvalidCells = invalidCells[moduleId] || {};
@@ -120,21 +125,13 @@ export default function GroupModulesTable({ group }) {
     [tableData, curriculum]
   );
 
+  // Sistema mejorado para obtener valores actuales (sin caché problemático)
   const getCurrentValue = useCallback(
     (moduleId, studentId, subjectId, originalValue) => {
-      const cacheKey = `${moduleId}-${studentId}-${subjectId}`;
-
-      if (getCurrentValueCache.has(cacheKey)) {
-        return getCurrentValueCache.get(cacheKey);
-      }
-
       const editedValue = editedGrades[moduleId]?.[studentId]?.[subjectId];
-      const result = editedValue !== undefined ? editedValue : originalValue;
-
-      getCurrentValueCache.set(cacheKey, result);
-      return result;
+      return editedValue !== undefined ? editedValue : originalValue;
     },
-    [editedGrades, getCurrentValueCache]
+    [editedGrades]
   );
 
   const buildNumberEditor = useCallback(
@@ -171,7 +168,11 @@ export default function GroupModulesTable({ group }) {
           },
         }));
 
-        options.editorCallback(val);
+        // Forzar actualización del componente para reflejar cambios inmediatamente
+        setTimeout(() => {
+          options.editorCallback(val);
+          setForceUpdate((prev) => prev + 1);
+        }, 0);
       };
 
       const isInvalid = invalidCells[moduleId]?.[studentId]?.[subjId] || false;
@@ -181,7 +182,7 @@ export default function GroupModulesTable({ group }) {
     [getCurrentValue, invalidCells]
   );
 
-  // Handlers
+  // Handlers mejorados
   const createHandleSave = useCallback(
     (moduleId) => async () => {
       const hasInvalidGrades = hasInvalidValues(moduleId);
@@ -229,6 +230,7 @@ export default function GroupModulesTable({ group }) {
 
             showSuccess('Hecho', 'Calificaciones registradas exitosamente');
 
+            // Limpiar estados de edición
             setEditedGrades((prev) => ({
               ...prev,
               [moduleId]: {},
@@ -242,7 +244,10 @@ export default function GroupModulesTable({ group }) {
               [moduleId]: false,
             }));
 
-            loadData();
+            // Recargar datos con delay para asegurar que el backend procesó los cambios
+            setTimeout(() => {
+              loadData();
+            }, 500);
           } catch (error) {
             showError('Error', error.message || 'Ocurrió un error al registrar las calificaciones');
           }
@@ -266,9 +271,43 @@ export default function GroupModulesTable({ group }) {
         ...prev,
         [moduleId]: {},
       }));
+
+      // Forzar actualización para refrescar la vista
+      setTimeout(() => {
+        setForceUpdate((prev) => prev + 1);
+      }, 100);
     },
     []
   );
+
+  // Función para manejar el toggle de detalles (simplificada)
+  const handleToggleDetails = useCallback((moduleId) => {
+    setShowQualificationDetails((prev) => ({
+      ...prev,
+      [moduleId]: !prev[moduleId],
+    }));
+  }, []);
+
+  // Función para manejar el colapso/expansión de módulos (con fix para tooltips)
+  const handleToggleCollapse = useCallback((moduleId) => {
+    setIsModuleCollapsed((prev) => {
+      const wasCollapsed = prev[moduleId];
+      const newState = {
+        ...prev,
+        [moduleId]: !prev[moduleId],
+      };
+
+      // Siempre forzar actualización para que el Tooltip reconozca los elementos
+      setTimeout(
+        () => {
+          setForceUpdate((prevUpdate) => prevUpdate + 1);
+        },
+        wasCollapsed ? 400 : 100
+      ); // Más delay al expandir, menos al colapsar
+
+      return newState;
+    });
+  }, []);
 
   // Módulos ordenados
   const sortedModules = useMemo(() => {
@@ -285,12 +324,12 @@ export default function GroupModulesTable({ group }) {
     []
   );
 
-  // Crear header groups para todos los módulos (fuera del loop)
+  // Crear header groups para todos los módulos (mejorado)
   const headerGroups = useMemo(() => {
     const groups = {};
     sortedModules.forEach((module) => {
       groups[module.id] = (
-        <ColumnGroup>
+        <ColumnGroup key={`header-${module.id}`}>
           <Row>
             <Column header="Nombre del estudiante" rowSpan={2} style={{ border: '1px solid #ededed' }} />
             <Column header="Materias" colSpan={module.subjects.length} style={{ border: '1px solid #ededed' }} />
@@ -305,18 +344,21 @@ export default function GroupModulesTable({ group }) {
       );
     });
     return groups;
-  }, [sortedModules]);
+  }, [sortedModules, forceUpdate]);
 
-  // Crear table keys para todos los módulos (fuera del loop)
+  // Crear table keys mejoradas (menos agresivas)
   const tableKeys = useMemo(() => {
     const keys = {};
     sortedModules.forEach((module) => {
       const isEditing = isEditingModule[module.id];
       const editedCount = Object.keys(editedGrades[module.id] || {}).length;
-      keys[module.id] = `${module.id}-${isEditing ? 'edit' : 'view'}-${showQualificationDetails[module.id] ? 'details' : 'nodetails'}-${editedCount}`;
+      const detailsShown = showQualificationDetails[module.id];
+      // Solo incluir forceUpdate cuando realmente sea necesario (en modo edición)
+      const forceKey = isEditing ? forceUpdate : 0;
+      keys[module.id] = `${module.id}-${isEditing ? 'edit' : 'view'}-${detailsShown ? 'details' : 'nodetails'}-${editedCount}-${forceKey}`;
     });
     return keys;
-  }, [sortedModules, isEditingModule, editedGrades, showQualificationDetails]);
+  }, [sortedModules, isEditingModule, editedGrades, showQualificationDetails, forceUpdate]);
 
   if (loading) {
     return <span>Cargando...</span>;
@@ -324,7 +366,7 @@ export default function GroupModulesTable({ group }) {
 
   return (
     <>
-      <Tooltip target="[data-pr-tooltip]" />
+      <Tooltip key={`tooltip-${forceUpdate}`} target="[data-pr-tooltip]" />
 
       {sortedModules.map((module) => {
         const isCollapsed = isModuleCollapsed[module.id];
@@ -345,7 +387,7 @@ export default function GroupModulesTable({ group }) {
         const tableKey = tableKeys[module.id];
 
         return (
-          <div className="card border-0 mt-3" key={module.id}>
+          <div className="card border-0 mt-3" key={`module-${module.id}`}>
             {/* Header módulo */}
             <div className="d-flex flex-wrap gap-2 align-items-center justify-content-between w-100">
               <div className="d-flex align-items-center my-md-3 mt-3 mx-3">
@@ -353,19 +395,7 @@ export default function GroupModulesTable({ group }) {
                   <MdOutlineGroup size={40} className="p-1" />
                 </div>
                 <h6 className="text-blue-500 fs-5 fw-semibold ms-3 mb-0">{module.name}</h6>
-                <Button
-                  icon={isCollapsed ? 'pi pi-plus' : 'pi pi-minus'}
-                  title={isCollapsed ? 'Expandir módulo' : 'Ocultar módulo'}
-                  size="small"
-                  text
-                  className="rounded-circle ms-2"
-                  onClick={() =>
-                    setIsModuleCollapsed((prev) => ({
-                      ...prev,
-                      [module.id]: !prev[module.id],
-                    }))
-                  }
-                />
+                <Button icon={isCollapsed ? 'pi pi-plus' : 'pi pi-minus'} title={isCollapsed ? 'Expandir módulo' : 'Ocultar módulo'} size="small" text className="rounded-circle ms-2" onClick={() => handleToggleCollapse(module.id)} />
               </div>
 
               {!isCollapsed && (
@@ -385,12 +415,7 @@ export default function GroupModulesTable({ group }) {
                         icon="pi pi-question-circle"
                         className={`me-2 ${showQualificationDetails[module.id] ? 'p-button-help' : 'p-button-secondary'}`}
                         outlined={!showQualificationDetails[module.id]}
-                        onClick={() =>
-                          setShowQualificationDetails((prev) => ({
-                            ...prev,
-                            [module.id]: !prev[module.id],
-                          }))
-                        }
+                        onClick={() => handleToggleDetails(module.id)}
                         data-pr-tooltip={showQualificationDetails[module.id] ? 'Ocultar detalles de calificación' : 'Mostrar detalles de calificación'}
                         data-pr-position="top"
                       />
@@ -465,7 +490,7 @@ export default function GroupModulesTable({ group }) {
                   rowsPerPageOptions={[5, 10, 25]}
                   globalFilter={search}
                   globalFilterFields={['fullName']}
-                  emptyMessage={!search ? <p className="text-center my-5">Aún no hay registros</p> : <p className="text-center my-5">No se encontraron resultados</p>}
+                  emptyMessage={!search ? <p className="text-center my-5">Aún no hay estudiantes asignados</p> : <p className="text-center my-5">No se encontraron resultados</p>}
                   tableStyle={{
                     borderBottom: '1px solid #ededed',
                     borderLeft: '1px solid #ededed',
@@ -478,7 +503,7 @@ export default function GroupModulesTable({ group }) {
                   {/* Materias */}
                   {module.subjects.map((subj) => (
                     <Column
-                      key={subj.id}
+                      key={`subject-${subj.id}`}
                       field={String(subj.id)}
                       header={<span className="fw-bold">{subj.id}</span>}
                       style={{
@@ -553,12 +578,13 @@ export default function GroupModulesTable({ group }) {
                     />
                   ))}
 
-                  {/* Promedio */}
+                  {/* Promedio mejorado */}
                   <Column
                     header="Promedio"
                     style={gridLinesX}
                     body={(row) => {
-                      const notas = module.subjects
+                      // Calcular promedio usando datos actuales (incluyendo ediciones)
+                      const grades = module.subjects
                         .map((s) => {
                           const originalValue = row[s.id];
                           const currentValue = getCurrentValue(module.id, row.studentId, s.id, originalValue);
@@ -566,7 +592,10 @@ export default function GroupModulesTable({ group }) {
                         })
                         .filter((v) => v != null && v >= 6 && v <= 10);
 
-                      return notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1) : '—';
+                      if (grades.length === 0) return '—';
+
+                      const average = grades.reduce((a, b) => a + b, 0) / grades.length;
+                      return average.toFixed(1);
                     }}
                   />
                 </DataTable>

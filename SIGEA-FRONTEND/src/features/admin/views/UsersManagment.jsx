@@ -6,6 +6,7 @@ import { MultiSelect } from 'primereact/multiselect';
 import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
 import { Tag } from 'primereact/tag';
+import { Chip } from 'primereact/chip';
 import { Checkbox } from 'primereact/checkbox';
 import { Toolbar } from 'primereact/toolbar';
 import { ProgressSpinner } from 'primereact/progressspinner';
@@ -17,6 +18,8 @@ import { getUserByRole, getUserByRoleAndPlantel, createUser, updateUser, toggleU
 import { getAllRoles } from '../../../api/roleService';
 import { getCareerByPlantelId } from '../../../api/academics/careerService';
 import { createEnrollment, generateRegistrationNumber, getEnrollmentsByUser, updateEnrollmentRegistration, deleteEnrollment, canRemoveUserFromCareer } from '../../../api/academics/enrollmentService';
+import { getAllCampus } from '../../../api/academics/campusService';
+import { assignMultipleCampusToSupervisor } from '../../../api/supervisorService';
 import { useToast } from '../../../components/providers/ToastProvider';
 import { useConfirmDialog } from '../../../components/providers/ConfirmDialogProvider';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -37,6 +40,7 @@ const ROLE_LABELS = {
 };
 
 const ROLE_NEEDS_CAREERS = ['TEACHER', 'STUDENT'];
+const ROLE_NEEDS_CAMPUS = ['SUPERVISOR'];
 
 const DEFAULT_ROLES = [
   { id: 1, roleName: 'ADMIN' },
@@ -115,6 +119,7 @@ export default function UsersManagement() {
   const [enrollmentInputs, setEnrollmentInputs] = useState({});
   const [roles, setRoles] = useState([]);
   const [careers, setCareers] = useState([]);
+  const [campus, setCampus] = useState([]); // Nuevo estado para campus
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -126,6 +131,9 @@ export default function UsersManagement() {
   const [selectedCareers, setSelectedCareers] = useState([]);
   const [careerChips, setCareerChips] = useState([]);
   const [editCareerChips, setEditCareerChips] = useState([]);
+  // Nuevos estados para campus
+  const [selectedCampus, setSelectedCampus] = useState([]);
+  const [campusChips, setCampusChips] = useState([]);
   const [registerMore, setRegisterMore] = useState(false);
   const [generatingMatriculas, setGeneratingMatriculas] = useState(false);
 
@@ -161,6 +169,12 @@ export default function UsersManagement() {
     return ROLE_NEEDS_CAREERS.includes(getCurrentRole.roleName);
   }, [getCurrentRole]);
 
+  // Nuevo computed para campus
+  const currentRoleNeedsCampus = useMemo(() => {
+    if (!getCurrentRole) return false;
+    return ROLE_NEEDS_CAMPUS.includes(getCurrentRole.roleName);
+  }, [getCurrentRole]);
+
   const careerOptions = useMemo(
     () =>
       careers.map((career) => ({
@@ -170,6 +184,19 @@ export default function UsersManagement() {
         name: career.name,
       })),
     [careers]
+  );
+
+  // Nuevas opciones para campus
+  const campusOptions = useMemo(
+    () =>
+      campus
+        .filter((camp) => camp.id !== user?.campus?.id) // Filtrar el campus principal del usuario
+        .map((camp) => ({
+          label: camp.name,
+          value: camp.id,
+          name: camp.name,
+        })),
+    [campus, user?.campus?.id]
   );
 
   const getRoleLabel = useCallback(
@@ -284,6 +311,27 @@ const processedUsers = useMemo(() => {
     } finally {
       setGeneratingMatriculas(false);
     }
+  };
+
+  // Nueva función para manejar selección de campus
+  const handleCampusSelection = (selectedCampusIds) => {
+    setSelectedCampus(selectedCampusIds);
+
+    const newChips = selectedCampusIds.map(campusId => {
+      const selectedCamp = campus.find(c => c.id === campusId);
+      return {
+        campusId: campusId,
+        campusName: selectedCamp?.name || 'Campus desconocido',
+      };
+    });
+
+    setCampusChips(newChips);
+  };
+
+  // Nueva función para remover chip de campus
+  const removeCampusChip = (campusId) => {
+    setCampusChips((prev) => prev.filter((chip) => chip.campusId !== campusId));
+    setSelectedCampus((prev) => prev.filter((id) => id !== campusId));
   };
 
   const updateChipMatricula = (careerId, newYear, newLast4) => {
@@ -413,6 +461,17 @@ const processedUsers = useMemo(() => {
     }
   }, [user?.campus?.id]);
 
+  // Nueva función para cargar campus
+  const loadCampus = useCallback(async () => {
+    try {
+      const data = await getAllCampus();
+      setCampus(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error loading campus:', error);
+      setCampus([]);
+    }
+  }, []);
+
   // Effects
   useEffect(() => {
     const loadRoles = async () => {
@@ -426,7 +485,8 @@ const processedUsers = useMemo(() => {
     };
     loadRoles();
     loadCareers();
-  }, [showError, loadCareers]);
+    loadCampus(); // Cargar campus
+  }, [showError, loadCareers, loadCampus]);
 
   useEffect(() => {
     if (roles.length > 0 && isInitialLoad && user?.campus?.id) {
@@ -521,6 +581,7 @@ const processedUsers = useMemo(() => {
 
           savedUser = await createUser(userData);
 
+          // Manejar inscripciones de carreras
           if (currentRoleNeedsCareers && careerChips.length > 0) {
             for (const chip of careerChips) {
               try {
@@ -536,13 +597,34 @@ const processedUsers = useMemo(() => {
             }
           }
 
-          showSuccess('Éxito', 'Usuario registrado correctamente');
+          // Manejar asignación de campus para supervisores
+          if (currentRoleNeedsCampus && campusChips.length > 0) {
+            try {
+              const campusIds = campusChips.map(chip => chip.campusId);
+              const result = await assignMultipleCampusToSupervisor(
+                savedUser.id, 
+                campusIds, 
+                user.id
+              );
+              
+              if (result.failed > 0) {
+                showWarn('Advertencia', `Usuario creado pero ${result.failed} campus no pudieron ser asignados`);
+              }
+            } catch (campusError) {
+              console.error('Error assigning campus:', campusError);
+              showWarn('Advertencia', 'Usuario creado pero hubo un error al asignar algunos campus');
+            }
+          }
+
+          showSuccess('Hecho', 'Usuario registrado correctamente');
 
           if (registerMore) {
             setFormData({ ...INITIAL_USER_STATE, campusId: user?.campus?.id || '', roleId: finalRoleId });
             setSelectedCareers([]);
             setCareerChips([]);
             setEditCareerChips([]);
+            setSelectedCampus([]);
+            setCampusChips([]);
             setUserEnrollments([]);
             setOriginalUserEnrollments([]);
             setEnrollmentInputs({});
@@ -615,7 +697,7 @@ const processedUsers = useMemo(() => {
               }
             }
 
-            showSuccess('Éxito', `Usuario ${formData.name} actualizado correctamente`);
+            showSuccess('Hecho', `Usuario ${formData.name} actualizado correctamente`);
             bootstrap.Modal.getInstance(editModalRef.current)?.hide();
             resetAllStates();
             reloadCurrentView();
@@ -636,8 +718,11 @@ const processedUsers = useMemo(() => {
       formData,
       selectedTipoUsuario,
       user?.campus?.id,
+      user?.id,
       currentRoleNeedsCareers,
+      currentRoleNeedsCampus,
       careerChips,
+      campusChips,
       editCareerChips,
       registerMore,
       userEnrollments,
@@ -676,7 +761,7 @@ const processedUsers = useMemo(() => {
 
               await Promise.all(promises);
               setSelected([]);
-              showSuccess('Éxito', `${userIds.length} usuario(s) ${action === 'desactivar' ? 'desactivados' : 'activados'} correctamente`);
+              showSuccess('Hecho', `${userIds.length} usuario(s) ${action === 'desactivar' ? 'desactivados' : 'activados'} correctamente`);
               reloadCurrentView();
             } catch (error) {
               showError('Error', `Error al ${action} los usuarios`);
@@ -715,6 +800,8 @@ const processedUsers = useMemo(() => {
     setSelectedCareers([]);
     setCareerChips([]);
     setEditCareerChips([]);
+    setSelectedCampus([]);
+    setCampusChips([]);
     setRegisterMore(false);
     setEditingUser(null);
     setUserEnrollments([]);
@@ -782,6 +869,8 @@ const processedUsers = useMemo(() => {
         setFormData(initialFormData);
         setSelectedCareers([]);
         setCareerChips([]);
+        setSelectedCampus([]);
+        setCampusChips([]);
         setRegisterMore(false);
         setUserEnrollments([]);
         setOriginalUserEnrollments([]);
@@ -1025,6 +1114,8 @@ const processedUsers = useMemo(() => {
     if (field === 'roleId') {
       setSelectedCareers([]);
       setCareerChips([]);
+      setSelectedCampus([]);
+      setCampusChips([]);
     }
   }, []);
 
@@ -1103,6 +1194,21 @@ const processedUsers = useMemo(() => {
             )}
           </div>
         </div>
+      </div>
+    ),
+    []
+  );
+
+  // Nuevo componente de chip de campus
+  const CampusChipComponent = useCallback(
+    ({ chip, onRemove }) => (
+      <div className="col-md-6 mb-2">
+        <Chip 
+          label={chip.campusName} 
+          removable 
+          onRemove={() => onRemove(chip.campusId)}
+          className="mb-2"
+        />
       </div>
     ),
     []
@@ -1208,9 +1314,54 @@ const processedUsers = useMemo(() => {
                   )}
                 </div>
 
-                <hr />
+                {/* Nueva sección para campus supervisados (solo para supervisores) */}
+                {currentRoleNeedsCampus && (
+                  <div className="col-md-6 mb-4">
+                    <label className="form-label">
+                      Campus supervisados
+                    </label>
+                    <MultiSelect
+                      value={selectedCampus}
+                      options={campusOptions}
+                      onChange={(e) => handleCampusSelection(e.value)}
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Selecciona planteles adicionales"
+                      emptyMessage='Sin planteles disponibles'
+                      className="w-100"
+                      maxSelectedLabels={0}
+                      selectedItemsLabel="{0} planteles seleccionados"
+                    />
+
+                    <small className="text-muted d-block mt-1">
+                      <p>Campus principal:</p>
+                      <Chip 
+                        label={user?.campus?.name || 'No definido'} 
+                        className="me-2 mb-2"
+                      />
+                    </small>
+                    
+                    {campusChips.length > 0 && (
+                      <div className="mt-2">
+                        <small className="text-muted d-block mb-2">Campus supervisados:</small>
+                        <div className="d-flex flex-wrap">
+                          {campusChips.map((chip) => (
+                            <CampusChipComponent
+                              key={chip.campusId}
+                              chip={chip}
+                              onRemove={removeCampusChip}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                  </div>
+                )}
 
                 {currentRoleNeedsCareers && (
+                  <>
+                  <hr />
                   <div className="col-12">
                     <label className="form-label">
                       Carreras <small className="text-muted">(opcional)</small>
@@ -1251,6 +1402,7 @@ const processedUsers = useMemo(() => {
                       </div>
                     )}
                   </div>
+                  </>
                 )}
               </div>
               <div className="modal-footer d-flex justify-content-between">
@@ -1300,8 +1452,6 @@ const processedUsers = useMemo(() => {
                   <label className="form-label">Rol</label>
                   <input className="form-control" value={getRoleFriendlyName(rolesMap[formData.roleId]?.roleName || '')} disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }} />
                 </div>
-
-                {/* ESTADO REMOVIDO - Solo se puede cambiar desde el DataTable */}
 
                 <hr />
 

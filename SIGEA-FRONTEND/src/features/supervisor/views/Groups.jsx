@@ -1,0 +1,203 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Button } from 'primereact/button';
+import { BreadCrumb } from 'primereact/breadcrumb';
+import { ProgressSpinner } from 'primereact/progressspinner';
+import { MdOutlineGroup, MdOutlineSchool, MdOutlineAccessTime, MdOutlinePerson, MdOutlineMoreHoriz } from 'react-icons/md';
+
+import { useToast } from '../../../components/providers/ToastProvider';
+import { getGroupByCareer } from '../../../api/academics/groupService';
+
+const weekDayOptions = [
+  { label: 'Lunes', value: 'LUN' },
+  { label: 'Martes', value: 'MAR' },
+  { label: 'Miércoles', value: 'MIE' },
+  { label: 'Jueves', value: 'JUE' },
+  { label: 'Viernes', value: 'VIE' },
+  { label: 'Sábado', value: 'SAB' },
+  { label: 'Domingo', value: 'DOM' },
+];
+
+const getWeekLabel = (code) => weekDayOptions.find((o) => o.value === code)?.label || code;
+
+export default function Groups() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { showError } = useToast();
+
+  // Obtener datos de navegación
+  const { career, campusId, campusName, isPrimary } = location.state || {};
+
+  const [groups, setGroups] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Función para cargar grupos
+  const loadGroups = useCallback(async () => {
+    if (!career?.id) {
+      showError('Error', 'No se especificó la carrera a consultar');
+      navigate('/supervisor/campuses/careers', { 
+        state: { campusId, campusName, isPrimary } 
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await getGroupByCareer(career.id);
+      const groupsData = Array.isArray(response) ? response : response?.data ?? [];
+      setGroups(groupsData);
+    } catch (err) {
+      console.error('Error loading groups:', err);
+      showError('Error', 'Error al cargar los grupos de la carrera');
+      setGroups([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [career?.id, showError, navigate, campusId, campusName, isPrimary]);
+
+  // Efecto para cargar datos
+  useEffect(() => {
+    if (career?.id) {
+      loadGroups();
+    } else {
+      navigate('/supervisor/campuses/careers', { 
+        state: { campusId, campusName, isPrimary } 
+      });
+    }
+  }, [loadGroups, career?.id, navigate, campusId, campusName, isPrimary]);
+
+  // Breadcrumb items
+  const breadcrumbItems = [
+    { 
+      label: 'Campus', 
+      command: () => navigate('/supervisor/campuses') 
+    },
+    { 
+      label: campusName,
+      command: () => navigate('/supervisor/campuses/careers', { 
+        state: { campusId, campusName, isPrimary } 
+      })
+    },
+    { 
+      label: career?.name || 'Carrera' 
+    }
+  ];
+
+  const breadcrumbHome = { 
+    icon: 'pi pi-home', 
+    command: () => navigate('/supervisor/campuses') 
+  };
+
+  // Función para navegar a detalles del grupo
+  const handleGroupClick = useCallback((group) => {
+    navigate('/supervisor/campuses/careers/group-details', {
+      state: { group, career, campusId, campusName, isPrimary }
+    });
+  }, [navigate, career, campusId, campusName, isPrimary]);
+
+  if (loading) {
+    return (
+      <>
+        <div className="bg-white rounded-top p-2">
+          <h3 className="text-blue-500 fw-semibold mx-3 my-1">Grupos - {career?.name}</h3>
+        </div>
+
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 400 }}>
+          <div className="text-center">
+            <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" />
+            <p className="mt-3 text-600">Cargando grupos...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className="bg-white rounded-top p-2">
+        <h3 className="text-blue-500 fw-semibold mx-3 my-1">Grupos - {career?.name}</h3>
+      </div>
+
+      <BreadCrumb
+        model={breadcrumbItems}
+        home={breadcrumbHome}
+        className="mt-2 pb-0 ps-0 text-nowrap"
+      />
+
+      {groups.length === 0 ? (
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 300 }}>
+          <div className="text-center">
+            <MdOutlineGroup className="text-secondary" size={70} />
+            <h5 className="mt-3 text-muted">No hay grupos registrados</h5>
+            <p className="text-muted">Esta carrera no tiene grupos configurados</p>
+            <Button 
+              label="Volver a carreras" 
+              icon="pi pi-arrow-left" 
+              severity="secondary" 
+              outlined
+              onClick={() => navigate('/supervisor/campuses/careers', { 
+                state: { campusId, campusName, isPrimary } 
+              })}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="row mt-3">
+          {groups.map((group) => (
+            <div key={group.groupId} className="col-12 col-sm-6 col-lg-4 col-xl-3 mb-3" style={{ maxWidth: '25rem' }}>
+              <div className="card border-0 h-100 hovereable up shadow-sm" onClick={() => handleGroupClick(group)}>
+                <div className="card-body">
+                  <div className="d-flex justify-content-between align-items-start mb-3">
+                    <div className="flex-grow-1 text-truncate">
+                      <h6 className="fw-semibold lh-sm mb-2 text-dark text-truncate">{group.name}</h6>
+                      <div className="d-flex align-items-center gap-2">
+                        <span className="badge bg-light text-dark border">
+                          {getWeekLabel(group.weekDay)}
+                        </span>
+                        <span className="badge bg-light text-dark border">
+                          {group.startTime} - {group.endTime}
+                        </span>
+                      </div>
+                      <div className="mt-2">
+                        <small className="text-muted">
+                          <MdOutlinePerson className="me-1" size={14} />
+                          {group.teacherName}
+                        </small>
+                      </div>
+                      <div className="mt-1">
+                        <small className="text-muted">
+                          <MdOutlineSchool className="me-1" size={14} />
+                          {group.curriculumName}
+                        </small>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <div className="row g-2 text-center">
+                    <div className="col-6">
+                      <div className="p-2 rounded bg-light h-100 text-truncate">
+                        <MdOutlineGroup className="text-secondary mb-1" size={24} />
+                        <div className="fw-bold text-secondary">{group.studentsCount || 0}</div>
+                        <small className="text-muted">Estudiantes</small>
+                      </div>
+                    </div>
+                    <div className="col-6">
+                      <div className="p-2 rounded bg-light h-100 text-truncate">
+                        <MdOutlineAccessTime className="text-secondary mb-1" size={24} />
+                        <div className="fw-bold text-secondary">
+                          {group.studentsCount > 0 ? 'Activo' : 'Vacío'}
+                        </div>
+                        <small className="text-muted">Estado</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
