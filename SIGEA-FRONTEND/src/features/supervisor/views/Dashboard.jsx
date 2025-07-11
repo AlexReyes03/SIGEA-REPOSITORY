@@ -4,6 +4,8 @@ import { MdOutlineEmojiEvents, MdOutlinePerson, MdOutlineCoPresent, MdOutlineGro
 import { Rating } from 'primereact/rating';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Message } from 'primereact/message';
+import { Button } from 'primereact/button';
+import { Tag } from 'primereact/tag';
 
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/providers/ToastProvider';
@@ -53,7 +55,7 @@ export default function Dashboard() {
     };
   }, []);
 
-  // Función para cargar estadísticas de un campus
+  // Función para cargar estadísticas de un plantel
   const loadCampusStats = useCallback(async (campusId) => {
     try {
       const [careers, students, teachers] = await Promise.all([
@@ -68,7 +70,7 @@ export default function Dashboard() {
         teachersCount: Array.isArray(teachers) ? teachers.length : 0,
       };
     } catch (error) {
-      console.error(`Error loading stats for campus ${campusId}:`, error);
+      showError('Error', `Error al cargar las estadísticas por plantel`);
       return {
         careersCount: 0,
         studentsCount: 0,
@@ -86,7 +88,7 @@ export default function Dashboard() {
       const data = await getSupervisorCampuses(user.id);
       setSupervisorData(data);
 
-      // Preparar array de todos los campus
+      // Preparar array de todos los planteles
       const allCampus = [
         {
           id: data.primaryCampusId,
@@ -103,7 +105,7 @@ export default function Dashboard() {
         })),
       ];
 
-      // Cargar estadísticas para cada campus
+      // Cargar estadísticas para cada plantel
       const campusStatsPromises = allCampus.map(async (campus) => {
         const stats = await loadCampusStats(campus.id);
         return {
@@ -129,7 +131,6 @@ export default function Dashboard() {
       setTotalTeachers(totals.teachers);
       setTotalCareers(totals.careers);
     } catch (err) {
-      console.error('Error loading supervisor data:', err);
       showError('Error', 'Error al cargar los datos del supervisor');
       setSupervisorData(null);
       setCampusWithStats([]);
@@ -145,7 +146,7 @@ export default function Dashboard() {
     }
   }, [loadSupervisorData]);
 
-  // Función para navegar a un campus específico
+  // Función para navegar a un plantel específico
   const handleCampusClick = useCallback(
     (campus) => {
       navigate('/supervisor/campuses/careers', {
@@ -182,159 +183,150 @@ export default function Dashboard() {
         <h3 className="text-blue-500 fw-semibold mx-3 my-1">Inicio</h3>
       </div>
 
+      {/* FILA 1 - INDICADORES CLAVE: Solo 4 contadores */}
       <div className="row mt-3">
-        {/* COLUMNA IZQUIERDA - Estadísticas generales */}
-        <div className="col-12 col-lg-6">
-          <div className="row">
-            {/* Total de campus */}
-            <div className="col-12 col-md-6 mb-3">
-              <div className="card border-0">
-                <div className="card-body">
-                  <div className="d-flex align-items-center">
-                    <div className="title-icon p-1 rounded-circle">
-                      <MdOutlineLocationOn size={40} className="p-1" />
-                    </div>
-                    <h6 className="text-secondary ms-2 mb-0">Campus supervisados</h6>
-                  </div>
-                  <div className="d-flex flex-column align-items-center">
-                    <p className="fs-1 fw-bold text-blue-500 mb-0">{supervisorData ? 1 + supervisorData.additionalCampuses.length : 0}</p>
-                  </div>
+        {/* Total de planteles supervisados */}
+        <div className="col-12 col-sm-6 col-lg-3 mb-3">
+          <div className="card border-0 h-100">
+            <div className="card-body d-flex flex-column justify-content-between" style={{ minHeight: '140px' }}>
+              <div className="d-flex align-items-center mb-2">
+                <div className="title-icon p-1 rounded-circle">
+                  <MdOutlineLocationOn size={32} className="p-1" />
                 </div>
+                <h6 className="text-secondary ms-2 mb-0 text-truncate">Planteles supervisados</h6>
               </div>
-            </div>
-
-            {/* Total de carreras */}
-            <div className="col-12 col-md-6 mb-3">
-              <div className="card border-0">
-                <div className="card-body">
-                  <div className="d-flex align-items-center">
-                    <div className="title-icon p-1 rounded-circle">
-                      <MdOutlineSchool size={40} className="p-1" />
-                    </div>
-                    <h6 className="text-secondary ms-2 mb-0">Total de carreras</h6>
-                  </div>
-                  <div className="d-flex flex-column align-items-center">
-                    <p className="fs-1 fw-bold text-blue-500 mb-0">{totalCareers}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Total de docentes */}
-            <div className="col-12 col-md-6 mb-3">
-              <div className="card border-0">
-                <div className="card-body">
-                  <div className="d-flex align-items-center">
-                    <div className="title-icon p-1 rounded-circle">
-                      <MdOutlineCoPresent size={40} className="p-1" />
-                    </div>
-                    <h6 className="text-secondary ms-2 mb-0">Total de docentes</h6>
-                  </div>
-                  <div className="d-flex flex-column align-items-center">
-                    <p className="fs-1 fw-bold text-blue-500 mb-0">{totalTeachers}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Total de estudiantes */}
-            <div className="col-12 col-md-6 mb-3">
-              <div className="card border-0">
-                <div className="card-body">
-                  <div className="d-flex align-items-center">
-                    <div className="title-icon p-1 rounded-circle">
-                      <MdOutlinePerson size={40} className="p-1" />
-                    </div>
-                    <h6 className="text-secondary ms-2 mb-0">Total de estudiantes</h6>
-                  </div>
-                  <div className="d-flex flex-column align-items-center">
-                    <p className="fs-1 fw-bold text-blue-500 mb-0">{totalStudents}</p>
-                  </div>
-                </div>
+              <div className="text-center">
+                <p className="fs-1 fw-bold text-blue-500 mb-0">{supervisorData ? 1 + supervisorData.additionalCampuses.length : 0}</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* COLUMNA DERECHA */}
-        <div className="col-12 col-lg-6">
-          {/* Desempeño general */}
-          <div className="row">
-            <div className="col-12 mb-3">
-              <div className="card border-0" style={{ height: '200px' }}>
-                <div className="card-body d-flex flex-column h-100">
-                  <div className="d-flex align-items-center mb-3">
-                    <div className="title-icon p-1 rounded-circle">
-                      <MdOutlineEmojiEvents size={40} className="p-1" />
-                    </div>
-                    <h6 className="text-secondary ms-2 mb-0">Desempeño general</h6>
-                  </div>
-                  <div className="d-flex flex-column align-items-center justify-content-center flex-grow-1">
-                    <div>
-                      <Rating value={Math.round(ratingValue)} readOnly cancel={false} />
-                    </div>
-                    <div className="d-flex flex-row align-items-center mt-3">
-                      <p className="fs-1 fw-bold text-blue-500 me-3 mb-0">{ratingValue.toFixed(1)}</p>
-                      <div className={`${isUp ? 'icon-average-up' : 'icon-average-down'} rounded-circle`}>{isUp ? <MdArrowDropUp size={40} /> : <MdArrowDropDown size={40} />}</div>
-                    </div>
-                  </div>
+        {/* Total de carreras */}
+        <div className="col-12 col-sm-6 col-lg-3 mb-3">
+          <div className="card border-0 h-100">
+            <div className="card-body d-flex flex-column justify-content-between" style={{ minHeight: '140px' }}>
+              <div className="d-flex align-items-center mb-2">
+                <div className="title-icon p-1 rounded-circle">
+                  <MdOutlineSchool size={32} className="p-1" />
                 </div>
+                <h6 className="text-secondary ms-2 mb-0 text-truncate">Total de carreras</h6>
+              </div>
+              <div className="text-center">
+                <p className="fs-1 fw-bold text-blue-500 mb-0">{totalCareers}</p>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Campus supervisados */}
-          <div className="row">
-            <div className="col-12">
-              <div className="card border-0" style={{ minHeight: '300px' }}>
-                <div className="card-body">
-                  <div className="d-flex align-items-center mb-3">
-                    <div className="title-icon p-1 rounded-circle">
-                      <MdOutlineGroup size={40} className="p-1" />
-                    </div>
-                    <h6 className="text-secondary ms-2 mb-0">Mis campus</h6>
-                  </div>
-
-                  <div className="d-grid gap-2 px-2 overflow-auto" style={{ maxHeight: '250px', cursor: 'pointer' }}>
-                    {campusWithStats.length === 0 ? (
-                      <div className="text-center mt-3">
-                        <Message severity="info" text="No tienes campus asignados." />
-                      </div>
-                    ) : (
-                      campusWithStats.map((campus) => (
-                        <div key={campus.id} className="d-flex flex-column p-3 border rounded my-1 hovereable" onClick={() => handleCampusClick(campus)}>
-                          <div className="d-flex justify-content-between align-items-start mb-2">
-                            <span className="fw-medium text-truncate me-2">{campus.name}</span>
-                            {campus.isPrimary ? <span className="badge bg-primary">Principal</span> : <span className="badge bg-secondary">Supervisado</span>}
-                          </div>
-
-                          <div className="d-flex justify-content-between text-muted small">
-                            <span>
-                              <MdOutlineSchool size={16} className="me-1" />
-                              {campus.careersCount} carreras
-                            </span>
-                            <span>
-                              <MdOutlineCoPresent size={16} className="me-1" />
-                              {campus.teachersCount} docentes
-                            </span>
-                            <span>
-                              <MdOutlinePerson size={16} className="me-1" />
-                              {campus.studentsCount} estudiantes
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  {campusWithStats.length > 0 && (
-                    <div className="text-center mt-2">
-                      <button className="btn btn-outline-primary btn-sm" onClick={() => navigate('/supervisor/campuses')}>
-                        Ver todos los campus
-                      </button>
-                    </div>
-                  )}
+        {/* Total de docentes */}
+        <div className="col-12 col-sm-6 col-lg-3 mb-3">
+          <div className="card border-0 h-100">
+            <div className="card-body d-flex flex-column justify-content-between" style={{ minHeight: '140px' }}>
+              <div className="d-flex align-items-center mb-2">
+                <div className="title-icon p-1 rounded-circle">
+                  <MdOutlineCoPresent size={32} className="p-1" />
                 </div>
+                <h6 className="text-secondary ms-2 mb-0 text-truncate">Total de docentes</h6>
+              </div>
+              <div className="text-center">
+                <p className="fs-1 fw-bold text-blue-500 mb-0">{totalTeachers}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Total de estudiantes */}
+        <div className="col-12 col-sm-6 col-lg-3 mb-3">
+          <div className="card border-0 h-100">
+            <div className="card-body d-flex flex-column justify-content-between" style={{ minHeight: '140px' }}>
+              <div className="d-flex align-items-center mb-2">
+                <div className="title-icon p-1 rounded-circle">
+                  <MdOutlinePerson size={32} className="p-1" />
+                </div>
+                <h6 className="text-secondary ms-2 mb-0 text-truncate">Total de estudiantes</h6>
+              </div>
+              <div className="text-center">
+                <p className="fs-1 fw-bold text-blue-500 mb-0">{totalStudents}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* FILA 2 - DETALLE: Planteles (izquierda) y Desempeño (derecha) */}
+      <div className="row">
+        {/* Planteles supervisados - Columna izquierda */}
+        <div className="col-12 col-lg-8 mb-3">
+          <div className="card border-0" style={{ minHeight: '400px' }}>
+            <div className="card-body">
+              <div className="d-flex align-items-center justify-content-between mb-4">
+                <div className="d-flex align-items-center">
+                  <div className="title-icon p-1 rounded-circle">
+                    <MdOutlineLocationOn size={40} className="p-1" />
+                  </div>
+                  <h5 className="text-blue-500 fw-semibold ms-3 mb-0">Planteles supervisados</h5>
+                </div>
+                {campusWithStats.length > 0 && (
+                  <Button size="small" outlined icon="pi pi-arrow-up-right" onClick={() => navigate('/supervisor/campuses')}>
+                    <span className="d-none d-md-inline ms-2">Ver todos</span>
+                  </Button>
+                )}
+              </div>
+              {campusWithStats.length === 0 ? (
+                <div className="text-center py-5">
+                  <Message severity="info" text="No tienes planteles asignados." />
+                </div>
+              ) : (
+                <div className="overflow-auto" style={{ maxHeight: '300px' }}>
+                  <div className="d-grid gap-2 mb-3">
+                    {campusWithStats.map((campus) => (
+                      <div key={campus.id} className="d-flex flex-column p-3 border rounded hovereable" onClick={() => handleCampusClick(campus)} style={{ cursor: 'pointer' }}>
+                        <div className="d-flex justify-content-between align-items-start mb-2">
+                          <span className="fw-medium text-truncate me-2">{campus.name}</span>
+                          {campus.isPrimary ? <Tag severity="success" value="Principal"></Tag> : <Tag severity="primary" value="Supervisado"></Tag>}
+                        </div>
+
+                        <div className="d-flex justify-content-between text-center text-muted small">
+                          <span>
+                            <MdOutlineSchool size={16} className="me-1" />
+                            {campus.careersCount} carreras
+                          </span>
+                          <span>
+                            <MdOutlineCoPresent size={16} className="me-1" />
+                            {campus.teachersCount} docentes
+                          </span>
+                          <span>
+                            <MdOutlinePerson size={16} className="me-1" />
+                            {campus.studentsCount} estudiantes
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Desempeño general - Columna derecha */}
+        <div className="col-12 col-lg-4 mb-3">
+          <div className="card border-0" style={{ minHeight: '400px' }}>
+            <div className="card-body d-flex flex-column">
+              <div className="d-flex align-items-center mb-4">
+                <div className="title-icon p-1 rounded-circle">
+                  <MdOutlineEmojiEvents size={40} className="p-1" />
+                </div>
+                <h5 className="text-blue-500 fw-semibold ms-3 mb-0">Desempeño general</h5>
+              </div>
+              <div className="d-flex flex-column align-items-center justify-content-center flex-grow-1">
+                <Rating value={Math.round(ratingValue)} readOnly cancel={false} className="mb-3" />
+                <div className="d-flex align-items-center">
+                  <p className="fs-1 fw-bold text-blue-500 me-3 mb-0">{ratingValue.toFixed(1)}</p>
+                  <div className={`${isUp ? 'icon-average-up' : 'icon-average-down'} rounded-circle`}>{isUp ? <MdArrowDropUp size={40} /> : <MdArrowDropDown size={40} />}</div>
+                </div>
+                <small className="text-muted mt-2 text-center">Evaluación promedio de todos los docentes supervisados</small>
               </div>
             </div>
           </div>

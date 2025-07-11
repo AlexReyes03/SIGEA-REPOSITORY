@@ -26,6 +26,9 @@ export default function GroupModulesTableReadOnly({ group }) {
   const [qualificationDetails, setQualificationDetails] = useState({});
   const [showQualificationDetails, setShowQualificationDetails] = useState({});
 
+  // Estado para forzar re-render del Tooltip
+  const [forceUpdate, setForceUpdate] = useState(0);
+
   const loadData = useCallback(async () => {
     try {
       const curriculumData = await getCurriculumById(group.curriculumId);
@@ -64,6 +67,11 @@ export default function GroupModulesTableReadOnly({ group }) {
       });
 
       setTableData(rows);
+
+      // Forzar actualización para resolver problemas de renderizado
+      setTimeout(() => {
+        setForceUpdate((prev) => prev + 1);
+      }, 100);
     } catch (err) {
       showError('Error', 'Error al cargar los datos');
     } finally {
@@ -77,6 +85,35 @@ export default function GroupModulesTableReadOnly({ group }) {
       loadData();
     }
   }, [group, loadData]);
+
+  const handleToggleCollapse = useCallback((moduleId) => {
+    setShowQualificationDetails((prev) => ({
+      ...prev,
+      [moduleId]: false,
+    }));
+
+    setIsModuleCollapsed((prev) => {
+      const wasCollapsed = prev[moduleId];
+      const nextState = { ...prev, [moduleId]: !wasCollapsed };
+
+      setTimeout(
+        () => {
+          setForceUpdate((u) => u + 1);
+        },
+        wasCollapsed ? 400 : 100
+      );
+
+      return nextState;
+    });
+  }, []);
+
+  // Función para manejar el toggle de detalles (simplificada)
+  const handleToggleDetails = useCallback((moduleId) => {
+    setShowQualificationDetails((prev) => ({
+      ...prev,
+      [moduleId]: !prev[moduleId],
+    }));
+  }, []);
 
   // Módulos ordenados
   const sortedModules = useMemo(() => {
@@ -98,7 +135,7 @@ export default function GroupModulesTableReadOnly({ group }) {
     const groups = {};
     sortedModules.forEach((module) => {
       groups[module.id] = (
-        <ColumnGroup>
+        <ColumnGroup key={`header-${module.id}`}>
           <Row>
             <Column header="Nombre del estudiante" rowSpan={2} style={{ border: '1px solid #ededed' }} />
             <Column header="Materias" colSpan={module.subjects.length} style={{ border: '1px solid #ededed' }} />
@@ -119,10 +156,11 @@ export default function GroupModulesTableReadOnly({ group }) {
   const tableKeys = useMemo(() => {
     const keys = {};
     sortedModules.forEach((module) => {
-      keys[module.id] = `${module.id}-readonly-${showQualificationDetails[module.id] ? 'details' : 'nodetails'}`;
+      const detailsShown = showQualificationDetails[module.id];
+      keys[module.id] = `${module.id}-readonly-${detailsShown ? 'details' : 'nodetails'}-${forceUpdate}`;
     });
     return keys;
-  }, [sortedModules, showQualificationDetails]);
+  }, [sortedModules, showQualificationDetails, forceUpdate]);
 
   if (loading) {
     return (
@@ -134,7 +172,7 @@ export default function GroupModulesTableReadOnly({ group }) {
 
   return (
     <>
-      <Tooltip target="[data-pr-tooltip]" />
+      <Tooltip key={`tooltip-readonly-${forceUpdate}`} target="[data-pr-tooltip]" />
 
       {sortedModules.map((module) => {
         const isCollapsed = isModuleCollapsed[module.id];
@@ -145,7 +183,7 @@ export default function GroupModulesTableReadOnly({ group }) {
         const tableKey = tableKeys[module.id];
 
         return (
-          <div className="card border-0 mt-3" key={module.id}>
+          <div className="card border-0 mt-3" key={`module-${module.id}`}>
             {/* Header módulo */}
             <div className="d-flex flex-wrap gap-2 align-items-center justify-content-between w-100">
               <div className="d-flex align-items-center my-md-3 mt-3 mx-3">
@@ -153,19 +191,7 @@ export default function GroupModulesTableReadOnly({ group }) {
                   <MdOutlineGroup size={40} className="p-1" />
                 </div>
                 <h6 className="text-blue-500 fs-5 fw-semibold ms-3 mb-0">{module.name}</h6>
-                <Button
-                  icon={isCollapsed ? 'pi pi-plus' : 'pi pi-minus'}
-                  title={isCollapsed ? 'Expandir módulo' : 'Ocultar módulo'}
-                  size="small"
-                  text
-                  className="rounded-circle ms-2"
-                  onClick={() =>
-                    setIsModuleCollapsed((prev) => ({
-                      ...prev,
-                      [module.id]: !prev[module.id],
-                    }))
-                  }
-                />
+                <Button icon={isCollapsed ? 'pi pi-plus' : 'pi pi-minus'} title={isCollapsed ? 'Expandir módulo' : 'Ocultar módulo'} size="small" text className="rounded-circle ms-2" onClick={() => handleToggleCollapse(module.id)} />
               </div>
 
               {!isCollapsed && (
@@ -174,12 +200,7 @@ export default function GroupModulesTableReadOnly({ group }) {
                     icon="pi pi-question-circle"
                     className={`me-2 ${showQualificationDetails[module.id] ? 'p-button-help' : 'p-button-secondary'}`}
                     outlined={!showQualificationDetails[module.id]}
-                    onClick={() =>
-                      setShowQualificationDetails((prev) => ({
-                        ...prev,
-                        [module.id]: !prev[module.id],
-                      }))
-                    }
+                    onClick={() => handleToggleDetails(module.id)}
                     data-pr-tooltip={showQualificationDetails[module.id] ? 'Ocultar detalles de calificación' : 'Mostrar detalles de calificación'}
                     data-pr-position="top"
                   />
@@ -233,7 +254,7 @@ export default function GroupModulesTableReadOnly({ group }) {
                   rowsPerPageOptions={[5, 10, 25]}
                   globalFilter={search}
                   globalFilterFields={['fullName']}
-                  emptyMessage={!search ? <p className="text-center my-5">Aún no hay registros</p> : <p className="text-center my-5">No se encontraron resultados</p>}
+                  emptyMessage={!search ? <p className="text-center my-5">Aún no hay estudiantes</p> : <p className="text-center my-5">No se encontraron resultados</p>}
                   tableStyle={{
                     borderBottom: '1px solid #ededed',
                     borderLeft: '1px solid #ededed',
@@ -246,7 +267,7 @@ export default function GroupModulesTableReadOnly({ group }) {
                   {/* Materias */}
                   {module.subjects.map((subj) => (
                     <Column
-                      key={subj.id}
+                      key={`subject-readonly-${subj.id}`}
                       field={String(subj.id)}
                       header={<span className="fw-bold">{subj.id}</span>}
                       style={{
@@ -260,9 +281,7 @@ export default function GroupModulesTableReadOnly({ group }) {
                         const details = qualificationDetails[row.studentId]?.[subj.id];
 
                         if (grade != null) {
-                          const tooltipContent = details 
-                            ? `Calificado por: ${details.teacherName}\nFecha: ${details.dateFormatted}` 
-                            : 'Sin información del docente';
+                          const tooltipContent = details ? `Calificado por: ${details.teacherName}\nFecha: ${details.dateFormatted}` : 'Sin información del docente';
 
                           return (
                             <span
@@ -281,12 +300,12 @@ export default function GroupModulesTableReadOnly({ group }) {
 
                         // Sin calificación
                         return (
-                          <span 
-                            style={{ 
-                              display: 'block', 
-                              textAlign: 'center', 
+                          <span
+                            style={{
+                              display: 'block',
+                              textAlign: 'center',
                               color: '#6c757d',
-                              fontStyle: 'italic'
+                              fontStyle: 'italic',
                             }}
                           >
                             SC
@@ -299,12 +318,10 @@ export default function GroupModulesTableReadOnly({ group }) {
                   {/* Promedio */}
                   <Column
                     header="Promedio"
-                    className='fw-semibold'
+                    className="fw-semibold"
                     style={gridLinesX}
                     body={(row) => {
-                      const grades = module.subjects
-                        .map((s) => row[s.id])
-                        .filter((v) => v != null && v >= 6 && v <= 10);
+                      const grades = module.subjects.map((s) => row[s.id]).filter((v) => v != null && v >= 6 && v <= 10);
 
                       return grades.length ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(1) : '—';
                     }}

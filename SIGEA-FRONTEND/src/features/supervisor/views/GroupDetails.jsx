@@ -118,7 +118,7 @@ export default function GroupDetails() {
 
   const breadcrumbHome = {
     icon: 'pi pi-home',
-    command: () => navigate('/supervisor/campuses'),
+    command: () => navigate('/supervisor'),
   };
 
   if (loading) {
