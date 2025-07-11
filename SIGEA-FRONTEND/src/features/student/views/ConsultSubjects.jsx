@@ -229,7 +229,7 @@ export default function ConsultSubjects({ group, studentId, studentData }) {
                                     <h6 className="text-blue-500 fs-5 fw-semibold mb-1">{module.name}</h6>
                                     {moduleAverage && (
                                         <small className="text-muted">
-                                            Promedio del módulo: <span className="fw-semibold">{moduleAverage}</span>
+                                            Promedio: <span className="fw-semibold">{moduleAverage}</span>
                                         </small>
                                     )}
                                 </div>
