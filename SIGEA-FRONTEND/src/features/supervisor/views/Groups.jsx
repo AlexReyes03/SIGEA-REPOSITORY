@@ -3,10 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from 'primereact/button';
 import { BreadCrumb } from 'primereact/breadcrumb';
 import { ProgressSpinner } from 'primereact/progressspinner';
-import { MdOutlineGroup, MdOutlineSchool, MdOutlineAccessTime, MdOutlinePerson, MdOutlineMoreHoriz } from 'react-icons/md';
+import { MdOutlineGroup, MdOutlineSchool, MdOutlineAccessTime, MdOutlinePerson, MdOutlineCheckCircle, MdOutlineCircle } from 'react-icons/md';
 
 import { useToast } from '../../../components/providers/ToastProvider';
-import { getGroupByCareer } from '../../../api/academics/groupService';
+import { getGroupByCareer, getGroupStudents } from '../../../api/academics/groupService';
 
 const weekDayOptions = [
   { label: 'Lunes', value: 'LUN' },
@@ -30,6 +30,50 @@ export default function Groups() {
 
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingStudentCounts, setLoadingStudentCounts] = useState(false);
+
+  // Función para cargar cantidad de estudiantes de un grupo
+  const loadGroupStudentCount = useCallback(async (groupId) => {
+    try {
+      const students = await getGroupStudents(groupId);
+      return Array.isArray(students) ? students.length : 0;
+    } catch (error) {
+      console.error(`Error loading students for group ${groupId}:`, error);
+      return 0;
+    }
+  }, []);
+
+  // Función para cargar contadores de estudiantes para todos los grupos
+  const loadStudentCounts = useCallback(
+    async (groupsList) => {
+      setLoadingStudentCounts(true);
+
+      const groupPromises = groupsList.map(async (group) => {
+        const studentsCount = await loadGroupStudentCount(group.groupId);
+        return {
+          ...group,
+          studentsCount,
+        };
+      });
+
+      try {
+        const groupsWithCounts = await Promise.all(groupPromises);
+        setGroups(groupsWithCounts);
+      } catch (error) {
+        console.error('Error loading student counts:', error);
+        // Si falla, mantener los grupos sin contador
+        setGroups(
+          groupsList.map((group) => ({
+            ...group,
+            studentsCount: 0,
+          }))
+        );
+      } finally {
+        setLoadingStudentCounts(false);
+      }
+    },
+    [loadGroupStudentCount]
+  );
 
   // Función para cargar grupos
   const loadGroups = useCallback(async () => {
@@ -45,7 +89,13 @@ export default function Groups() {
       setLoading(true);
       const response = await getGroupByCareer(career.id);
       const groupsData = Array.isArray(response) ? response : response?.data ?? [];
-      setGroups(groupsData);
+
+      // Cargar contadores de estudiantes para cada grupo
+      if (groupsData.length > 0) {
+        await loadStudentCounts(groupsData);
+      } else {
+        setGroups([]);
+      }
     } catch (err) {
       console.error('Error loading groups:', err);
       showError('Error', 'Error al cargar los grupos de la carrera');
@@ -53,7 +103,7 @@ export default function Groups() {
     } finally {
       setLoading(false);
     }
-  }, [career?.id, showError, navigate, campusId, campusName, isPrimary]);
+  }, [career?.id, showError, navigate, campusId, campusName, isPrimary, loadStudentCounts]);
 
   // Efecto para cargar datos
   useEffect(() => {
@@ -69,7 +119,7 @@ export default function Groups() {
   // Breadcrumb items
   const breadcrumbItems = [
     {
-      label: 'Campus',
+      label: 'Planteles',
       command: () => navigate('/supervisor/campuses'),
     },
     {
@@ -86,7 +136,7 @@ export default function Groups() {
 
   const breadcrumbHome = {
     icon: 'pi pi-home',
-    command: () => navigate('/supervisor/campuses'),
+    command: () => navigate('/supervisor'),
   };
 
   // Función para navegar a detalles del grupo
@@ -129,7 +179,7 @@ export default function Groups() {
           <div className="text-center">
             <MdOutlineGroup className="text-secondary" size={70} />
             <h5 className="mt-3 text-muted">No hay grupos registrados</h5>
-            <p className="text-muted">Esta carrera no tiene grupos configurados</p>
+            <p className="text-muted">Esta carrera no tiene grupos</p>
             <Button
               label="Volver a carreras"
               icon="pi pi-arrow-left"
@@ -147,44 +197,45 @@ export default function Groups() {
         <div className="row mt-3">
           {groups.map((group) => (
             <div key={group.groupId} className="col-12 col-sm-6 col-lg-4 col-xl-3 mb-3" style={{ maxWidth: '25rem' }}>
-              <div className="card border-0 h-100 hovereable up shadow-sm" onClick={() => handleGroupClick(group)}>
+              <div className="card border-0 h-100 hovereable up shadow-sm" onClick={() => handleGroupClick(group)} style={{ cursor: 'pointer' }}>
                 <div className="card-body">
                   <div className="d-flex justify-content-between align-items-start mb-3">
                     <div className="flex-grow-1 text-truncate">
-                      <h6 className="fw-semibold lh-sm mb-2 text-dark text-truncate">{group.name}</h6>
-                      <div className="d-flex align-items-center gap-2">
+                      <h6 className="fw-semibold lh-sm mb-2 text-dark text-truncate">Grupo {group.name}</h6>
+                      <div className="d-flex align-items-center gap-2 mb-2">
                         <span className="badge bg-light text-dark border">{getWeekLabel(group.weekDay)}</span>
                         <span className="badge bg-light text-dark border">
                           {group.startTime} - {group.endTime}
                         </span>
                       </div>
-                      <div className="mt-2">
+                      <div className="mt-2 text-uppercase">
                         <small className="text-muted">
                           <MdOutlinePerson className="me-1" size={14} />
-                          {group.teacherName}
+                          {group.teacherName || 'Sin docente asignado'}
                         </small>
                       </div>
-                      <div className="mt-1">
+                      <div className="mt-1 text-uppercase">
                         <small className="text-muted">
                           <MdOutlineSchool className="me-1" size={14} />
-                          {group.curriculumName}
+                          {group.curriculumName || 'Sin plan de estudios'}
                         </small>
                       </div>
                     </div>
                   </div>
 
+                  {/* Contadores mejorados */}
                   <div className="row g-2 text-center">
                     <div className="col-6">
                       <div className="p-2 rounded bg-light h-100 text-truncate">
                         <MdOutlineGroup className="text-secondary mb-1" size={24} />
-                        <div className="fw-bold text-secondary">{group.studentsCount || 0}</div>
-                        <small className="text-muted">Estudiantes</small>
+                        <div className="fw-bold text-secondary">{loadingStudentCounts ? <ProgressSpinner style={{ width: '16px', height: '16px' }} strokeWidth="4" /> : group.studentsCount || 0}</div>
+                        <small className="text-muted">{group.studentsCount === 1 ? 'Estudiante' : 'Estudiantes'}</small>
                       </div>
                     </div>
                     <div className="col-6">
                       <div className="p-2 rounded bg-light h-100 text-truncate">
-                        <MdOutlineAccessTime className="text-secondary mb-1" size={24} />
-                        <div className="fw-bold text-secondary">{group.studentsCount > 0 ? 'Activo' : 'Vacío'}</div>
+                        {group.studentsCount > 0 ? <MdOutlineCheckCircle className="text-secondary mb-1" size={24} /> : <MdOutlineCircle className="text-secondary mb-1" size={24} />}
+                        <div className="fw-bold text-secondary">{loadingStudentCounts ? <ProgressSpinner style={{ width: '16px', height: '16px' }} strokeWidth="4" /> : group.studentsCount > 0 ? 'Activo' : 'Vacío'}</div>
                         <small className="text-muted">Estado</small>
                       </div>
                     </div>

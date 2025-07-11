@@ -1,13 +1,15 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { MdOutlineSchool, MdOutlineStars, MdOutlineLocationOn, MdOutlinePerson, MdOutlineCoPresent } from 'react-icons/md';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Skeleton } from 'primereact/skeleton';
-import { MdOutlineSchool, MdOutlineStars, MdOutlineLocationOn } from 'react-icons/md';
+import { BreadCrumb } from 'primereact/breadcrumb';
 
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/providers/ToastProvider';
 import { getSupervisorCampuses } from '../../../api/supervisorService';
 import { getCareerByPlantelId } from '../../../api/academics/careerService';
+import { getUserByRoleAndPlantel } from '../../../api/userService';
 
 export default function Campuses() {
   const { user } = useAuth();
@@ -15,9 +17,35 @@ export default function Campuses() {
   const { showError } = useToast();
 
   const [supervisorData, setSupervisorData] = useState(null);
-  const [campusWithCareers, setCampusWithCareers] = useState([]);
+  const [campusWithStats, setCampusWithStats] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadingCareers, setLoadingCareers] = useState(false);
+  const [loadingStats, setLoadingStats] = useState(false);
+
+  // Función para cargar estadísticas completas de un plantel
+  const loadCampusStats = useCallback(async (campusId) => {
+    try {
+      const [careers, students, teachers] = await Promise.all([
+        getCareerByPlantelId(campusId),
+        getUserByRoleAndPlantel(4, campusId), // 4 = STUDENT
+        getUserByRoleAndPlantel(3, campusId), // 3 = TEACHER
+      ]);
+
+      return {
+        careersCount: Array.isArray(careers) ? careers.length : 0,
+        studentsCount: Array.isArray(students) ? students.length : 0,
+        teachersCount: Array.isArray(teachers) ? teachers.length : 0,
+        careers: Array.isArray(careers) ? careers : [],
+      };
+    } catch (error) {
+      console.error(`Error loading stats for campus ${campusId}:`, error);
+      return {
+        careersCount: 0,
+        studentsCount: 0,
+        teachersCount: 0,
+        careers: [],
+      };
+    }
+  }, []);
 
   // Función para cargar datos del supervisor
   const loadSupervisorData = useCallback(async () => {
@@ -28,7 +56,7 @@ export default function Campuses() {
       const data = await getSupervisorCampuses(user.id);
       setSupervisorData(data);
 
-      // Preparar array de todos los campus (principal + adicionales)
+      // Preparar array de todos los planteles (principal + adicionales)
       const allCampus = [
         {
           id: data.primaryCampusId,
@@ -45,58 +73,51 @@ export default function Campuses() {
         })),
       ];
 
-      // Cargar cantidad de carreras para cada campus
-      await loadCareersCount(allCampus);
+      // Cargar estadísticas completas para cada plantel
+      await loadCompleteStats(allCampus);
     } catch (err) {
       console.error('Error loading supervisor data:', err);
       showError('Error', 'Error al cargar los datos del supervisor');
       setSupervisorData(null);
-      setCampusWithCareers([]);
+      setCampusWithStats([]);
     } finally {
       setLoading(false);
     }
   }, [user?.id, showError]);
 
-  // Función para cargar cantidad de carreras por campus
-  const loadCareersCount = useCallback(async (campusList) => {
-    setLoadingCareers(true);
+  // Función para cargar estadísticas completas por plantel
+  const loadCompleteStats = useCallback(
+    async (campusList) => {
+      setLoadingStats(true);
 
-    const campusPromises = campusList.map(async (campus) => {
+      const campusPromises = campusList.map(async (campus) => {
+        const stats = await loadCampusStats(campus.id);
+        return {
+          ...campus,
+          ...stats,
+        };
+      });
+
       try {
-        const careers = await getCareerByPlantelId(campus.id);
-        const careersArray = Array.isArray(careers) ? careers : [];
-
-        return {
-          ...campus,
-          careersCount: careersArray.length,
-          careers: careersArray,
-        };
+        const campusWithStatsData = await Promise.all(campusPromises);
+        setCampusWithStats(campusWithStatsData);
       } catch (error) {
-        console.error(`Error loading careers for campus ${campus.id}:`, error);
-        return {
-          ...campus,
-          careersCount: 0,
-          careers: [],
-        };
+        console.error('Error loading complete stats:', error);
+        setCampusWithStats(
+          campusList.map((campus) => ({
+            ...campus,
+            careersCount: 0,
+            studentsCount: 0,
+            teachersCount: 0,
+            careers: [],
+          }))
+        );
+      } finally {
+        setLoadingStats(false);
       }
-    });
-
-    try {
-      const campusWithCareersData = await Promise.all(campusPromises);
-      setCampusWithCareers(campusWithCareersData);
-    } catch (error) {
-      console.error('Error loading careers count:', error);
-      setCampusWithCareers(
-        campusList.map((campus) => ({
-          ...campus,
-          careersCount: 0,
-          careers: [],
-        }))
-      );
-    } finally {
-      setLoadingCareers(false);
-    }
-  }, []);
+    },
+    [loadCampusStats]
+  );
 
   // Función para navegar a careers
   const handleCampusClick = useCallback(
@@ -119,11 +140,25 @@ export default function Campuses() {
     }
   }, [loadSupervisorData]);
 
+  const breadcrumbItems = [
+    {
+      label: 'Planteles',
+      command: () => navigate('/supervisor/campuses'),
+    },
+  ];
+
+  const breadcrumbHome = {
+    icon: 'pi pi-home',
+    command: () => navigate('/supervisor'),
+  };
+
   return (
     <>
       <div className="bg-white rounded-top p-2">
         <h3 className="text-blue-500 fw-semibold mx-3 my-1">Planteles</h3>
       </div>
+
+      <BreadCrumb model={breadcrumbItems} home={breadcrumbHome} className="mt-2 pb-0 ps-0 text-nowrap" />
 
       {loading ? (
         <>
@@ -154,7 +189,7 @@ export default function Campuses() {
           <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 400 }}>
             <div className="text-center">
               <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" />
-              <p className="mt-3 text-600">Cargando campus...</p>
+              <p className="mt-3 text-600">Cargando planteles...</p>
             </div>
           </div>
         </>
@@ -166,17 +201,17 @@ export default function Campuses() {
             <p className="text-muted">Intenta recargar la página</p>
           </div>
         </div>
-      ) : campusWithCareers.length === 0 ? (
+      ) : campusWithStats.length === 0 ? (
         <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 300 }}>
           <div className="text-center">
             <MdOutlineLocationOn className="text-secondary" size={70} />
-            <h5 className="mt-3 text-muted">No hay campus asignados</h5>
-            <p className="text-muted">Contacta al administrador para asignar campus</p>
+            <h5 className="mt-3 text-muted">No hay planteles asignados</h5>
+            <p className="text-muted">Contacta al administrador para asignar planteles</p>
           </div>
         </div>
       ) : (
         <div className="row mt-3">
-          {campusWithCareers.map((campus) => (
+          {campusWithStats.map((campus) => (
             <div key={campus.id} className="col-12 col-sm-6 col-lg-4 col-xl-3 mb-3" style={{ maxWidth: '25rem' }}>
               <div className="card border-0 h-100 hovereable up shadow-sm" onClick={() => handleCampusClick(campus)} style={{ cursor: 'pointer' }}>
                 <div className="card-body">
@@ -185,26 +220,44 @@ export default function Campuses() {
                       <div className="d-flex align-items-center gap-2 mb-2">
                         <h6 className="fw-semibold lh-sm mb-0 text-dark text-truncate">{campus.name}</h6>
                       </div>
-                      <div className="mb-2">
+                      <div className="mb-3">
                         {campus.isPrimary ? (
                           <small className="text-muted">
                             <i className="pi pi-star me-1"></i>
-                            Campus principal
+                            Plantel principal
                           </small>
                         ) : (
                           <small className="text-muted">
                             <i className="pi pi-users me-1"></i>
-                            Campus supervisado
+                            Plantel supervisado
                           </small>
                         )}
                       </div>
                     </div>
                   </div>
-                  <div className="text-center">
-                    <div className="p-3 rounded bg-light">
-                      <MdOutlineSchool className="text-secondary mb-2" size={32} />
-                      <div className="fw-bold text-secondary fs-4">{loadingCareers ? <ProgressSpinner style={{ width: '20px', height: '20px' }} strokeWidth="4" /> : campus.careersCount || 0}</div>
-                      <small className="text-muted">{campus.careersCount === 1 ? 'Carrera' : 'Carreras'}</small>
+
+                  {/* Contadores mejorados */}
+                  <div className="row g-2 text-center">
+                    <div className="col-4">
+                      <div className="p-2 rounded bg-light h-100 text-truncate">
+                        <MdOutlineSchool className="text-secondary mb-1" size={24} />
+                        <div className="fw-bold text-secondary">{loadingStats ? <ProgressSpinner style={{ width: '16px', height: '16px' }} strokeWidth="4" /> : campus.careersCount || 0}</div>
+                        <small className="text-muted">{campus.careersCount === 1 ? 'Carrera' : 'Carreras'}</small>
+                      </div>
+                    </div>
+                    <div className="col-4">
+                      <div className="p-2 rounded bg-light h-100 text-truncate">
+                        <MdOutlineCoPresent className="text-secondary mb-1" size={24} />
+                        <div className="fw-bold text-secondary">{loadingStats ? <ProgressSpinner style={{ width: '16px', height: '16px' }} strokeWidth="4" /> : campus.teachersCount || 0}</div>
+                        <small className="text-muted">{campus.teachersCount === 1 ? 'Docente' : 'Docentes'}</small>
+                      </div>
+                    </div>
+                    <div className="col-4">
+                      <div className="p-2 rounded bg-light h-100 text-truncate">
+                        <MdOutlinePerson className="text-secondary mb-1" size={24} />
+                        <div className="fw-bold text-secondary">{loadingStats ? <ProgressSpinner style={{ width: '16px', height: '16px' }} strokeWidth="4" /> : campus.studentsCount || 0}</div>
+                        <small className="text-muted">{campus.studentsCount === 1 ? 'Estudiante' : 'Estudiantes'}</small>
+                      </div>
                     </div>
                   </div>
                 </div>

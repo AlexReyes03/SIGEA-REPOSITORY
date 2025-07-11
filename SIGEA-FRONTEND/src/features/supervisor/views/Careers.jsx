@@ -4,7 +4,7 @@ import { Button } from 'primereact/button';
 import { BreadCrumb } from 'primereact/breadcrumb';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Skeleton } from 'primereact/skeleton';
-import { MdOutlineCoPresent, MdOutlineBook, MdOutlineSchool } from 'react-icons/md';
+import { MdOutlineCoPresent, MdOutlineBook, MdOutlineSchool, MdOutlinePerson } from 'react-icons/md';
 
 import { useToast } from '../../../components/providers/ToastProvider';
 import { getCareerByPlantelId } from '../../../api/academics/careerService';
@@ -14,10 +14,10 @@ export default function Careers() {
   const navigate = useNavigate();
   const { showError } = useToast();
 
-  // Obtener datos del campus desde el state de navegación
+  // Obtener datos del plantel desde el state de navegación
   const campusData = location.state;
   const campusId = campusData?.campusId;
-  const campusName = campusData?.campusName || 'Campus';
+  const campusName = campusData?.campusName || 'Plantel';
   const isPrimary = campusData?.isPrimary || false;
 
   const [careers, setCareers] = useState([]);
@@ -26,7 +26,7 @@ export default function Careers() {
   // Función optimizada para cargar carreras
   const loadCareers = useCallback(async () => {
     if (!campusId) {
-      showError('Error', 'No se especificó el campus a consultar');
+      showError('Error', 'No se especificó el plantel a consultar');
       navigate('/supervisor/campuses');
       return;
     }
@@ -37,7 +37,7 @@ export default function Careers() {
       setCareers(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error('Error loading careers:', err);
-      showError('Error', 'Error al cargar las carreras del campus');
+      showError('Error', 'Error al cargar las carreras del plantel');
       setCareers([]);
     } finally {
       setLoading(false);
@@ -49,7 +49,7 @@ export default function Careers() {
     if (campusId) {
       loadCareers();
     } else {
-      // Si no hay campus ID, redirigir al dashboard
+      // Si no hay plantel ID, redirigir al dashboard
       navigate('/supervisor/campuses');
     }
   }, [loadCareers, campusId, navigate]);
@@ -72,7 +72,7 @@ export default function Careers() {
   // Breadcrumb items
   const breadcrumbItems = [
     {
-      label: 'Campus',
+      label: 'Planteles',
       command: () => navigate('/supervisor/campuses'),
     },
     {
@@ -82,7 +82,7 @@ export default function Careers() {
 
   const breadcrumbHome = {
     icon: 'pi pi-home',
-    command: () => navigate('/supervisor/campuses'),
+    command: () => navigate('/supervisor'),
   };
 
   return (
@@ -103,8 +103,10 @@ export default function Careers() {
                     <div className="flex-grow-1">
                       <div className="d-flex align-items-center gap-2 mb-2"></div>
                       <div className="mb-2">
-                        <Skeleton className="mb-2" borderRadius="16px"></Skeleton>
-                        <Skeleton className="mb-2" width="7rem" borderRadius="16px"></Skeleton>
+                        <div className="d-flex justify-content-between">
+                          <Skeleton className="mb-2" width="12rem" borderRadius="16px"></Skeleton>
+                          <Skeleton className="mb-2" width="4rem" borderRadius="16px"></Skeleton>
+                        </div>
                         <Skeleton className="mb-2" width="9rem" borderRadius="16px"></Skeleton>
                       </div>
                     </div>
@@ -123,7 +125,7 @@ export default function Careers() {
           <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 400 }}>
             <div className="text-center">
               <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" />
-              <p className="mt-3 text-600">Cargando campus...</p>
+              <p className="mt-3 text-600">Cargando carreras...</p>
             </div>
           </div>
         </>
@@ -136,8 +138,8 @@ export default function Careers() {
               <div className="text-center">
                 <MdOutlineSchool className="text-secondary" size={70} />
                 <h5 className="mt-3 text-muted">No hay carreras registradas</h5>
-                <p className="text-muted">Este campus no tiene carreras configuradas</p>
-                <Button label="Volver a campus" icon="pi pi-home" severity="secondary" outlined onClick={() => navigate('/supervisor/campuses')} />
+                <p className="text-muted">Este plantel no tiene carreras configuradas</p>
+                <Button label="Volver a planteles" icon="pi pi-home" severity="secondary" outlined onClick={() => navigate('/supervisor/campuses')} />
               </div>
             </div>
           ) : (
@@ -149,11 +151,16 @@ export default function Careers() {
                     <div className="card border-0 h-100 hovereable up shadow-sm" onClick={() => handleCareerClick(career)} style={{ cursor: 'pointer' }}>
                       <div className="card-body">
                         <div className="d-flex justify-content-between align-items-start mb-3">
-                          <div className="flex-grow-1 text-truncate">
-                            <h6 className="fw-semibold lh-sm mb-2 text-dark text-truncate">{career.name}</h6>
-                            <div className="d-flex align-items-center gap-2">
-                              <span className="badge bg-light text-dark border">{career.differentiator}</span>
+                          <div className="flex-grow-1">
+                            {/* Nombre y differentiator en la misma línea */}
+                            <div className="d-flex align-items-center justify-content-between mb-2">
+                              <h6 className="fw-semibold lh-sm mb-0 text-dark text-truncate me-2" style={{ maxWidth: '70%' }}>
+                                {career.name}
+                              </h6>
+                              <span className="badge bg-light text-dark border flex-shrink-0">{career.differentiator}</span>
                             </div>
+
+                            {/* Estado de la carrera */}
                             <div className="mt-2">
                               {career.studentsCount === 0 && career.teachersCount === 0 && career.groupsCount === 0 ? (
                                 <small className="text-muted">
@@ -170,10 +177,11 @@ export default function Careers() {
                           </div>
                         </div>
 
+                        {/* Contadores */}
                         <div className="row g-2 text-center">
                           <div className="col-4">
                             <div className="p-2 rounded bg-light h-100 text-truncate">
-                              <MdOutlineCoPresent className="text-secondary mb-1" size={24} />
+                              <MdOutlinePerson className="text-secondary mb-1" size={24} />
                               <div className="fw-bold text-secondary">{career.studentsCount || 0}</div>
                               <small className="text-muted">Estudiantes</small>
                             </div>
@@ -187,9 +195,9 @@ export default function Careers() {
                           </div>
                           <div className="col-4">
                             <div className="p-2 rounded bg-light h-100 text-truncate">
-                              <i className="pi pi-users text-secondary mb-1" style={{ fontSize: '1.5rem' }}></i>
+                              <MdOutlineCoPresent className="text-secondary mb-1" size={24} />
                               <div className="fw-bold text-secondary">{career.teachersCount || 0}</div>
-                              <small className="text-muted">Maestros</small>
+                              <small className="text-muted">Docentes</small>
                             </div>
                           </div>
                         </div>

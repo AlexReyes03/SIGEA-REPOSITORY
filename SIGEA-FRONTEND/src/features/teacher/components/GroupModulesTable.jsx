@@ -290,22 +290,23 @@ export default function GroupModulesTable({ group }) {
 
   // Función para manejar el colapso/expansión de módulos (con fix para tooltips)
   const handleToggleCollapse = useCallback((moduleId) => {
+    setShowQualificationDetails((prev) => ({
+      ...prev,
+      [moduleId]: false,
+    }));
+
     setIsModuleCollapsed((prev) => {
       const wasCollapsed = prev[moduleId];
-      const newState = {
-        ...prev,
-        [moduleId]: !prev[moduleId],
-      };
+      const nextState = { ...prev, [moduleId]: !wasCollapsed };
 
-      // Siempre forzar actualización para que el Tooltip reconozca los elementos
       setTimeout(
         () => {
-          setForceUpdate((prevUpdate) => prevUpdate + 1);
+          setForceUpdate((u) => u + 1);
         },
         wasCollapsed ? 400 : 100
-      ); // Más delay al expandir, menos al colapsar
+      );
 
-      return newState;
+      return nextState;
     });
   }, []);
 
@@ -490,7 +491,7 @@ export default function GroupModulesTable({ group }) {
                   rowsPerPageOptions={[5, 10, 25]}
                   globalFilter={search}
                   globalFilterFields={['fullName']}
-                  emptyMessage={!search ? <p className="text-center my-5">Aún no hay estudiantes asignados</p> : <p className="text-center my-5">No se encontraron resultados</p>}
+                  emptyMessage={!searchTerms ? <p className="text-center my-5">Aún no hay estudiantes</p> : <p className="text-center my-5">No se encontraron resultados</p>}
                   tableStyle={{
                     borderBottom: '1px solid #ededed',
                     borderLeft: '1px solid #ededed',

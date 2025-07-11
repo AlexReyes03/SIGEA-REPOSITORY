@@ -173,6 +173,7 @@ export default function Dashboard() {
                   <p className="fs-1 fw-bold text-blue-500 me-3 mb-0">{ratingValue.toFixed(1)}</p>
                   <div className={`${isUp ? 'icon-average-up' : 'icon-average-down'} rounded-circle`}>{isUp ? <MdArrowDropUp size={40} /> : <MdArrowDropDown size={40} />}</div>
                 </div>
+                <small className="text-muted mt-2 text-center">Evaluación promedio de todos los docentes supervisados</small>
               </div>
             </div>
           </div>
