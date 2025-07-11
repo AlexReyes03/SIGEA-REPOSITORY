@@ -14,10 +14,9 @@ import { motion } from 'framer-motion';
 import { useToast } from '../../../components/providers/ToastProvider';
 import { getCurriculumById } from '../../../api/academics/curriculumService';
 import { getQualificationsByGroupWithDetails } from '../../../api/academics/qualificationService';
+import { ReportCard } from './ReportCard'; 
 
-export default function ConsultSubjects({ group, studentId }) {
-    console.log('ConsultSubjects - Componente renderizado con props:', { group, studentId });
-
+export default function ConsultSubjects({ group, studentId, studentData }) {
     const [loading, setLoading] = useState(true);
     const { showError } = useToast();
 
@@ -26,18 +25,10 @@ export default function ConsultSubjects({ group, studentId }) {
     const [curriculum, setCurriculum] = useState(null);
     const [tableData, setTableData] = useState([]);
     const [qualificationDetails, setQualificationDetails] = useState({});
-    const [showQualificationDetails, setShowQualificationDetails] = useState({});
 
     const loadData = useCallback(async () => {
         try {
-            console.log('ConsultSubjects - Props recibidas:', { group, studentId });
-
             if (!group?.curriculumId || !group?.groupId || !studentId) {
-                console.error('ConsultSubjects - Faltan datos requeridos:', {
-                    curriculumId: group?.curriculumId,
-                    groupId: group?.groupId,
-                    studentId
-                });
                 setLoading(false);
                 return;
             }
@@ -85,31 +76,20 @@ export default function ConsultSubjects({ group, studentId }) {
     }, [group, studentId, showError]);
 
     useEffect(() => {
-        console.log('ConsultSubjects - useEffect ejecutado');
-        console.log('ConsultSubjects - Evaluando condición:', {
-            groupExists: !!group,
-            curriculumId: group?.curriculumId,
-            studentIdExists: !!studentId,
-            studentId: studentId
-        });
-
         if (group?.curriculumId && studentId) {
-            console.log('ConsultSubjects - Condición cumplida, iniciando carga...');
             setLoading(true);
             loadData();
         } else {
-            console.log('ConsultSubjects - Condición NO cumplida, no se carga nada');
             setLoading(false);
         }
     }, [group, studentId, loadData]);
 
-    // Módulos ordenados
     const sortedModules = useMemo(() => {
         if (!curriculum?.modules) return [];
         return [...curriculum.modules].sort((a, b) => a.id - b.id);
     }, [curriculum?.modules]);
 
-    // Crear header groups para todos los módulos
+    // Crea los header groups para todos los módulos
     const headerGroups = useMemo(() => {
         const groups = {};
         sortedModules.forEach((module) => {
@@ -135,16 +115,7 @@ export default function ConsultSubjects({ group, studentId }) {
         return groups;
     }, [sortedModules]);
 
-    // Crear table keys para todos los módulos
-    const tableKeys = useMemo(() => {
-        const keys = {};
-        sortedModules.forEach((module) => {
-            keys[module.id] = `${module.id}-consult-${showQualificationDetails[module.id] ? 'details' : 'nodetails'}`;
-        });
-        return keys;
-    }, [sortedModules, showQualificationDetails]);
-
-    // Filtrar datos por búsqueda
+    // Filtra datos por búsqueda
     const getFilteredData = useCallback((moduleId, searchTerm) => {
         if (!tableData[moduleId]) return [];
 
@@ -156,14 +127,27 @@ export default function ConsultSubjects({ group, studentId }) {
         );
     }, [tableData]);
 
-    // Renderizar badge de calificación
+    // Renderiza badge de calificación
     const renderGradeBadge = (grade) => {
+        const badgeStyle = {
+            width: '45px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '0.9rem',
+            fontWeight: '600',
+            borderRadius: '50px',
+            minWidth: '45px',
+            textAlign: 'center'
+        };
+
         if (grade == null) {
             return (
                 <Badge
                     value="S/C"
                     severity="secondary"
-                    style={{ fontSize: '0.9rem' }}
+                    style={badgeStyle}
                 />
             );
         }
@@ -173,7 +157,7 @@ export default function ConsultSubjects({ group, studentId }) {
             <Badge
                 value={grade}
                 severity={severity}
-                style={{ fontSize: '0.9rem' }}
+                style={badgeStyle}
             />
         );
     };
@@ -192,7 +176,6 @@ export default function ConsultSubjects({ group, studentId }) {
         );
     }
 
-    // Verificar si faltan props necesarias
     if (!group || !studentId) {
         return (
             <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 220 }}>
@@ -216,10 +199,7 @@ export default function ConsultSubjects({ group, studentId }) {
                 const isCollapsed = isModuleCollapsed[module.id];
                 const search = searchTerms[module.id] || '';
                 const filteredData = getFilteredData(module.id, search);
-
-                // Obtener header group y table key
                 const headerGroup = headerGroups[module.id];
-                const tableKey = tableKeys[module.id];
 
                 // Calcular estadísticas del módulo
                 const moduleGrades = filteredData
@@ -229,6 +209,13 @@ export default function ConsultSubjects({ group, studentId }) {
                 const moduleAverage = moduleGrades.length > 0
                     ? (moduleGrades.reduce((a, b) => a + b, 0) / moduleGrades.length).toFixed(1)
                     : null;
+
+                // Preparar datos para la boleta PDF
+                const moduleDataForPDF = {
+                    id: module.id,
+                    name: module.name,
+                    subjects: filteredData
+                };
 
                 return (
                     <div className="card border-0 mt-3" key={module.id}>
@@ -262,20 +249,17 @@ export default function ConsultSubjects({ group, studentId }) {
                             </div>
 
                             {!isCollapsed && (
-                                <div className="d-flex align-items-center justify-content-end mx-3 mb-3 mb-md-0">
-                                    <Button
-                                        icon="pi pi-info-circle"
-                                        className={`me-2 ${showQualificationDetails[module.id] ? 'p-button-info' : 'p-button-secondary'}`}
-                                        outlined={!showQualificationDetails[module.id]}
-                                        onClick={() =>
-                                            setShowQualificationDetails((prev) => ({
-                                                ...prev,
-                                                [module.id]: !prev[module.id],
-                                            }))
-                                        }
-                                        data-pr-tooltip={showQualificationDetails[module.id] ? 'Ocultar detalles de calificación' : 'Mostrar detalles de calificación'}
-                                        data-pr-position="top"
-                                    />
+                                <div className="d-flex align-items-center justify-content-end mx-3 mb-3 mb-md-0 gap-2">
+                                    {/* Botón de descarga de boleta PDF */}
+                                    {studentData && (
+                                        <ReportCard
+                                            studentData={studentData}
+                                            groupData={group}
+                                            moduleData={moduleDataForPDF}
+                                            qualificationDetails={qualificationDetails}
+                                            moduleId={module.id}
+                                        />
+                                    )}
 
                                     <div className="p-fluid">
                                         <InputText
@@ -316,7 +300,6 @@ export default function ConsultSubjects({ group, studentId }) {
                         >
                             <div className="m-3 mt-0">
                                 <DataTable
-                                    key={tableKey}
                                     value={filteredData}
                                     headerColumnGroup={headerGroup}
                                     size="small"
@@ -378,32 +361,10 @@ export default function ConsultSubjects({ group, studentId }) {
                                         }}
                                         body={(rowData) => {
                                             const grade = rowData.grade;
-                                            const details = qualificationDetails[rowData.subjectId];
 
-                                            if (grade != null) {
-                                                const tooltipContent = details
-                                                    ? `Calificado por: ${details.teacherName}\nFecha: ${details.dateFormatted}`
-                                                    : 'Sin información adicional';
-
-                                                return (
-                                                    <div className="d-flex justify-content-center">
-                                                        <span
-                                                            data-pr-tooltip={showQualificationDetails[module.id] ? tooltipContent : undefined}
-                                                            data-pr-position={showQualificationDetails[module.id] ? 'top' : undefined}
-                                                            style={{
-                                                                cursor: showQualificationDetails[module.id] ? 'help' : 'default',
-                                                            }}
-                                                        >
-                                                            {renderGradeBadge(grade)}
-                                                        </span>
-                                                    </div>
-                                                );
-                                            }
-
-                                            // Sin calificación
                                             return (
                                                 <div className="d-flex justify-content-center">
-                                                    {renderGradeBadge(null)}
+                                                    {renderGradeBadge(grade)}
                                                 </div>
                                             );
                                         }}

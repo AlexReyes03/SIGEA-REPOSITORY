@@ -33,8 +33,7 @@ import TeacherGroups from '../features/teacher/views/Groups';
 import TeacherGroupDetails from '../features/teacher/views/GroupDetails';
 
 import StudentDashboard from '../features/student/views/Dashboard';
-import StudentGroups from '../features/student/views/Groups';
-import StudentQualifications from '../features/student/views/GroupDetails';
+import StudentQualifications from '../features/student/views/Qualifications';
 import ConsultSubjects from '../features/student/views/ConsultSubjects';
 import TeacherEvaluation from '../features/student/views/TeacherEvaluation';
 
@@ -118,8 +117,7 @@ export default function AppRouter() {
         <Route element={<AppLayout />}>
           {/* ESTUDIANTE */}
           <Route path="student" element={<StudentDashboard />} />
-          <Route path="student/my-groups" element={<StudentGroups />} />
-          <Route path="student/my-groups/qualifications" element={<StudentQualifications />} />
+          <Route path="student/my-qualifications" element={<StudentQualifications/>} />
           <Route path="student/profile" element={<Profile />} />
           <Route path='student/consult-subjects' element={<ConsultSubjects />} />
           <Route path='student/teacher-evaluation' element={<TeacherEvaluation />} />

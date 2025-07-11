@@ -7,7 +7,7 @@ export const getAllGroups = async () => {
 
 export const getGroupById = async (id) => {
   const res = await request(`/api/groups/${id}`);
-  return res.data;
+  return res;
 };
 
 export const getGroupByTeacher = async (teacherId) => {
