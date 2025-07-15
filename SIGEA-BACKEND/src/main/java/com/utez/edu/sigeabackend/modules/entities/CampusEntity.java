@@ -19,6 +19,21 @@ public class CampusEntity {
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
+    @Column(name = "director", length = 150)
+    private String director;
+
+    @Column(name = "director_identifier", length = 50)
+    private String directorIdentifier;
+
+    @Column(name = "address", length = 255)
+    private String address;
+
+    @Column(name = "phone", length = 15)
+    private String phone;
+
+    @Column(name = "rfc", length = 20)
+    private String rfc;
+
     /**
      * Relación uno-a-muchos con UserEntity.
      * Usuarios que pertenecen directamente a este campus.
@@ -52,6 +67,16 @@ public class CampusEntity {
         this.name = name;
     }
 
+    public CampusEntity(long id, String name, String director, String directorIdentifier, String address, String phone, String rfc) {
+        this.id = id;
+        this.name = name;
+        this.director = director;
+        this.directorIdentifier = directorIdentifier;
+        this.address = address;
+        this.phone = phone;
+        this.rfc = rfc;
+    }
+
     // Getters & Setters
     public long getId() {
         return id;
@@ -67,6 +92,46 @@ public class CampusEntity {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getDirector() {
+        return director;
+    }
+
+    public void setDirector(String director) {
+        this.director = director;
+    }
+
+    public String getDirectorIdentifier() {
+        return directorIdentifier;
+    }
+
+    public void setDirectorIdentifier(String directorIdentifier) {
+        this.directorIdentifier = directorIdentifier;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getRfc() {
+        return rfc;
+    }
+
+    public void setRfc(String rfc) {
+        this.rfc = rfc;
     }
 
     public List<UserEntity> getUsers() {

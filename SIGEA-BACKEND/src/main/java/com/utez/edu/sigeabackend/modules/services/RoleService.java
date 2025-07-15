@@ -25,7 +25,6 @@ public class RoleService {
         return responseService.getOkResponse("Roles encontrados", roles);
     }
 
-
     public ResponseEntity<?> findById(long id) {
         var optionalRole = repository.findById(id);
         if (optionalRole.isPresent()) {
@@ -35,13 +34,22 @@ public class RoleService {
         }
     }
 
+    /*
+     * MÉTODOS DE MODIFICACIÓN COMENTADOS PARA SEGURIDAD
+     * Estos métodos pueden ser habilitados en el futuro si es necesario
+     * Por ahora, los roles se generan automáticamente al arrancar la aplicación
+     */
+
+    /*
     public ResponseEntity<?> create(RoleEntity role) {
         if (repository.existsByRoleName(role.getRoleName()))
             return responseService.get400Response();
         repository.save(role);
         return responseService.get201Response("Rol creado correctamente");
     }
+    */
 
+    /*
     public ResponseEntity<?> update(long id, RoleEntity role) {
         var optionalRole = repository.findById(id);
         if (optionalRole.isPresent()) {
@@ -53,7 +61,9 @@ public class RoleService {
             return responseService.get404Response();
         }
     }
+    */
 
+    /*
     public ResponseEntity<?> delete(long id) {
         var optionalRole = repository.findById(id);
         if (optionalRole.isPresent()) {
@@ -63,4 +73,5 @@ public class RoleService {
             return responseService.get404Response();
         }
     }
+    */
 }

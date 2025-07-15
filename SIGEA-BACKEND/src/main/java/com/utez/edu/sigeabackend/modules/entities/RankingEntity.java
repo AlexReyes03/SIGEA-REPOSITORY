@@ -30,6 +30,13 @@ public class RankingEntity {
     @JoinColumn(name = "student_id", nullable = false)
     private UserEntity student;
 
+    // Campos transitorios para recibir IDs en JSON
+    @Transient
+    private Long teacherId;
+
+    @Transient
+    private Long studentId;
+
     @PrePersist
     protected void onCreate() {
         this.date = LocalDateTime.now();
@@ -102,5 +109,22 @@ public class RankingEntity {
 
     public void setStudent(UserEntity student) {
         this.student = student;
+    }
+
+    // Getters and Setters para campos transitorios
+    public Long getTeacherId() {
+        return teacherId;
+    }
+
+    public void setTeacherId(Long teacherId) {
+        this.teacherId = teacherId;
+    }
+
+    public Long getStudentId() {
+        return studentId;
+    }
+
+    public void setStudentId(Long studentId) {
+        this.studentId = studentId;
     }
 }

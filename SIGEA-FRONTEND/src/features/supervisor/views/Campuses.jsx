@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { MdOutlineSchool, MdOutlineStars, MdOutlineLocationOn, MdOutlinePerson, MdOutlineCoPresent } from 'react-icons/md';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Skeleton } from 'primereact/skeleton';
@@ -10,10 +10,12 @@ import { useToast } from '../../../components/providers/ToastProvider';
 import { getSupervisorCampuses } from '../../../api/supervisorService';
 import { getCareerByPlantelId } from '../../../api/academics/careerService';
 import { getUserByRoleAndPlantel } from '../../../api/userService';
+import { getAllRoles } from '../../../api/roleService';
 
 export default function Campuses() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { showError } = useToast();
 
   const [supervisorData, setSupervisorData] = useState(null);
@@ -21,13 +23,30 @@ export default function Campuses() {
   const [loading, setLoading] = useState(true);
   const [loadingStats, setLoadingStats] = useState(false);
 
+  // Detectar el contexto basado en la ruta actual
+  const isTeachersContext = location.pathname.includes('campuses-teachers');
+  const contextTitle = isTeachersContext ? 'Planteles - Docentes' : 'Planteles - Carreras';
+  const homeRoute = isTeachersContext ? '/supervisor/campuses-teachers' : '/supervisor/campuses-careers';
+
   // Función para cargar estadísticas completas de un plantel
   const loadCampusStats = useCallback(async (campusId) => {
     try {
+      // Obtener el ID del rol TEACHER
+      let teacherRoleId = 3; // Valor por defecto
+      try {
+        const roles = await getAllRoles();
+        const teacherRole = roles.find(role => role.roleName === 'TEACHER');
+        if (teacherRole) {
+          teacherRoleId = teacherRole.id;
+        }
+      } catch (roleError) {
+        console.warn('Error loading roles, using default teacher role ID:', roleError);
+      }
+
       const [careers, students, teachers] = await Promise.all([
         getCareerByPlantelId(campusId),
         getUserByRoleAndPlantel(4, campusId), // 4 = STUDENT
-        getUserByRoleAndPlantel(3, campusId), // 3 = TEACHER
+        getUserByRoleAndPlantel(teacherRoleId, campusId), // teacherRoleId = TEACHER
       ]);
 
       return {
@@ -119,18 +138,30 @@ export default function Campuses() {
     [loadCampusStats]
   );
 
-  // Función para navegar a careers
+  // Función para navegar según el contexto
   const handleCampusClick = useCallback(
     (campus) => {
-      navigate('/supervisor/campuses/careers', {
-        state: {
-          campusId: campus.id,
-          campusName: campus.name,
-          isPrimary: campus.isPrimary,
-        },
-      });
+      if (isTeachersContext) {
+        // Contexto de docentes
+        navigate('/supervisor/campuses-teachers/teachers', {
+          state: {
+            campusId: campus.id,
+            campusName: campus.name,
+            isPrimary: campus.isPrimary,
+          },
+        });
+      } else {
+        // Contexto de carreras
+        navigate('/supervisor/campuses-careers/careers', {
+          state: {
+            campusId: campus.id,
+            campusName: campus.name,
+            isPrimary: campus.isPrimary,
+          },
+        });
+      }
     },
-    [navigate]
+    [navigate, isTeachersContext]
   );
 
   // Efecto optimizado
@@ -143,7 +174,7 @@ export default function Campuses() {
   const breadcrumbItems = [
     {
       label: 'Planteles',
-      command: () => navigate('/supervisor/campuses'),
+      command: () => navigate(homeRoute),
     },
   ];
 
@@ -155,7 +186,7 @@ export default function Campuses() {
   return (
     <>
       <div className="bg-white rounded-top p-2">
-        <h3 className="text-blue-500 fw-semibold mx-3 my-1">Planteles</h3>
+        <h3 className="text-blue-500 fw-semibold mx-3 my-1">{contextTitle}</h3>
       </div>
 
       <BreadCrumb model={breadcrumbItems} home={breadcrumbHome} className="mt-2 pb-0 ps-0 text-nowrap" />

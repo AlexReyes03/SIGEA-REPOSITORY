@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import * as authService from '../api/authService';
 
 export const AuthContext = createContext();
@@ -12,6 +12,7 @@ function decodeJWT(token) {
     return null;
   }
 }
+
 function isTokenExpired(token) {
   const decoded = decodeJWT(token);
   return !decoded || !decoded.exp || decoded.exp * 1000 < Date.now();
@@ -30,6 +31,7 @@ export function AuthProvider({ children }) {
   });
 
   const [loading, setLoading] = useState(false);
+  const logoutInProgressRef = useRef(false);
 
   const updateUser = useCallback((updates) => {
     setUser((prevUser) => {
@@ -39,13 +41,26 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
-  const logout = useCallback(async () => {
+  const logout = useCallback(async (reason = null) => {
+    if (logoutInProgressRef.current) return;
+    logoutInProgressRef.current = true;
+
     try {
-      await authService.logout();
+      if (reason !== 'auth_error') {
+        try {
+          await authService.logout();
+        } catch (error) {
+          console.warn('Error durante logout del servidor:', error);
+        }
+      }
     } catch {}
+
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
+    logoutInProgressRef.current = false;
+
+    return reason;
   }, []);
 
   const login = useCallback(async (credentials) => {
@@ -56,15 +71,31 @@ export function AuthProvider({ children }) {
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(payload.user));
       setUser(payload.user);
+      logoutInProgressRef.current = false;
       return payload.user;
     } finally {
       setLoading(false);
     }
   }, []);
 
+  const handleAuthError = useCallback(
+    async (status, message) => {
+      if (logoutInProgressRef.current) return;
+      await logout('auth_error');
+      return {
+        status,
+        message: 'Tu sesión ha sido invalidada y se cerró la sesión de forma automática.',
+        shouldShowError: true,
+      };
+    },
+    [logout]
+  );
+
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token && isTokenExpired(token)) logout();
+    if (token && isTokenExpired(token)) {
+      logout('token_expired');
+    }
   }, [logout]);
 
   return (
@@ -76,6 +107,7 @@ export function AuthProvider({ children }) {
         login,
         logout,
         loading,
+        handleAuthError,
       }}
     >
       {children}

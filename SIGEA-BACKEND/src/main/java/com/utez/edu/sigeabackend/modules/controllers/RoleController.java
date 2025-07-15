@@ -25,19 +25,30 @@ public class RoleController {
         return service.findById(id);
     }
 
+    /*
+     * ENDPOINTS DE MODIFICACIÓN COMENTADOS PARA SEGURIDAD
+     * Estos endpoints pueden ser habilitados en el futuro si es necesario
+     * Por ahora, los roles se generan automáticamente al arrancar la aplicación
+     */
+
+    /*
     @PostMapping
     public ResponseEntity<?> create(@RequestBody RoleEntity role) {
         return service.create(role);
     }
+    */
 
+    /*
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable Long id, @RequestBody RoleEntity role) {
         return service.update(id, role);
     }
+    */
 
+    /*
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id) {
         return service.delete(id);
     }
-
+    */
 }

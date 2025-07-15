@@ -10,6 +10,7 @@ export default function Dashboard() {
   const [usersActive, setUsersActive] = useState(0);
 
   const [studentsCount, setStudentsCount] = useState(0);
+  const [adminCount, setAdminCount] = useState(0);
   const [teachersCount, setTeachersCount] = useState(0);
 
   useEffect(() => {
@@ -67,6 +68,7 @@ export default function Dashboard() {
         if (mounted) {
           setStudentsCount(users.filter((user) => user.roleName === 'STUDENT').length);
           setTeachersCount(users.filter((user) => user.roleName === 'TEACHER').length);
+          setAdminCount(users.filter((user) => user.roleName === 'ADMIN').length);
         }
       } catch (e) {
         console.error(e);
@@ -108,12 +110,12 @@ export default function Dashboard() {
                 <div className="card-body">
                   <div className="d-flex align-items-center">
                     <div className="title-icon p-1 rounded-circle">
-                      <MdOutlineGroup size={40} className="p-1" />
+                      <MdOutlinePerson size={40} className="p-1" />
                     </div>
-                    <h6 className="text-secondary ms-2 mb-0">Nuevos inicios</h6>
+                    <h6 className="text-secondary ms-2 mb-0">Administrativos</h6>
                   </div>
                   <div className="d-flex flex-column align-items-center">
-                    <p className="fs-1 fw-bold text-blue-500 mb-0">125</p>
+                    <p className="fs-1 fw-bold text-blue-500 mb-0">{adminCount}</p>
                   </div>
                 </div>
               </div>
@@ -142,7 +144,7 @@ export default function Dashboard() {
                 <div className="card-body">
                   <div className="d-flex align-items-center">
                     <div className="title-icon p-1 rounded-circle">
-                      <MdOutlinePerson size={40} className="p-1" />
+                      <MdOutlineGroup size={40} className="p-1" />
                     </div>
                     <h6 className="text-secondary ms-2 mb-0">Total de estudiantes</h6>
                   </div>
@@ -173,7 +175,7 @@ export default function Dashboard() {
                   <p className="fs-1 fw-bold text-blue-500 me-3 mb-0">{ratingValue.toFixed(1)}</p>
                   <div className={`${isUp ? 'icon-average-up' : 'icon-average-down'} rounded-circle`}>{isUp ? <MdArrowDropUp size={40} /> : <MdArrowDropDown size={40} />}</div>
                 </div>
-                <small className="text-muted mt-2 text-center">Evaluación promedio de todos los docentes supervisados</small>
+                <small className="text-muted mt-2 text-center">Evaluación promedio de todos los docentes.</small>
               </div>
             </div>
           </div>

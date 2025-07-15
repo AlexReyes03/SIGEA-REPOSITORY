@@ -30,6 +30,7 @@ public class RankingService {
         this.responseService = responseService;
     }
 
+    // Helper method to convert entity to DTO
     private RankingDto toDto(RankingEntity ranking) {
         UserEntity student = ranking.getStudent();
 
@@ -101,7 +102,7 @@ public class RankingService {
                     .body(Map.of("error", "El docente especificado no existe"));
         }
 
-        List<RankingEntity> list = repository.findByTeacherIdWithDetails(teacherId);
+        List<RankingEntity> list = repository.findByTeacher_IdWithDetails(teacherId);
         if (list.isEmpty()) {
             return responseService.getOkResponse("Rankings del docente", null);
         }
@@ -114,11 +115,22 @@ public class RankingService {
     }
 
     @Transactional
-    public ResponseEntity<?> create(RankingEntity ranking, long teacherId, long studentId) {
+    public ResponseEntity<?> create(RankingEntity ranking) {
         try {
+            // Validar que teacherId y studentId estén presentes
+            if (ranking.getTeacherId() == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "El ID del docente es obligatorio"));
+            }
+
+            if (ranking.getStudentId() == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "El ID del estudiante es obligatorio"));
+            }
+
             // Validar que teacher y student existan
-            Optional<UserEntity> teacherOpt = userRepository.findById(teacherId);
-            Optional<UserEntity> studentOpt = userRepository.findById(studentId);
+            Optional<UserEntity> teacherOpt = userRepository.findById(ranking.getTeacherId());
+            Optional<UserEntity> studentOpt = userRepository.findById(ranking.getStudentId());
 
             if (teacherOpt.isEmpty()) {
                 return ResponseEntity.badRequest()
@@ -131,7 +143,7 @@ public class RankingService {
             }
 
             // Validar que el estudiante no haya calificado ya al docente
-            if (repository.existsByStudentIdAndTeacherId(studentId, teacherId)) {
+            if (repository.existsByStudent_IdAndTeacher_Id(ranking.getStudentId(), ranking.getTeacherId())) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "Este estudiante ya ha calificado a este docente"));
             }
@@ -148,6 +160,7 @@ public class RankingService {
                         .body(Map.of("error", "El comentario es obligatorio"));
             }
 
+            // Configurar relaciones
             ranking.setTeacher(teacherOpt.get());
             ranking.setStudent(studentOpt.get());
 

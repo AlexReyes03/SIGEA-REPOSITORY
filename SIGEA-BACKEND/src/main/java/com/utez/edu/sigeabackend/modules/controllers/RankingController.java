@@ -30,9 +30,7 @@ public class RankingController {
     }
 
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody RankingEntity ranking,
-                                    @RequestParam long teacherId,
-                                    @RequestParam long studentId) {
-        return service.create(ranking, teacherId, studentId);
+    public ResponseEntity<?> create(@RequestBody RankingEntity ranking) {
+        return service.create(ranking);
     }
 }

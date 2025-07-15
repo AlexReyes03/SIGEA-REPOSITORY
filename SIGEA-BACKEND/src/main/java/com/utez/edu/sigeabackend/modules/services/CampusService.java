@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -29,7 +30,7 @@ public class CampusService {
         this.responseService = responseService;
     }
 
-    // Helper method to convert entity to DTO
+    // Helper method to convert entity to DTO - ORDEN CORREGIDO
     private CampusDto toDto(CampusEntity campus) {
         int totalUsers = campus.getUsers().size();
         int totalSupervisors = campus.getSupervisorAssignments().size();
@@ -37,6 +38,11 @@ public class CampusService {
         return new CampusDto(
                 campus.getId(),
                 campus.getName(),
+                campus.getDirector(),
+                campus.getDirectorIdentifier(),
+                campus.getAddress(),
+                campus.getPhone(),
+                campus.getRfc(),
                 totalUsers,
                 totalSupervisors
         );
@@ -82,6 +88,60 @@ public class CampusService {
     }
 
     @Transactional
+    public ResponseEntity<?> update(long id, CampusEntity campus) {
+        try {
+            Optional<CampusEntity> optionalCampus = repository.findById(id);
+            if (optionalCampus.isPresent()) {
+                CampusEntity existing = optionalCampus.get();
+
+                if (campus.getName() != null) {
+                    existing.setName(campus.getName());
+                }
+
+                existing.setDirector(campus.getDirector());
+
+                existing.setDirectorIdentifier(campus.getDirectorIdentifier());
+
+                if (campus.getAddress() != null) {
+                    existing.setAddress(campus.getAddress());
+                }
+                if (campus.getPhone() != null) {
+                    existing.setPhone(campus.getPhone());
+                }
+                if (campus.getRfc() != null) {
+                    existing.setRfc(campus.getRfc());
+                }
+
+                CampusEntity updated = repository.save(existing);
+                return ResponseEntity.ok(toDto(updated));
+            } else {
+                return responseService.get404Response();
+            }
+        } catch (Exception e) {
+            // Log del error para debugging
+            System.err.println("Error updating campus: " + e.getMessage());
+
+            // Retornar error más descriptivo
+            if (e.getMessage().contains("Data too long")) {
+                return ResponseEntity.status(400)
+                        .body(Map.of("error", "Algún campo excede la longitud máxima permitida"));
+            } else if (e.getMessage().contains("director_identifier")) {
+                return ResponseEntity.status(400)
+                        .body(Map.of("error", "Error en el identificador del director"));
+            } else {
+                return ResponseEntity.status(500)
+                        .body(Map.of("error", "Error interno al actualizar el campus"));
+            }
+        }
+    }
+
+    /*
+     * Estos endpoints pueden ser habilitados en el futuro si es necesario
+     * Por ahora, la gestión de campus se hace directamente en la base de datos
+     */
+
+    /*
+    @Transactional
     public ResponseEntity<?> create(CampusEntity campus) {
         if (repository.existsByName(campus.getName())) {
             return responseService.get400Response();
@@ -90,20 +150,9 @@ public class CampusService {
         CampusEntity saved = repository.save(campus);
         return ResponseEntity.status(HttpStatus.CREATED).body(toDto(saved));
     }
+    */
 
-    @Transactional
-    public ResponseEntity<?> update(long id, CampusEntity campus) {
-        Optional<CampusEntity> optionalCampus = repository.findById(id);
-        if (optionalCampus.isPresent()) {
-            CampusEntity existing = optionalCampus.get();
-            existing.setName(campus.getName());
-            CampusEntity updated = repository.save(existing);
-            return ResponseEntity.ok(toDto(updated));
-        } else {
-            return responseService.get404Response();
-        }
-    }
-
+    /*
     @Transactional
     public ResponseEntity<?> delete(long id) {
         if (!repository.existsById(id)) {
@@ -120,4 +169,5 @@ public class CampusService {
         repository.deleteById(id);
         return responseService.getOkResponse("Campus eliminado", null);
     }
+    */
 }

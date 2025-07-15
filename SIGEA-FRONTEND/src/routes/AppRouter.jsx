@@ -16,6 +16,7 @@ import Profile from '../features/admin/views/Profile';
 
 import AdminDashboard from '../features/admin/views/Dashboard';
 import AdminUsersManagement from '../features/admin/views/UsersManagment';
+import AdminCampus from '../features/admin/views/Campus';
 import AdminCareers from '../features/admin/views/Careers';
 import AdminCareerGroups from '../features/admin/views/Groups';
 import AdminCareerCurriculums from '../features/admin/views/Curriculums';
@@ -23,7 +24,8 @@ import AdminGroupDetail from '../features/admin/views/GroupDetail';
 
 import SupervisorDashboard from '../features/supervisor/views/Dashboard';
 import SupervisorCampuses from '../features/supervisor/views/Campuses'
-import SupervisorTeachersScore from '../features/supervisor/views/TeachersScore';
+import SupervisorTeachers from '../features/supervisor/views/Teachers';
+import SupervisorTeacherScore from '../features/supervisor/views/TeacherScore';
 import SupervisorCareers from '../features/supervisor/views/Careers';
 import SupervisorGroups from '../features/supervisor/views/Groups'
 import SupervisorGroupDetails from '../features/supervisor/views/GroupDetails'
@@ -83,6 +85,7 @@ export default function AppRouter() {
           <Route path="admin" element={<AdminDashboard />} />
           <Route path="admin/profile" element={<Profile />} />
           <Route path="admin/users" element={<AdminUsersManagement />} />
+          <Route path="admin/campus" element={<AdminCampus />} />
           <Route path="admin/careers" element={<AdminCareers />} />
           <Route path="admin/careers/groups" element={<AdminCareerGroups />} />
           <Route path="admin/careers/curriculums" element={<AdminCareerCurriculums />} />
@@ -104,11 +107,18 @@ export default function AppRouter() {
         <Route element={<AppLayout />}>
           {/* SUPERVISOR */}
           <Route path="supervisor" element={<SupervisorDashboard />} />
-          <Route path="supervisor/campuses" element={<SupervisorCampuses />} />
-          <Route path="supervisor/campuses/careers" element={<SupervisorCareers />} />
-          <Route path="supervisor/campuses/careers/groups" element={<SupervisorGroups />} />
-          <Route path="supervisor/campuses/careers/group-details" element={<SupervisorGroupDetails />} />
-          <Route path="supervisor/teacher-score" element={<SupervisorTeachersScore />} />
+          
+          {/* Rutas para Carreras */}
+          <Route path="supervisor/campuses-careers" element={<SupervisorCampuses />} />
+          <Route path="supervisor/campuses-careers/careers" element={<SupervisorCareers />} />
+          <Route path="supervisor/campuses-careers/careers/groups" element={<SupervisorGroups />} />
+          <Route path="supervisor/campuses-careers/careers/group-details" element={<SupervisorGroupDetails />} />
+          
+          {/* Rutas para Docentes */}
+          <Route path="supervisor/campuses-teachers" element={<SupervisorCampuses />} />
+          <Route path="supervisor/campuses-teachers/teachers" element={<SupervisorTeachers />} />
+          <Route path="supervisor/campuses-teachers/teachers/teacher-score" element={<SupervisorTeacherScore />} />
+          
           <Route path="supervisor/profile" element={<Profile />} />
         </Route>
       </Route>

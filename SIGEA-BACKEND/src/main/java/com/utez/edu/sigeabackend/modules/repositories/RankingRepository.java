@@ -14,12 +14,12 @@ public interface RankingRepository extends JpaRepository<RankingEntity, Long> {
     /**
      * Busca todos los rankings de un docente específico
      */
-    List<RankingEntity> findByTeacherId(long teacherId);
+    List<RankingEntity> findByTeacher_Id(long teacherId);
 
     /**
      * Verifica si ya existe una calificación de un estudiante hacia un docente específico
      */
-    boolean existsByStudentIdAndTeacherId(long studentId, long teacherId);
+    boolean existsByStudent_IdAndTeacher_Id(long studentId, long teacherId);
 
     /**
      * Obtiene todos los rankings con información completa del estudiante y docente
@@ -37,5 +37,5 @@ public interface RankingRepository extends JpaRepository<RankingEntity, Long> {
             "JOIN FETCH r.student s " +
             "JOIN FETCH s.campus " +
             "WHERE r.teacher.id = :teacherId")
-    List<RankingEntity> findByTeacherIdWithDetails(@Param("teacherId") long teacherId);
+    List<RankingEntity> findByTeacher_IdWithDetails(@Param("teacherId") long teacherId);
 }

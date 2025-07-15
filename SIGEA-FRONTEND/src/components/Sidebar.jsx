@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MdHome, MdSchool, MdGroups, MdPerson, MdLeaderboard, MdLogout } from 'react-icons/md';
+import { MdHome, MdSchool, MdGroups, MdApartment, MdPerson, MdLeaderboard, MdLogout } from 'react-icons/md';
 import { motion } from 'framer-motion';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -56,6 +56,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
       case 'ADMIN':
         return [
           { label: 'Inicio', path: '/admin', Icon: MdHome },
+          { label: 'Plantel', path: '/admin/campus', Icon: MdApartment },
           { label: 'Carreras', path: '/admin/careers', Icon: MdSchool },
           { label: 'Usuarios', path: '/admin/users', Icon: MdGroups },
           { label: 'Perfil', path: '/admin/profile', Icon: MdPerson },
@@ -64,8 +65,8 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
       case 'SUPERVISOR':
         return [
           { label: 'Inicio', path: '/supervisor', Icon: MdHome },
-          { label: 'Planteles', path: '/supervisor/campuses', Icon: MdSchool },
-          { label: 'Desempeño', path: '/supervisor/teacher-score', Icon: MdLeaderboard },
+          { label: 'Carreras', path: '/supervisor/campuses-careers', Icon: MdSchool },
+          { label: 'Desempeño', path: '/supervisor/campuses-teachers', Icon: MdLeaderboard },
           { label: 'Perfil', path: '/supervisor/profile', Icon: MdPerson },
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },
         ];

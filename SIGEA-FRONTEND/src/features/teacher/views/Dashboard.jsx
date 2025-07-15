@@ -358,11 +358,7 @@ export default function Dashboard() {
                                         <h6 className="fw-semibold mb-0 text-truncate me-2">{group.careerName}</h6>
                                         <span className={`badge ${status === 'current' ? 'bg-success' : status === 'past' ? 'bg-secondary' : 'bg-primary'}`}>{statusText}</span>
                                       </div>
-                                      <small className="text-muted">Grupo {group.name}</small>
-                                    </div>
-                                    <div className="text-end ms-3">
-                                      <div className={`fw-bold ${statusColor}`}>{group.startTime}</div>
-                                      <small className="text-muted">a {group.endTime}</small>
+                                      <small className="text-muted">Grupo {group.name} - <span className={`fw-bold ${statusColor}`}>{group.startTime}</span><small className="text-muted"> a {group.endTime}</small></small>
                                     </div>
                                   </div>
                                 </div>

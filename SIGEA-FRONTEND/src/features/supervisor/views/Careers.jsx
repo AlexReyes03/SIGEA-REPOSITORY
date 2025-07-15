@@ -27,7 +27,7 @@ export default function Careers() {
   const loadCareers = useCallback(async () => {
     if (!campusId) {
       showError('Error', 'No se especificó el plantel a consultar');
-      navigate('/supervisor/campuses');
+      navigate('/supervisor/campuses-careers');
       return;
     }
 
@@ -50,14 +50,14 @@ export default function Careers() {
       loadCareers();
     } else {
       // Si no hay plantel ID, redirigir al dashboard
-      navigate('/supervisor/campuses');
+      navigate('/supervisor/campuses-careers');
     }
   }, [loadCareers, campusId, navigate]);
 
   // Función para navegar a grupos
   const handleCareerClick = useCallback(
     (career) => {
-      navigate('/supervisor/campuses/careers/groups', {
+      navigate('/supervisor/campuses-careers/careers/groups', {
         state: {
           career,
           campusId,
@@ -73,7 +73,7 @@ export default function Careers() {
   const breadcrumbItems = [
     {
       label: 'Planteles',
-      command: () => navigate('/supervisor/campuses'),
+      command: () => navigate('/supervisor/campuses-careers'),
     },
     {
       label: campusName,
@@ -139,7 +139,7 @@ export default function Careers() {
                 <MdOutlineSchool className="text-secondary" size={70} />
                 <h5 className="mt-3 text-muted">No hay carreras registradas</h5>
                 <p className="text-muted">Este plantel no tiene carreras configuradas</p>
-                <Button label="Volver a planteles" icon="pi pi-home" severity="secondary" outlined onClick={() => navigate('/supervisor/campuses')} />
+                <Button label="Volver a planteles" severity="secondary" outlined onClick={() => navigate('/supervisor/campuses-careers')} />
               </div>
             </div>
           ) : (

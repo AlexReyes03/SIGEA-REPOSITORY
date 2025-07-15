@@ -148,17 +148,17 @@ export default function Dashboard() {
 
   // Función para navegar a un plantel específico
   const handleCampusClick = useCallback(
-    (campus) => {
-      navigate('/supervisor/campuses/careers', {
-        state: {
-          campusId: campus.id,
-          campusName: campus.name,
-          isPrimary: campus.isPrimary,
-        },
-      });
-    },
-    [navigate]
-  );
+  (campus) => {
+    navigate('/supervisor/campuses-careers/careers', {
+      state: {
+        campusId: campus.id,
+        campusName: campus.name,
+        isPrimary: campus.isPrimary,
+      },
+    });
+  },
+  [navigate]
+);
 
   if (loading) {
     return (
@@ -268,10 +268,15 @@ export default function Dashboard() {
                   <h5 className="text-blue-500 fw-semibold ms-3 mb-0">Planteles supervisados</h5>
                 </div>
                 {campusWithStats.length > 0 && (
-                  <Button size="small" outlined icon="pi pi-arrow-up-right" onClick={() => navigate('/supervisor/campuses')}>
-                    <span className="d-none d-md-inline ms-2">Ver todos</span>
-                  </Button>
-                )}
+  <Button 
+    size="small" 
+    outlined 
+    icon="pi pi-arrow-up-right" 
+    onClick={() => navigate('/supervisor/campuses-careers')}
+  >
+    <span className="d-none d-md-inline ms-2">Ver todos</span>
+  </Button>
+)}
               </div>
               {campusWithStats.length === 0 ? (
                 <div className="text-center py-5">
