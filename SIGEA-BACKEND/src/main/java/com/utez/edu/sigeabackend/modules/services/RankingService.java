@@ -76,7 +76,7 @@ public class RankingService {
     public ResponseEntity<?> findAll() {
         List<RankingEntity> list = repository.findAllWithDetails();
         if (list.isEmpty()) {
-            return responseService.get404Response();
+            return responseService.getOkResponse("Lista de rankings", null);
         }
 
         List<RankingDto> dtos = list.stream()
@@ -103,7 +103,7 @@ public class RankingService {
 
         List<RankingEntity> list = repository.findByTeacherIdWithDetails(teacherId);
         if (list.isEmpty()) {
-            return responseService.get404Response();
+            return responseService.getOkResponse("Rankings del docente", null);
         }
 
         List<RankingDto> dtos = list.stream()
