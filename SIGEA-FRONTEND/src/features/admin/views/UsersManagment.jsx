@@ -142,26 +142,34 @@ export default function UsersManagement() {
 
   const rolesMap = useMemo(() => {
     const map = {};
-    roles.forEach((role) => {
-      map[role.id] = role;
-      map[role.roleName] = role;
-    });
+    roles
+      .filter((role) => role.roleName !== 'DEV') // Filtrar rol DEV también del mapa
+      .forEach((role) => {
+        map[role.id] = role;
+        map[role.roleName] = role;
+      });
     return map;
   }, [roles]);
 
   const roleOptions = useMemo(
     () =>
-      roles.map((role) => ({
-        label: getRoleFriendlyName(role.roleName),
-        value: role.id,
-      })),
+      roles
+        .filter((role) => role.roleName !== 'DEV')
+        .map((role) => ({
+          label: getRoleFriendlyName(role.roleName),
+          value: role.id,
+        })),
     [roles]
   );
 
   const getCurrentRole = useMemo(() => {
     const roleId = formData.roleId || selectedTipoUsuario;
     if (!roleId) return null;
-    return rolesMap[roleId];
+
+    const role = rolesMap[roleId];
+    if (role && role.roleName === 'DEV') return null;
+
+    return role;
   }, [formData.roleId, selectedTipoUsuario, rolesMap]);
 
   const currentRoleNeedsCareers = useMemo(() => {
@@ -214,44 +222,44 @@ export default function UsersManagement() {
     }));
   };
 
-const processedUsers = useMemo(() => {
-  if (!Array.isArray(users)) return [];
+  const processedUsers = useMemo(() => {
+    if (!Array.isArray(users)) return [];
 
-  return users
-    .filter((userItem) => userItem.id !== user.id)
-    .map((userItem) => {
-      const roleLabel = getRoleLabel(userItem.roleName, userItem.roleId);
-      const statusLabel = getStatusConfig(userItem.status).label;
-      const fullName = `${userItem.name || ''} ${userItem.paternalSurname || ''} ${userItem.maternalSurname || ''}`.trim();
+    return users
+      .filter((userItem) => userItem.id !== user.id)
+      .map((userItem) => {
+        const roleLabel = getRoleLabel(userItem.roleName, userItem.roleId);
+        const statusLabel = getStatusConfig(userItem.status).label;
+        const fullName = `${userItem.name || ''} ${userItem.paternalSurname || ''} ${userItem.maternalSurname || ''}`.trim();
 
-      let displayRegistration = '';
-      if (userItem.primaryRegistrationNumber) {
-        displayRegistration = userItem.primaryRegistrationNumber;
-        if (userItem.additionalEnrollmentsCount > 0) {
-          displayRegistration += ` +${userItem.additionalEnrollmentsCount}`;
+        let displayRegistration = '';
+        if (userItem.primaryRegistrationNumber) {
+          displayRegistration = userItem.primaryRegistrationNumber;
+          if (userItem.additionalEnrollmentsCount > 0) {
+            displayRegistration += ` +${userItem.additionalEnrollmentsCount}`;
+          }
         }
-      }
 
-      const displayCreatedAt = userItem.createdAt
-        ? new Date(userItem.createdAt).toLocaleDateString('es-MX', {
+        const displayCreatedAt = userItem.createdAt
+          ? new Date(userItem.createdAt).toLocaleDateString('es-MX', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric',
           })
-        : '';
+          : '';
 
-      return {
-        ...userItem,
-        fullName,
-        roleLabel,
-        statusLabel,
-        displayRegistration,
-        searchableRole: `${userItem.roleName || ''} ${roleLabel}`.toLowerCase(),
-        searchableStatus: `${userItem.status || ''} ${statusLabel}`.toLowerCase(),
-        displayCreatedAt,
-      };
-    });
-}, [users, getRoleLabel, user.id]);
+        return {
+          ...userItem,
+          fullName,
+          roleLabel,
+          statusLabel,
+          displayRegistration,
+          searchableRole: `${userItem.roleName || ''} ${roleLabel}`.toLowerCase(),
+          searchableStatus: `${userItem.status || ''} ${statusLabel}`.toLowerCase(),
+          displayCreatedAt,
+        };
+      });
+  }, [users, getRoleLabel, user.id]);
 
 
   const generateMatriculaForCareer = async (careerId) => {
@@ -461,7 +469,7 @@ const processedUsers = useMemo(() => {
     }
   }, [user?.campus?.id]);
 
-  // Nueva función para cargar campus
+  // Carga de campus
   const loadCampus = useCallback(async () => {
     try {
       const data = await getAllCampus();
@@ -485,7 +493,7 @@ const processedUsers = useMemo(() => {
     };
     loadRoles();
     loadCareers();
-    loadCampus(); // Cargar campus
+    loadCampus();
   }, [showError, loadCareers, loadCampus]);
 
   useEffect(() => {
@@ -602,11 +610,11 @@ const processedUsers = useMemo(() => {
             try {
               const campusIds = campusChips.map(chip => chip.campusId);
               const result = await assignMultipleCampusToSupervisor(
-                savedUser.id, 
-                campusIds, 
+                savedUser.id,
+                campusIds,
                 user.id
               );
-              
+
               if (result.failed > 0) {
                 showWarn('Advertencia', `Usuario creado pero ${result.failed} campus no pudieron ser asignados`);
               }
@@ -812,7 +820,7 @@ const processedUsers = useMemo(() => {
   const openModal = useCallback(
     async (userData = null) => {
       if (userData) {
-        setEditingUser(userData); 
+        setEditingUser(userData);
         setFormData({
           id: userData.id,
           name: userData.name || '',
@@ -1203,9 +1211,9 @@ const processedUsers = useMemo(() => {
   const CampusChipComponent = useCallback(
     ({ chip, onRemove }) => (
       <div className="col-md-6 mb-2">
-        <Chip 
-          label={chip.campusName} 
-          removable 
+        <Chip
+          label={chip.campusName}
+          removable
           onRemove={() => onRemove(chip.campusId)}
           className="mb-2"
         />
@@ -1269,7 +1277,7 @@ const processedUsers = useMemo(() => {
             rowsPerPageOptions={[5, 10, 25, 50]}
             filterDisplay="menu"
             globalFilter={globalFilter}
-            globalFilterFields={['name', 'paternalSurname', 'maternalSurname', 'fullName', 'email', 'displayRegistration', 'campusName', 'roleName', 'roleLabel', 'searchableRole', 'statusLabel', 'createdAt','searchableStatus', 'displayCreatedAt']}
+            globalFilterFields={['name', 'paternalSurname', 'maternalSurname', 'fullName', 'email', 'displayRegistration', 'campusName', 'roleName', 'roleLabel', 'searchableRole', 'statusLabel', 'createdAt', 'searchableStatus', 'displayCreatedAt']}
             header={header}
             className="text-nowrap"
             emptyMessage={
@@ -1335,12 +1343,12 @@ const processedUsers = useMemo(() => {
 
                     <small className="text-muted d-block mt-1">
                       <p>Campus principal:</p>
-                      <Chip 
-                        label={user?.campus?.name || 'No definido'} 
+                      <Chip
+                        label={user?.campus?.name || 'No definido'}
                         className="me-2 mb-2"
                       />
                     </small>
-                    
+
                     {campusChips.length > 0 && (
                       <div className="mt-2">
                         <small className="text-muted d-block mb-2">Campus supervisados:</small>
@@ -1355,53 +1363,53 @@ const processedUsers = useMemo(() => {
                         </div>
                       </div>
                     )}
-                    
+
                   </div>
                 )}
 
                 {currentRoleNeedsCareers && (
                   <>
-                  <hr />
-                  <div className="col-12">
-                    <label className="form-label">
-                      Carreras <small className="text-muted">(opcional)</small>
-                    </label>
-                    <MultiSelect
-                      value={selectedCareers}
-                      options={careerOptions}
-                      onChange={(e) => handleCareerSelection(e.value)}
-                      optionLabel="label"
-                      optionValue="value"
-                      placeholder="Selecciona las carreras"
-                      className="w-100"
-                      maxSelectedLabels={0}
-                      selectedItemsLabel="{0} carreras seleccionadas"
-                      disabled={generatingMatriculas}
-                    />
+                    <hr />
+                    <div className="col-12">
+                      <label className="form-label">
+                        Carreras <small className="text-muted">(opcional)</small>
+                      </label>
+                      <MultiSelect
+                        value={selectedCareers}
+                        options={careerOptions}
+                        onChange={(e) => handleCareerSelection(e.value)}
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Selecciona las carreras"
+                        className="w-100"
+                        maxSelectedLabels={0}
+                        selectedItemsLabel="{0} carreras seleccionadas"
+                        disabled={generatingMatriculas}
+                      />
 
-                    {generatingMatriculas && (
-                      <div className="d-flex align-items-center mt-2">
-                        <ProgressSpinner style={{ width: '20px', height: '20px' }} strokeWidth="4" />
-                        <span className="ms-2 text-muted">Generando matrículas...</span>
-                      </div>
-                    )}
-
-                    {careerChips.length > 0 && (
-                      <div className="mt-3">
-                        <div className="row g-2">
-                          {careerChips.map((chip) => (
-                            <CareerChipComponent
-                              key={chip.careerId}
-                              chip={chip}
-                              onUpdateYear={(careerId, newYear) => updateChipMatricula(careerId, newYear, chip.last4)}
-                              onUpdateLast4={(careerId, newLast4) => updateChipMatricula(careerId, chip.year, newLast4)}
-                              onRemove={removeCareerChip}
-                            />
-                          ))}
+                      {generatingMatriculas && (
+                        <div className="d-flex align-items-center mt-2">
+                          <ProgressSpinner style={{ width: '20px', height: '20px' }} strokeWidth="4" />
+                          <span className="ms-2 text-muted">Generando matrículas...</span>
                         </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+
+                      {careerChips.length > 0 && (
+                        <div className="mt-3">
+                          <div className="row g-2">
+                            {careerChips.map((chip) => (
+                              <CareerChipComponent
+                                key={chip.careerId}
+                                chip={chip}
+                                onUpdateYear={(careerId, newYear) => updateChipMatricula(careerId, newYear, chip.last4)}
+                                onUpdateLast4={(careerId, newLast4) => updateChipMatricula(careerId, chip.year, newLast4)}
+                                onRemove={removeCareerChip}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </>
                 )}
               </div>
