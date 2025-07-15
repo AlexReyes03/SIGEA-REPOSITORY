@@ -62,6 +62,13 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
           { label: 'Perfil', path: '/admin/profile', Icon: MdPerson },
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },
         ];
+      case 'DEV':
+        return [
+          { label: 'Inicio', path: '/developer', Icon: MdHome },
+          { label: 'Usuarios', path: '/developer/users', Icon: MdGroups },
+          { label: 'Perfil', path: '/developer/profile', Icon: MdPerson },
+          { label: 'Cerrar sesión', path: null, Icon: MdLogout },
+        ];
       case 'SUPERVISOR':
         return [
           { label: 'Inicio', path: '/supervisor', Icon: MdHome },

@@ -14,6 +14,9 @@ import NotFound from '../components/404';
 
 import Profile from '../features/admin/views/Profile';
 
+import DevDashboard from '../features/developer/views/Dashboard';
+import DevUsersManagement from '../features/developer/views/UsersManagment';
+
 import AdminDashboard from '../features/admin/views/Dashboard';
 import AdminUsersManagement from '../features/admin/views/UsersManagment';
 import AdminCampus from '../features/admin/views/Campus';
@@ -23,12 +26,12 @@ import AdminCareerCurriculums from '../features/admin/views/Curriculums';
 import AdminGroupDetail from '../features/admin/views/GroupDetail';
 
 import SupervisorDashboard from '../features/supervisor/views/Dashboard';
-import SupervisorCampuses from '../features/supervisor/views/Campuses'
+import SupervisorCampuses from '../features/supervisor/views/Campuses';
 import SupervisorTeachers from '../features/supervisor/views/Teachers';
 import SupervisorTeacherScore from '../features/supervisor/views/TeacherScore';
 import SupervisorCareers from '../features/supervisor/views/Careers';
-import SupervisorGroups from '../features/supervisor/views/Groups'
-import SupervisorGroupDetails from '../features/supervisor/views/GroupDetails'
+import SupervisorGroups from '../features/supervisor/views/Groups';
+import SupervisorGroupDetails from '../features/supervisor/views/GroupDetails';
 
 import TeacherDashboard from '../features/teacher/views/Dashboard';
 import TeacherGroups from '../features/teacher/views/Groups';
@@ -93,6 +96,15 @@ export default function AppRouter() {
         </Route>
       </Route>
 
+      <Route element={<PrivateRoute allowedRoles={['DEV']} />}>
+        <Route element={<AppLayout />}>
+          {/* DEVELOPER */}
+          <Route path="developer" element={<DevDashboard />} />
+          <Route path="developer/users" element={<DevUsersManagement />} />
+          <Route path="developer/profile" element={<Profile />} />
+        </Route>
+      </Route>
+
       <Route element={<PrivateRoute allowedRoles={['TEACHER']} />}>
         <Route element={<AppLayout />}>
           {/* DOCENTE */}
@@ -107,18 +119,18 @@ export default function AppRouter() {
         <Route element={<AppLayout />}>
           {/* SUPERVISOR */}
           <Route path="supervisor" element={<SupervisorDashboard />} />
-          
+
           {/* Rutas para Carreras */}
           <Route path="supervisor/campuses-careers" element={<SupervisorCampuses />} />
           <Route path="supervisor/campuses-careers/careers" element={<SupervisorCareers />} />
           <Route path="supervisor/campuses-careers/careers/groups" element={<SupervisorGroups />} />
           <Route path="supervisor/campuses-careers/careers/group-details" element={<SupervisorGroupDetails />} />
-          
+
           {/* Rutas para Docentes */}
           <Route path="supervisor/campuses-teachers" element={<SupervisorCampuses />} />
           <Route path="supervisor/campuses-teachers/teachers" element={<SupervisorTeachers />} />
           <Route path="supervisor/campuses-teachers/teachers/teacher-score" element={<SupervisorTeacherScore />} />
-          
+
           <Route path="supervisor/profile" element={<Profile />} />
         </Route>
       </Route>
@@ -127,10 +139,10 @@ export default function AppRouter() {
         <Route element={<AppLayout />}>
           {/* ESTUDIANTE */}
           <Route path="student" element={<StudentDashboard />} />
-          <Route path="student/my-qualifications" element={<StudentQualifications/>} />
+          <Route path="student/my-qualifications" element={<StudentQualifications />} />
           <Route path="student/profile" element={<Profile />} />
-          <Route path='student/consult-subjects' element={<ConsultSubjects />} />
-          <Route path='student/teacher-evaluation' element={<TeacherEvaluation />} />
+          <Route path="student/consult-subjects" element={<ConsultSubjects />} />
+          <Route path="student/teacher-evaluation" element={<TeacherEvaluation />} />
         </Route>
       </Route>
 

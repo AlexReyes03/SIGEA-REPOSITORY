@@ -44,6 +44,8 @@ export default function LoginForm() {
           return navigate('/teacher');
         case 'STUDENT':
           return navigate('/student');
+        case 'DEV':
+          return navigate('/developer');
         default:
           return navigate('/');
       }
