@@ -1,11 +1,10 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from 'primereact/button';
-import { HiMiniStar, HiCalendar, HiChevronRight } from "react-icons/hi2";
+import { HiMiniStar, HiCalendar, HiChevronRight  } from "react-icons/hi2";
 
 import { BiSolidBookBookmark } from "react-icons/bi";
 import { useAuth } from '../../../contexts/AuthContext';
-import { getCareerByPlantelId, } from '../../../api/academics/careerService';
 import { getEnrollmentsByUser } from '../../../api/academics/enrollmentService';
 import { getCurriculumByCareerId } from '../../../api/academics/curriculumService';
 
@@ -55,25 +54,21 @@ export default function Dashboard() {
   }, []);
 
   // Función para calcular el período basado en fecha de inscripción y duración
-  const calculatePeriod = (enrolledAt, totalWeeks) => {
-    console.log("Datos para calcular período:", { enrolledAt, totalWeeks });
-
+  const calculatePeriod = (enrolledAt, totalWeeks) => {  
     if (!enrolledAt || !totalWeeks || totalWeeks === 0) {
-      console.log("Faltan datos para calcular período");
-      return "Período no disponible";
+      return "Periodo no disponible";
     }
 
     const startDate = new Date(enrolledAt);
     const endDate = new Date(startDate);
-
+    
     // Agregar las semanas a la fecha de inicio
     endDate.setDate(startDate.getDate() + (totalWeeks * 7));
 
     const startYear = startDate.getFullYear();
     const endYear = endDate.getFullYear();
 
-    const result = `Período ${startYear}-${endYear}`;
-    console.log("Período calculado:", result);
+    const result = `Periodo ${startYear}-${endYear}`;
     return result;
   };
 
@@ -82,30 +77,26 @@ export default function Dashboard() {
       setLoading(true);
       if (user?.id) {
         const list = await getEnrollmentsByUser(user.id);
+        
         // Filtrar solo inscripciones activas
         const activeEnrollments = Array.isArray(list) ? list.filter(enrollment => enrollment.status === 'ACTIVE') : [];
-
-        // Para cada inscripción, obtener el curriculum y calcular el período
+      
         const enrollmentsWithPeriod = await Promise.all(
           activeEnrollments.map(async (enrollment) => {
             try {
-              const curriculum = await getCurriculumByCareerId(enrollment.careerId);
-              console.log("Curriculum obtenido para carrera", enrollment.careerId, ":", curriculum);
-
+              const curriculumResponse = await getCurriculumByCareerId(enrollment.careerId);
+              const curriculum = Array.isArray(curriculumResponse) ? curriculumResponse[0] : curriculumResponse;
               const durationData = getCurriculumDuration(curriculum);
-              console.log("Duración calculada:", durationData);
-
               const period = calculatePeriod(enrollment.enrolledAt, durationData.weeks);
-
+              
               return {
                 ...enrollment,
                 period: period
               };
             } catch (error) {
-              console.error(`Error loading curriculum for career ${enrollment.careerId}:`, error);
               return {
                 ...enrollment,
-                period: "Período no disponible"
+                period: "Periodo no disponible"
               };
             }
           })
@@ -114,9 +105,6 @@ export default function Dashboard() {
         setEnrollments(enrollmentsWithPeriod);
       }
     } catch (error) {
-      console.error("Error loading student enrollments:", error);
-      // showError('Error', 'Error al cargar las inscripciones.')
-      console.error('Error al cargar las inscripciones.');
       setEnrollments([]);
     } finally {
       setLoading(false);

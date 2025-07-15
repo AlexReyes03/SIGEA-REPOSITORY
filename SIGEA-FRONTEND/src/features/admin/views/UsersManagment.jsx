@@ -143,7 +143,7 @@ export default function UsersManagement() {
   const rolesMap = useMemo(() => {
     const map = {};
     roles
-      .filter((role) => role.roleName !== 'DEV') // Filtrar rol DEV también del mapa
+      .filter((role) => role.roleName !== 'DEV') 
       .forEach((role) => {
         map[role.id] = role;
         map[role.roleName] = role;
