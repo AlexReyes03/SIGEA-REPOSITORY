@@ -32,22 +32,31 @@ public class JWTRequestFilter extends OncePerRequestFilter {
         final String authHeader = request.getHeader("Authorization");
         String username = null, jwt = null;
 
+        System.out.println("=== JWT FILTER DEBUG ===");
+        System.out.println("Auth Header: " + (authHeader != null ? "PRESENT (" + authHeader.length() + " chars)" : "NULL"));
+
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             jwt = authHeader.substring(7);
+            System.out.println("JWT Token: " + (!jwt.isEmpty() ? "EXTRACTED (" + jwt.length() + " chars)" : "EMPTY"));
             try {
                 username = jwtUtil.extractUsername(jwt);
+                System.out.println("Username extracted: " + username);
             } catch (ExpiredJwtException ex) {
-                logger.debug("JWT expirado", ex);
+                System.out.println("JWT EXPIRED: " + ex.getMessage());
             } catch (io.jsonwebtoken.security.SignatureException ex) {
-                logger.debug("JWT signature inválida - posiblemente token de ambiente diferente", ex);
+                System.out.println("JWT SIGNATURE ERROR: " + ex.getMessage());
             } catch (Exception ex) {
-                logger.debug("Error procesando JWT: " + ex.getMessage(), ex);
+                System.out.println("JWT OTHER ERROR: " + ex.getClass().getSimpleName() + " - " + ex.getMessage());
             }
+        } else {
+            System.out.println("No Bearer token found");
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            System.out.println("Attempting to authenticate user: " + username);
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
             if (jwtUtil.validateToken(jwt, userDetails)) {
+                System.out.println("Token validation SUCCESS");
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 userDetails, null, userDetails.getAuthorities()
@@ -56,8 +65,11 @@ public class JWTRequestFilter extends OncePerRequestFilter {
                         new WebAuthenticationDetailsSource().buildDetails(request)
                 );
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+            } else {
+                System.out.println("Token validation FAILED");
             }
         }
+        System.out.println("========================");
         chain.doFilter(request, response);
     }
 }
