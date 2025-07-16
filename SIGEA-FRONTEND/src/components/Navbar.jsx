@@ -29,7 +29,7 @@ const Navbar = forwardRef(function Navbar({ toggleSidebar }, toggleRef) {
   const campusName = user.campus?.name || '';
   const fullName = `${user.name} ${user.paternalSurname || ''}`.trim();
   const roleKey = user.role?.name || user.role;
-  const roleMap = { ADMIN: 'Administrador', TEACHER: 'Maestro', STUDENT: 'Estudiante', SUPERVISOR: 'Supervisor' };
+  const roleMap = { ADMIN: 'Administrador', TEACHER: 'Maestro', STUDENT: 'Estudiante', SUPERVISOR: 'Supervisor', DEV: 'Desarrollador' };
   const roleName = roleMap[roleKey] || roleKey;
 
   // Calcular ancho dinámico basado en el contenido

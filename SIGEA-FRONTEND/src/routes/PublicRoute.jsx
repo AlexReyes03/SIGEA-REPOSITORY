@@ -9,6 +9,7 @@ export default function PublicRoute() {
     let redirectTo = '/';
     switch (user.role.name) {
       case 'ADMIN':      redirectTo = '/admin';      break;
+      case 'DEV':      redirectTo = '/developer';      break;
       case 'TEACHER': redirectTo = '/teacher'; break;
       case 'STUDENT':    redirectTo = '/student';    break;
       case 'SUPERVISOR': redirectTo = '/supervisor'; break;

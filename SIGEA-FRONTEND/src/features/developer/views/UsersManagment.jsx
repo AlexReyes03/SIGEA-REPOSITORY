@@ -15,9 +15,9 @@ import { Toast } from 'primereact/toast';
 import { Divider } from 'primereact/divider';
 import * as bootstrap from 'bootstrap';
 
-import { getUserByRoleAndPlantel, createUser, updateUser, toggleUserStatus } from '../../../api/userService';
+import { getAllUsers, getUserByRole, createUser, updateUser, toggleUserStatus } from '../../../api/userService';
 import { getAllRoles } from '../../../api/roleService';
-import { getCareerByPlantelId } from '../../../api/academics/careerService';
+import { getAllCareers } from '../../../api/academics/careerService';
 import { createEnrollment, generateRegistrationNumber, getEnrollmentsByUser, updateEnrollmentRegistration, deleteEnrollment, canRemoveUserFromCareer } from '../../../api/academics/enrollmentService';
 import { getAllCampus } from '../../../api/academics/campusService';
 import { assignMultipleCampusToSupervisor } from '../../../api/supervisorService';
@@ -56,6 +56,7 @@ const INITIAL_USER_STATE = {
   maternalSurname: '',
   email: '',
   roleId: '',
+  campusId: '',
   status: 'ACTIVE',
 };
 
@@ -120,20 +121,20 @@ export default function UsersManagement() {
   const [enrollmentInputs, setEnrollmentInputs] = useState({});
   const [roles, setRoles] = useState([]);
   const [careers, setCareers] = useState([]);
-  const [campus, setCampus] = useState([]); // Nuevo estado para campus
+  const [campus, setCampus] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [globalFilter, setGlobalFilter] = useState('');
   const [selectedTipoUsuario, setSelectedTipoUsuario] = useState(null);
+  const [selectedCampus, setSelectedCampus] = useState(null);
   const [selected, setSelected] = useState([]);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [formData, setFormData] = useState({ ...INITIAL_USER_STATE, campusId: user?.campus?.id || '' });
+  const [formData, setFormData] = useState({ ...INITIAL_USER_STATE });
   const [editingUser, setEditingUser] = useState(null);
   const [selectedCareers, setSelectedCareers] = useState([]);
   const [careerChips, setCareerChips] = useState([]);
   const [editCareerChips, setEditCareerChips] = useState([]);
-  // Nuevos estados para campus
-  const [selectedCampus, setSelectedCampus] = useState([]);
+  const [selectedSupervisedCampus, setSelectedSupervisedCampus] = useState([]);
   const [campusChips, setCampusChips] = useState([]);
   const [registerMore, setRegisterMore] = useState(false);
   const [generatingMatriculas, setGeneratingMatriculas] = useState(false);
@@ -144,7 +145,7 @@ export default function UsersManagement() {
   const rolesMap = useMemo(() => {
     const map = {};
     roles
-      .filter((role) => role.roleName !== 'DEV')
+      .filter((role) => role.roleName !== 'DEV') // Filtrar rol DEV
       .forEach((role) => {
         map[role.id] = role;
         map[role.roleName] = role;
@@ -163,6 +164,16 @@ export default function UsersManagement() {
     [roles]
   );
 
+  const campusOptions = useMemo(
+    () =>
+      campus.map((camp) => ({
+        label: camp.name,
+        value: camp.id,
+        name: camp.name,
+      })),
+    [campus]
+  );
+
   const getCurrentRole = useMemo(() => {
     const roleId = formData.roleId || selectedTipoUsuario;
     if (!roleId) return null;
@@ -178,35 +189,36 @@ export default function UsersManagement() {
     return ROLE_NEEDS_CAREERS.includes(getCurrentRole.roleName);
   }, [getCurrentRole]);
 
-  // Nuevo computed para campus
   const currentRoleNeedsCampus = useMemo(() => {
     if (!getCurrentRole) return false;
     return ROLE_NEEDS_CAMPUS.includes(getCurrentRole.roleName);
   }, [getCurrentRole]);
 
-  const careerOptions = useMemo(
-    () =>
-      careers.map((career) => ({
+  const careerOptions = useMemo(() => {
+    if (!formData.campusId) return [];
+
+    return careers
+      .filter((career) => career.campusId === parseInt(formData.campusId))
+      .map((career) => ({
         label: `${career.name} - ${career.differentiator}`,
         value: career.id,
         differentiator: career.differentiator,
         name: career.name,
-      })),
-    [careers]
-  );
+      }));
+  }, [careers, formData.campusId]);
 
-  // Nuevas opciones para campus
-  const campusOptions = useMemo(
-    () =>
-      campus
-        .filter((camp) => camp.id !== user?.campus?.id) // Filtrar el campus principal del usuario
-        .map((camp) => ({
-          label: camp.name,
-          value: camp.id,
-          name: camp.name,
-        })),
-    [campus, user?.campus?.id]
-  );
+  // Opciones para campus supervisados (excluyendo el principal)
+  const supervisedCampusOptions = useMemo(() => {
+    if (!formData.campusId) return [];
+
+    return campus
+      .filter((camp) => camp.id !== parseInt(formData.campusId))
+      .map((camp) => ({
+        label: camp.name,
+        value: camp.id,
+        name: camp.name,
+      }));
+  }, [campus, formData.campusId]);
 
   const getRoleLabel = useCallback(
     (roleName, roleId) => {
@@ -227,7 +239,7 @@ export default function UsersManagement() {
     if (!Array.isArray(users)) return [];
 
     return users
-      .filter((userItem) => userItem.id !== user.id)
+      .filter((userItem) => userItem.id !== user.id && userItem.roleName !== 'DEV') // Filtrar DEV y usuario actual
       .map((userItem) => {
         const roleLabel = getRoleLabel(userItem.roleName, userItem.roleId);
         const statusLabel = getStatusConfig(userItem.status).label;
@@ -321,25 +333,23 @@ export default function UsersManagement() {
     }
   };
 
-  // Nueva función para manejar selección de campus
   const handleCampusSelection = (selectedCampusIds) => {
-    setSelectedCampus(selectedCampusIds);
+    setSelectedSupervisedCampus(selectedCampusIds);
 
     const newChips = selectedCampusIds.map((campusId) => {
       const selectedCamp = campus.find((c) => c.id === campusId);
       return {
         campusId: campusId,
-        campusName: selectedCamp?.name || 'Campus desconocido',
+        campusName: selectedCamp?.name || 'Plantel desconocido',
       };
     });
 
     setCampusChips(newChips);
   };
 
-  // Nueva función para remover chip de campus
   const removeCampusChip = (campusId) => {
     setCampusChips((prev) => prev.filter((chip) => chip.campusId !== campusId));
-    setSelectedCampus((prev) => prev.filter((id) => id !== campusId));
+    setSelectedSupervisedCampus((prev) => prev.filter((id) => id !== campusId));
   };
 
   const updateChipMatricula = (careerId, newYear, newLast4) => {
@@ -368,48 +378,50 @@ export default function UsersManagement() {
     setSelectedCareers((prev) => prev.filter((id) => id !== careerId));
   };
 
-  // Función optimizada para cargar usuarios por rol y campus con cache
-  const loadUsersByRoleAndPlantel = useCallback(
-    async (roleId, campusId) => {
-      const cacheKey = `${roleId}_${campusId}`;
+  // Función optimizada para cargar usuarios con cache global
+  const loadUsers = useCallback(async () => {
+    const cacheKey = selectedTipoUsuario ? `role_${selectedTipoUsuario}` : 'all_users';
 
-      // Verificar si ya tenemos los datos en cache
-      if (cachedUsersByRole[cacheKey]) {
-        setUsers(cachedUsersByRole[cacheKey]);
-        return;
+    // Verificar si ya tenemos los datos en cache
+    if (cachedUsersByRole[cacheKey]) {
+      setUsers(cachedUsersByRole[cacheKey]);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      let data;
+
+      if (selectedTipoUsuario) {
+        data = await getUserByRole(selectedTipoUsuario);
+      } else {
+        data = await getAllUsers();
       }
 
-      try {
-        setLoading(true);
-        const data = await getUserByRoleAndPlantel(roleId, campusId);
-        const usersArray = Array.isArray(data) ? data : [];
+      const usersArray = Array.isArray(data) ? data : [];
 
-        // Guardar en cache
-        setCachedUsersByRole((prev) => ({
-          ...prev,
-          [cacheKey]: usersArray,
-        }));
+      // Guardar en cache
+      setCachedUsersByRole((prev) => ({
+        ...prev,
+        [cacheKey]: usersArray,
+      }));
 
-        setUsers(usersArray);
-      } catch (error) {
-        console.error('Error loading data:', error);
-        setUsers([]);
-        showError('Error', 'No se pudieron cargar los usuarios');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [cachedUsersByRole, showError]
-  );
+      setUsers(usersArray);
+    } catch (error) {
+      console.error('Error loading users:', error);
+      setUsers([]);
+      showError('Error', 'No se pudieron cargar los usuarios');
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedTipoUsuario, cachedUsersByRole, showError]);
 
   // Función para refrescar datos manualmente
   const refreshCurrentView = useCallback(async () => {
-    if (!selectedTipoUsuario || !user?.campus?.id) return;
-
     setRefreshing(true);
-    const cacheKey = `${selectedTipoUsuario}_${user.campus.id}`;
+    const cacheKey = selectedTipoUsuario ? `role_${selectedTipoUsuario}` : 'all_users';
 
-    // Limpiar cache para este rol específico y recargar
+    // Limpiar cache para esta consulta específica y recargar
     setCachedUsersByRole((prev) => {
       const newCache = { ...prev };
       delete newCache[cacheKey];
@@ -417,7 +429,14 @@ export default function UsersManagement() {
     });
 
     try {
-      const data = await getUserByRoleAndPlantel(selectedTipoUsuario, user.campus.id);
+      let data;
+
+      if (selectedTipoUsuario) {
+        data = await getUserByRole(selectedTipoUsuario);
+      } else {
+        data = await getAllUsers();
+      }
+
       const usersArray = Array.isArray(data) ? data : [];
 
       // Actualizar cache
@@ -433,43 +452,40 @@ export default function UsersManagement() {
     } finally {
       setRefreshing(false);
     }
-  }, [selectedTipoUsuario, user?.campus?.id, showError]);
+  }, [selectedTipoUsuario, showError]);
 
   const reloadCurrentView = useCallback(() => {
-    if (selectedTipoUsuario && user?.campus?.id) {
-      const cacheKey = `${selectedTipoUsuario}_${user.campus.id}`;
+    const cacheKey = selectedTipoUsuario ? `role_${selectedTipoUsuario}` : 'all_users';
 
-      if (editingUser) {
-        setCachedUsersByRole((prev) => {
-          const newCache = { ...prev };
-          if (newCache[cacheKey]) {
-            newCache[cacheKey] = newCache[cacheKey].map((cachedUser) => (cachedUser.id === editingUser.id ? { ...cachedUser, needsRefresh: true } : cachedUser));
-          }
-          return newCache;
-        });
-      }
-
+    if (editingUser) {
       setCachedUsersByRole((prev) => {
         const newCache = { ...prev };
-        delete newCache[cacheKey];
+        if (newCache[cacheKey]) {
+          newCache[cacheKey] = newCache[cacheKey].map((cachedUser) => (cachedUser.id === editingUser.id ? { ...cachedUser, needsRefresh: true } : cachedUser));
+        }
         return newCache;
       });
-
-      loadUsersByRoleAndPlantel(selectedTipoUsuario, user.campus.id);
     }
-  }, [selectedTipoUsuario, user?.campus?.id, loadUsersByRoleAndPlantel, editingUser]);
+
+    setCachedUsersByRole((prev) => {
+      const newCache = { ...prev };
+      delete newCache[cacheKey];
+      return newCache;
+    });
+
+    loadUsers();
+  }, [selectedTipoUsuario, loadUsers, editingUser]);
 
   const loadCareers = useCallback(async () => {
     try {
-      const data = await getCareerByPlantelId(user?.campus?.id);
+      const data = await getAllCareers();
       setCareers(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error loading careers:', error);
       setCareers([]);
     }
-  }, [user?.campus?.id]);
+  }, []);
 
-  // Carga de campus
   const loadCampus = useCallback(async () => {
     try {
       const data = await getAllCampus();
@@ -497,21 +513,17 @@ export default function UsersManagement() {
   }, [showError, loadCareers, loadCampus]);
 
   useEffect(() => {
-    if (roles.length > 0 && isInitialLoad && user?.campus?.id) {
-      const studentRole = roles.find((role) => role.roleName === 'STUDENT' || role.id === 4);
-      if (studentRole) {
-        setSelectedTipoUsuario(studentRole.id);
-        loadUsersByRoleAndPlantel(studentRole.id, user.campus.id);
-      }
+    if (roles.length > 0 && isInitialLoad) {
+      loadUsers();
       setIsInitialLoad(false);
     }
-  }, [roles, isInitialLoad, user?.campus?.id, loadUsersByRoleAndPlantel]);
+  }, [roles, isInitialLoad, loadUsers]);
 
   useEffect(() => {
-    if (!isInitialLoad && selectedTipoUsuario && user?.campus?.id) {
-      loadUsersByRoleAndPlantel(selectedTipoUsuario, user.campus.id);
+    if (!isInitialLoad) {
+      loadUsers();
     }
-  }, [selectedTipoUsuario, isInitialLoad, user?.campus?.id, loadUsersByRoleAndPlantel]);
+  }, [selectedTipoUsuario, isInitialLoad, loadUsers]);
 
   // función para manejar confirmación de eliminación de carreras
   const handleCareerRemovalWithConfirmation = useCallback(
@@ -545,7 +557,7 @@ export default function UsersManagement() {
 
         const finalRoleId = formData.roleId || selectedTipoUsuario;
 
-        if (!formData.name || !formData.paternalSurname || !formData.email || !finalRoleId) {
+        if (!formData.name || !formData.paternalSurname || !formData.email || !finalRoleId || !formData.campusId) {
           showWarn('Campos incompletos', 'Por favor llena todos los campos obligatorios.');
           return;
         }
@@ -559,7 +571,7 @@ export default function UsersManagement() {
           ...formData,
           roleId: finalRoleId,
           maternalSurname: formData.maternalSurname || null,
-          campusId: formData.campusId || null,
+          campusId: parseInt(formData.campusId),
         };
 
         if (!isEdit) {
@@ -582,11 +594,6 @@ export default function UsersManagement() {
           }
           await proceedWithUserUpdate();
         } else {
-          if (!formData.campusId) {
-            showWarn('Campos incompletos', 'Por favor llena todos los campos obligatorios.');
-            return;
-          }
-
           savedUser = await createUser(userData);
 
           // Manejar inscripciones de carreras
@@ -612,22 +619,22 @@ export default function UsersManagement() {
               const result = await assignMultipleCampusToSupervisor(savedUser.id, campusIds, user.id);
 
               if (result.failed > 0) {
-                showWarn('Advertencia', `Usuario creado pero ${result.failed} campus no pudieron ser asignados`);
+                showWarn('Advertencia', `Usuario creado pero ${result.failed} planteles no pudieron ser asignados`);
               }
             } catch (campusError) {
               console.error('Error assigning campus:', campusError);
-              showWarn('Advertencia', 'Usuario creado pero hubo un error al asignar algunos campus');
+              showWarn('Advertencia', 'Usuario creado pero hubo un error al asignar algunos planteles');
             }
           }
 
           showSuccess('Hecho', 'Usuario registrado correctamente');
 
           if (registerMore) {
-            setFormData({ ...INITIAL_USER_STATE, campusId: user?.campus?.id || '', roleId: finalRoleId });
+            setFormData({ ...INITIAL_USER_STATE, roleId: finalRoleId });
             setSelectedCareers([]);
             setCareerChips([]);
             setEditCareerChips([]);
-            setSelectedCampus([]);
+            setSelectedSupervisedCampus([]);
             setCampusChips([]);
             setUserEnrollments([]);
             setOriginalUserEnrollments([]);
@@ -721,7 +728,6 @@ export default function UsersManagement() {
     [
       formData,
       selectedTipoUsuario,
-      user?.campus?.id,
       user?.id,
       currentRoleNeedsCareers,
       currentRoleNeedsCampus,
@@ -800,11 +806,11 @@ export default function UsersManagement() {
 
   // Función para resetear todos los estados
   const resetAllStates = () => {
-    setFormData({ ...INITIAL_USER_STATE, campusId: user?.campus?.id || '' });
+    setFormData({ ...INITIAL_USER_STATE });
     setSelectedCareers([]);
     setCareerChips([]);
     setEditCareerChips([]);
-    setSelectedCampus([]);
+    setSelectedSupervisedCampus([]);
     setCampusChips([]);
     setRegisterMore(false);
     setEditingUser(null);
@@ -832,13 +838,6 @@ export default function UsersManagement() {
           const enrollments = await getEnrollmentsByUser(userData.id);
           const activeEnrollments = enrollments.filter((e) => e.status === 'ACTIVE');
 
-          console.log('Total enrollments:', enrollments.length);
-          console.log('Active enrollments:', activeEnrollments.length);
-          console.log(
-            'Enrollments:',
-            enrollments.map((e) => ({ id: e.id, careerName: e.careerName, status: e.status }))
-          );
-
           setUserEnrollments(activeEnrollments);
           setOriginalUserEnrollments([...activeEnrollments]);
 
@@ -863,7 +862,6 @@ export default function UsersManagement() {
       } else {
         const initialFormData = {
           ...INITIAL_USER_STATE,
-          campusId: user?.campus?.id || '',
         };
 
         if (selectedTipoUsuario) {
@@ -873,7 +871,7 @@ export default function UsersManagement() {
         setFormData(initialFormData);
         setSelectedCareers([]);
         setCareerChips([]);
-        setSelectedCampus([]);
+        setSelectedSupervisedCampus([]);
         setCampusChips([]);
         setRegisterMore(false);
         setUserEnrollments([]);
@@ -882,7 +880,7 @@ export default function UsersManagement() {
         new bootstrap.Modal(createModalRef.current).show();
       }
     },
-    [user?.campus?.id, selectedTipoUsuario]
+    [selectedTipoUsuario]
   );
 
   const handleEditCareerSelection = async (newSelectedCareerIds) => {
@@ -973,7 +971,6 @@ export default function UsersManagement() {
 
   const updateExistingCareerMatricula = (enrollmentId, field, value) => {
     if (field === 'year') {
-      // Para cambiar año de una carrera existente, necesitamos reconstruir toda la matrícula
       const enrollment = userEnrollments.find((e) => e.id === enrollmentId);
       if (enrollment) {
         const parts = extractMatriculaParts(enrollment.registrationNumber);
@@ -981,7 +978,6 @@ export default function UsersManagement() {
         const currentLast4 = enrollmentInputs[enrollmentId] || parts.last4;
         const newMatricula = buildFullRegistrationNumber(newYear, parts.differentiator, currentLast4);
 
-        // Guardar toda la nueva matrícula, no solo los últimos 4 dígitos
         setEnrollmentInputs((prev) => ({
           ...prev,
           [`${enrollmentId}_full`]: newMatricula,
@@ -994,7 +990,6 @@ export default function UsersManagement() {
     }
   };
 
-  // Función para obtener preview de matrícula existente
   const getExistingCareerPreview = (enrollment) => {
     const fullMatricula = enrollmentInputs[`${enrollment.id}_full`];
     if (fullMatricula) {
@@ -1020,7 +1015,7 @@ export default function UsersManagement() {
 
   // Computed values
   const getCurrentFilterLabel = useCallback(() => {
-    if (!selectedTipoUsuario) return 'Usuarios';
+    if (!selectedTipoUsuario) return 'Todos los usuarios';
     return getRoleLabel(null, selectedTipoUsuario) || 'Usuarios';
   }, [selectedTipoUsuario, getRoleLabel]);
 
@@ -1030,9 +1025,9 @@ export default function UsersManagement() {
   }, [getCurrentRole]);
 
   const getRegisterButtonText = useCallback(() => {
-    if (!selectedTipoUsuario) return 'Agregar Usuario';
+    if (!selectedTipoUsuario) return 'Registrar Usuario';
     const role = rolesMap[selectedTipoUsuario];
-    if (!role) return 'Agregar Usuario';
+    if (!role) return 'Registrar Usuario';
     return `Registrar ${getRoleFriendlyName(role.roleName)}`;
   }, [selectedTipoUsuario, rolesMap]);
 
@@ -1064,14 +1059,14 @@ export default function UsersManagement() {
         </div>
         <div className="d-flex align-items-center gap-2">
           <InputText placeholder="Buscar ..." value={globalFilter} onChange={(e) => setGlobalFilter(e.target.value)} disabled={loading} className="me-2" style={{ minWidth: '250px' }} />
-          <Button icon={refreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} severity="secondary" outlined  onClick={refreshCurrentView} disabled={loading || refreshing || !selectedTipoUsuario} tooltip="Actualizar datos" tooltipOptions={{ position: 'top' }} />
-          <Button icon="pi pi-upload" outlined={loading || !processedUsers.length} severity="primary"  onClick={() => dt.current?.exportCSV()} disabled={loading || !processedUsers.length}>
+          <Button icon={refreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} severity="primary" onClick={refreshCurrentView} disabled={loading || refreshing} tooltip="Actualizar datos" tooltipOptions={{ position: 'top' }} />
+          <Button icon="pi pi-upload" outlined={loading || !processedUsers.length} severity="help" onClick={() => dt.current?.exportCSV()} disabled={loading || !processedUsers.length}>
             <span className="d-none d-sm-inline ms-2">Exportar</span>
           </Button>
         </div>
       </div>
     ),
-    [getCurrentFilterLabel, processedUsers.length, globalFilter, loading, refreshing, refreshCurrentView, selectedTipoUsuario]
+    [getCurrentFilterLabel, processedUsers.length, globalFilter, loading, refreshing, refreshCurrentView]
   );
 
   // Templates
@@ -1085,6 +1080,10 @@ export default function UsersManagement() {
     return <span className="font-monospace">{rowData.displayRegistration}</span>;
   }, []);
 
+  const campusBodyTemplate = useCallback((rowData) => {
+    return <span className="text-nowrap">{rowData.campusName || '-'}</span>;
+  }, []);
+
   const actionsTemplate = useCallback(
     (row) => {
       const isActive = row.status === 'ACTIVE';
@@ -1094,8 +1093,8 @@ export default function UsersManagement() {
 
       return (
         <>
-          <Button icon="pi pi-pencil" rounded outlined className="me-2" severity="info" text disabled={loading} tooltip="Editar usuario" tooltipOptions={{ position: 'top' }} onClick={() => openModal(row)} />
-          <Button icon={toggleIcon} text severity={toggleSeverity} disabled={loading} tooltip={toggleTooltip} tooltipOptions={{ position: 'top' }} onClick={() => handleToggleStatus(row.id, row)} />
+          <Button icon="pi pi-pencil" rounded outlined className="me-2" severity="info" disabled={loading} tooltip="Editar usuario" tooltipOptions={{ position: 'top' }} onClick={() => openModal(row)} />
+          <Button icon={toggleIcon} rounded outlined severity={toggleSeverity} disabled={loading} tooltip={toggleTooltip} tooltipOptions={{ position: 'top' }} onClick={() => handleToggleStatus(row.id, row)} />
         </>
       );
     },
@@ -1118,20 +1117,15 @@ export default function UsersManagement() {
     if (field === 'roleId') {
       setSelectedCareers([]);
       setCareerChips([]);
-      setSelectedCampus([]);
+      setSelectedSupervisedCampus([]);
       setCampusChips([]);
     }
-  }, []);
 
-  const renderFormField = useCallback(
-    (label, field, props = {}) => (
-      <div className="col-md-6">
-        <label className="form-label">{label}</label>
-        <input {...props} className="form-control" value={formData[field]} onChange={(e) => updateFormField(field, e.target.value)} onKeyDown={handleKeyDown} />
-      </div>
-    ),
-    [formData, updateFormField, handleKeyDown]
-  );
+    if (field === 'campusId') {
+      setSelectedCareers([]);
+      setCareerChips([]);
+    }
+  }, []);
 
   // Componente de chip de carrera para el modal de crear
   const CareerChipComponent = useCallback(
@@ -1146,7 +1140,6 @@ export default function UsersManagement() {
           </div>
 
           <div className="row g-2">
-            {/* Input para año */}
             <div className="col-3">
               <label className="form-label small">Año</label>
               <input
@@ -1161,14 +1154,10 @@ export default function UsersManagement() {
                 maxLength="2"
               />
             </div>
-
-            {/* Diferenciador (solo lectura) */}
             <div className="col-4">
               <label className="form-label small">Carrera</label>
               <input type="text" className="form-control form-control-sm" value={chip.differentiator} disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }} />
             </div>
-
-            {/* Input para últimos 4 dígitos */}
             <div className="col-5">
               <label className="form-label small">Número</label>
               <input
@@ -1185,7 +1174,6 @@ export default function UsersManagement() {
             </div>
           </div>
 
-          {/* Preview de matrícula */}
           <div className="mt-2">
             <small className="text-muted">
               Matrícula: <strong className="font-monospace">{chip.matricula}</strong>
@@ -1203,7 +1191,6 @@ export default function UsersManagement() {
     []
   );
 
-  // Nuevo componente de chip de campus
   const CampusChipComponent = useCallback(
     ({ chip, onRemove }) => (
       <div className="col-md-6 mb-2">
@@ -1217,27 +1204,29 @@ export default function UsersManagement() {
     <>
       <Toast ref={toast} />
       <div className="bg-white rounded-top p-2">
-        <h3 className="text-blue-500 fw-semibold mx-3 my-1 mb-0">Usuarios</h3>
+        <h3 className="text-blue-500 fw-semibold mx-3 my-1 mb-0">Gestión Global de Usuarios</h3>
       </div>
       <div className="my-2 p-2 bg-white rounded">
         <Toolbar
           className="p-0 bg-white border-0"
           start={() => (
-            <Dropdown
-              value={selectedTipoUsuario}
-              options={roleOptions}
-              onChange={(e) => setSelectedTipoUsuario(e.value)}
-              placeholder="Filtrar por tipo de usuario"
-              className="me-2 mb-2 mb-md-0"
-              style={{ minWidth: 200 }}
-              optionLabel="label"
-              disabled={loading || roles.length === 0}
-            />
+            <div className="d-flex align-items-center gap-2">
+              <Dropdown
+                value={selectedTipoUsuario}
+                options={roleOptions}
+                onChange={(e) => setSelectedTipoUsuario(e.value)}
+                placeholder="Filtrar por tipo de usuario"
+                className="me-2 mb-2 mb-md-0"
+                style={{ minWidth: 200 }}
+                optionLabel="label"
+                disabled={loading || roles.length === 0}
+              />
+            </div>
           )}
           end={() => (
             <div className="d-flex align-items-center gap-2">
               {selected.length > 0 && (
-                <Button icon="pi pi-toggle-off" severity="warning" text className="me-2" onClick={() => handleToggleStatus(selected.map((u) => u.id))} disabled={loading}>
+                <Button icon="pi pi-toggle-off" severity="warning" className="me-2" onClick={() => handleToggleStatus(selected.map((u) => u.id))} disabled={loading}>
                   <span className="d-none d-sm-inline ms-1">Deshabilitar ({selected.length})</span>
                 </Button>
               )}
@@ -1277,14 +1266,17 @@ export default function UsersManagement() {
           >
             <Column selectionMode="multiple" headerStyle={{ width: '3em' }} />
             <Column field="displayRegistration" header="Matrícula" body={registrationBodyTemplate} sortable style={{ minWidth: '120px' }} />
+            <Column field="campusName" header="Plantel" body={campusBodyTemplate} sortable style={{ minWidth: '150px' }} />
             <Column field="fullName" header="Nombre" sortable style={{ minWidth: '200px' }} />
             <Column field="email" header="Correo Electrónico" sortable style={{ minWidth: '200px' }} />
+            <Column field="roleLabel" header="Rol" sortable style={{ minWidth: '120px' }} />
             <Column field="statusLabel" header="Estado" body={statusBodyTemplate} sortable style={{ minWidth: '100px' }} />
             <Column field="createdAt" header="Fecha de Registro" body={dateTemplate} sortable style={{ minWidth: '150px' }} />
             <Column body={actionsTemplate} header="Acciones" exportable={false} style={{ minWidth: '120px' }} />
           </DataTable>
         )}
       </div>
+
       {/* Modal CREAR USUARIO */}
       <div className="modal fade" ref={createModalRef} tabIndex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div className="modal-dialog modal-dialog-centered modal-xl">
@@ -1345,50 +1337,50 @@ export default function UsersManagement() {
 
                 <Divider />
 
-                {/* Sección: Rol y Configuración */}
+                {/* Sección: Rol y Plantel */}
                 <div className="mb-4">
                   <div className="d-flex align-items-center mb-3">
                     <MdOutlineAssignment className="text-muted me-2" size={20} />
-                    <h6 className="text-muted fw-semibold mb-0">Rol</h6>
+                    <h6 className="text-muted fw-semibold mb-0">Rol y Plantel</h6>
                   </div>
                   <div className="px-3 rounded">
-                    <div className="row">
-                      <div className="col-12">
+                    <div className="row g-3">
+                      <div className="col-md-6">
                         <label className="form-label fw-semibold">Tipo de usuario *</label>
-                        {selectedTipoUsuario ? (
-                          <input className="form-control" value={getRoleFriendlyName(rolesMap[selectedTipoUsuario]?.roleName || '')} disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }} />
-                        ) : (
-                          <Dropdown value={formData.roleId} options={roleOptions} onChange={(e) => updateFormField('roleId', e.value)} placeholder="Selecciona un rol" className="w-100" required disabled={loading} />
-                        )}
+                        <Dropdown value={formData.roleId} options={roleOptions} onChange={(e) => updateFormField('roleId', e.value)} placeholder="Selecciona un rol" className="w-100" required disabled={loading} />
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label fw-semibold">Plantel asignado *</label>
+                        <Dropdown value={formData.campusId} options={campusOptions} onChange={(e) => updateFormField('campusId', e.value)} placeholder="Selecciona un plantel" className="w-100" required disabled={loading} />
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Sección: Campus Supervisados - Solo para SUPERVISOR */}
+                {/* Sección: Planteles Supervisados - Solo para SUPERVISOR */}
                 {currentRoleNeedsCampus && (
                   <>
                     <Divider />
                     <div className="mb-4">
                       <div className="d-flex align-items-center mb-3">
                         <MdOutlineBusiness className="text-muted me-2" size={20} />
-                        <h6 className="text-muted fw-semibold mb-0">Campus Supervisados</h6>
+                        <h6 className="text-muted fw-semibold mb-0">Planteles Supervisados</h6>
                       </div>
                       <div className="px-3 rounded">
                         <div className="row">
                           <div className="col-12 mb-3">
-                            <label className="form-label fw-semibold">Campus principal</label>
+                            <label className="form-label fw-semibold">Plantel principal</label>
                             <div className="mt-1">
-                              <Chip label={user?.campus?.name || 'No definido'} className="me-2 mb-2" />
+                              <Chip label={campus.find((c) => c.id === parseInt(formData.campusId))?.name || 'Selecciona un plantel'} className="me-2 mb-2" />
                             </div>
-                            <small className="text-muted">Este es el campus principal asignado automáticamente</small>
+                            <small className="text-muted">Este será el plantel principal del supervisor</small>
                           </div>
 
                           <div className="col-12">
                             <label className="form-label fw-semibold">Planteles adicionales</label>
                             <MultiSelect
-                              value={selectedCampus}
-                              options={campusOptions}
+                              value={selectedSupervisedCampus}
+                              options={supervisedCampusOptions}
                               onChange={(e) => handleCampusSelection(e.value)}
                               optionLabel="label"
                               optionValue="value"
@@ -1397,7 +1389,7 @@ export default function UsersManagement() {
                               className="w-100"
                               maxSelectedLabels={0}
                               selectedItemsLabel="{0} planteles seleccionados"
-                              disabled={loading}
+                              disabled={loading || !formData.campusId}
                             />
 
                             {campusChips.length > 0 && (
@@ -1438,11 +1430,11 @@ export default function UsersManagement() {
                               onChange={(e) => handleCareerSelection(e.value)}
                               optionLabel="label"
                               optionValue="value"
-                              placeholder="Selecciona las carreras"
+                              placeholder={formData.campusId ? 'Selecciona las carreras' : 'Primero selecciona un plantel'}
                               className="w-100"
                               maxSelectedLabels={0}
                               selectedItemsLabel="{0} carreras seleccionadas"
-                              disabled={generatingMatriculas || loading}
+                              disabled={generatingMatriculas || loading || !formData.campusId}
                             />
 
                             {generatingMatriculas && (
@@ -1557,18 +1549,23 @@ export default function UsersManagement() {
 
                 <Divider />
 
-                {/* Sección: Rol */}
+                {/* Sección: Rol y Plantel */}
                 <div className="mb-4">
                   <div className="d-flex align-items-center mb-3">
                     <MdOutlineAssignment className="text-muted me-2" size={20} />
-                    <h6 className="text-muted fw-semibold mb-0">Rol</h6>
+                    <h6 className="text-muted fw-semibold mb-0">Rol y Plantel</h6>
                   </div>
                   <div className="px-3 rounded">
-                    <div className="row">
-                      <div className="col-12">
+                    <div className="row g-3">
+                      <div className="col-md-6">
                         <label className="form-label fw-semibold">Tipo de usuario</label>
                         <input className="form-control" value={getRoleFriendlyName(rolesMap[formData.roleId]?.roleName || '')} disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }} />
                         <small className="text-muted">El rol no se puede modificar después de la creación</small>
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label fw-semibold">Plantel asignado</label>
+                        <input className="form-control" value={campus.find((c) => c.id === parseInt(formData.campusId))?.name || 'No definido'} disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }} />
+                        <small className="text-muted">El plantel no se puede modificar después de la creación</small>
                       </div>
                     </div>
                   </div>
@@ -1625,7 +1622,6 @@ export default function UsersManagement() {
                                             </div>
 
                                             <div className="row g-2">
-                                              {/* Input para año */}
                                               <div className="col-3">
                                                 <label className="form-label small">Año</label>
                                                 <input
@@ -1641,14 +1637,10 @@ export default function UsersManagement() {
                                                   disabled={loading}
                                                 />
                                               </div>
-
-                                              {/* Diferenciador (solo lectura) */}
                                               <div className="col-4">
                                                 <label className="form-label small">Carrera</label>
                                                 <input type="text" className="form-control form-control-sm" value={parts.differentiator || career?.differentiator || ''} disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }} />
                                               </div>
-
-                                              {/* Input para últimos 4 dígitos */}
                                               <div className="col-5">
                                                 <label className="form-label small">Número</label>
                                                 <input
@@ -1666,7 +1658,6 @@ export default function UsersManagement() {
                                               </div>
                                             </div>
 
-                                            {/* Preview de matrícula */}
                                             <div className="mt-2">
                                               <small className="text-muted">
                                                 Matrícula: <strong className="font-monospace">{preview}</strong>
@@ -1700,7 +1691,6 @@ export default function UsersManagement() {
                                         </div>
 
                                         <div className="row g-2">
-                                          {/* Input para año */}
                                           <div className="col-3">
                                             <label className="form-label small">Año</label>
                                             <input
@@ -1716,14 +1706,10 @@ export default function UsersManagement() {
                                               disabled={loading}
                                             />
                                           </div>
-
-                                          {/* Diferenciador (solo lectura) */}
                                           <div className="col-4">
                                             <label className="form-label small">Carrera</label>
                                             <input type="text" className="form-control form-control-sm" value={chip.differentiator} disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }} />
                                           </div>
-
-                                          {/* Input para últimos 4 dígitos */}
                                           <div className="col-5">
                                             <label className="form-label small">Número</label>
                                             <input
@@ -1741,7 +1727,6 @@ export default function UsersManagement() {
                                           </div>
                                         </div>
 
-                                        {/* Preview de matrícula */}
                                         <div className="mt-2">
                                           <small className="text-muted">
                                             Matrícula: <strong className="font-monospace">{chip.matricula}</strong>

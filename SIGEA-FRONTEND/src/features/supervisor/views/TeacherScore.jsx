@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from 'primereact/button';
 import { BreadCrumb } from 'primereact/breadcrumb';
@@ -7,7 +7,10 @@ import { Rating } from 'primereact/rating';
 import { Avatar } from 'primereact/avatar';
 import { Card } from 'primereact/card';
 import { Badge } from 'primereact/badge';
+import { Paginator } from 'primereact/paginator';
+import { Dropdown } from 'primereact/dropdown';
 import { MdManageSearch, MdOutlineAssessment } from 'react-icons/md';
+import { PiEye, PiEyeSlash } from 'react-icons/pi';
 
 import { useToast } from '../../../components/providers/ToastProvider';
 import { getUserById } from '../../../api/userService';
@@ -28,6 +31,26 @@ export default function TeacherScore() {
   const [rankings, setRankings] = useState([]);
   const [expandedComments, setExpandedComments] = useState({});
 
+  // Estados para paginación
+  const [first, setFirst] = useState(0);
+  const [rows, setRows] = useState(5);
+
+  // Estados para filtros
+  const [sortOption, setSortOption] = useState('recent');
+
+  // Estado para modo privacidad
+  const [privacyMode, setPrivacyMode] = useState(false);
+
+  // Opciones de filas por página
+  const rowsPerPageOptions = [5, 10, 15];
+
+  // Opciones de ordenamiento
+  const sortOptions = [
+    { label: 'Más recientes', value: 'recent' },
+    { label: 'Mayor puntaje', value: 'highest' },
+    { label: 'Menor puntaje', value: 'lowest' },
+  ];
+
   // Función para mapear los datos del DTO del backend al formato esperado por el componente
   const mapRankingData = useCallback((rankingDto) => {
     return {
@@ -44,6 +67,51 @@ export default function TeacherScore() {
       studentCampusId: rankingDto.student.campusId,
     };
   }, []);
+
+  // Función para ordenar rankings
+  const sortedRankings = useMemo(() => {
+    if (!rankings.length) return [];
+
+    const sorted = [...rankings].sort((a, b) => {
+      switch (sortOption) {
+        case 'recent':
+          return new Date(b.date) - new Date(a.date);
+        case 'highest':
+          return b.star - a.star;
+        case 'lowest':
+          return a.star - b.star;
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [rankings, sortOption]);
+
+  // Función para obtener datos paginados
+  const paginatedRankings = useMemo(() => {
+    const startIndex = first;
+    const endIndex = first + rows;
+    return sortedRankings.slice(startIndex, endIndex);
+  }, [sortedRankings, first, rows]);
+
+  // Función para generar nombre anonimizado
+  const getAnonymizedName = useCallback(
+    (originalName) => {
+      if (!privacyMode) return originalName;
+      return 'Estudiante Anónimo';
+    },
+    [privacyMode]
+  );
+
+  // Función para obtener avatar (normal o anonimizado)
+  const getDisplayAvatar = useCallback(
+    (avatarUrl) => {
+      if (privacyMode) return avatarFallback;
+      return getAvatarUrl(avatarUrl);
+    },
+    [privacyMode]
+  );
 
   // Función para cargar datos del docente y sus rankings
   const loadTeacherData = useCallback(async () => {
@@ -71,6 +139,8 @@ export default function TeacherScore() {
       }
 
       setRankings(rankingsData);
+      // Resetear paginación al cargar nuevos datos
+      setFirst(0);
 
       if (rankingsData.length === 0) {
         console.info('No rankings found for teacher:', teacherId);
@@ -144,9 +214,19 @@ export default function TeacherScore() {
     }
   };
 
+  // Función para manejar cambio de página
+  const onPageChange = (event) => {
+    setFirst(event.first);
+    setRows(event.rows);
+  };
+
+  // Función para alternar modo privacidad
+  const togglePrivacyMode = () => {
+    setPrivacyMode(!privacyMode);
+  };
+
   // Calcular estadísticas
   const averageRating = rankings.length > 0 ? rankings.reduce((sum, ranking) => sum + ranking.star, 0) / rankings.length : 0;
-
   const totalEvaluations = rankings.length;
 
   // Función para truncar comentarios
@@ -155,13 +235,7 @@ export default function TeacherScore() {
     return comment.substring(0, maxLength) + '...';
   };
 
-  // Función para refrescar datos
-  const handleRefresh = useCallback(async () => {
-    setLoading(true);
-    await loadTeacherData();
-  }, [loadTeacherData]);
-
-  // Breadcrumb corregido
+  // Breadcrumb
   const breadcrumbItems = [
     {
       label: 'Planteles',
@@ -192,8 +266,23 @@ export default function TeacherScore() {
   return (
     <>
       <div className="d-flex flex-row justify-content-between align-items-center bg-white rounded-top p-2">
-        <h3 className="text-blue-500 fw-semibold mx-3 my-1">Desempeño <h3 className="text-blue-500 fw-semibold d-none d-md-inline">docente</h3></h3>
-        <Button icon={loading ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} severity="primary" size="small" onClick={handleRefresh} disabled={loading} tooltip="Actualizar datos" tooltipOptions={{ position: 'left' }} />
+        <h3 className="text-blue-500 fw-semibold mx-3 my-1">
+          Desempeño <span className="d-none d-md-inline">docente</span>
+        </h3>
+
+        {/* Controles de filtro y privacidad */}
+        <div className="d-flex align-items-center gap-2">
+          <Button
+            icon={privacyMode ? 'pi pi-eye' : 'pi pi-eye-slash'}
+            severity={privacyMode ? 'help' : 'secondary'}
+            outlined={privacyMode ? false : true}
+            size="small"
+            onClick={togglePrivacyMode}
+            tooltip={privacyMode ? 'Mostrar datos reales' : 'Ocultar datos sensibles'}
+            tooltipOptions={{ position: 'left' }}
+          />
+          <Dropdown value={sortOption} options={sortOptions} onChange={(e) => setSortOption(e.value)} placeholder="Ordenar por" className="me-2" style={{ minWidth: '150px' }} />
+        </div>
       </div>
 
       <BreadCrumb model={breadcrumbItems} home={breadcrumbHome} className="mt-2 pb-0 ps-0 text-nowrap" />
@@ -212,7 +301,7 @@ export default function TeacherScore() {
             <h5 className="mt-3 text-muted">No se pudieron cargar los datos</h5>
             <p className="text-muted">Intenta recargar la página</p>
             <div className="d-flex gap-2 justify-content-center">
-              <Button label="Reintentar" icon="pi pi-refresh" severity="primary" onClick={handleRefresh} />
+              <Button label="Reintentar" icon="pi pi-refresh" severity="primary" onClick={loadTeacherData} />
               <Button
                 label="Volver a docentes"
                 icon="pi pi-arrow-left"
@@ -307,30 +396,56 @@ export default function TeacherScore() {
                 <p className="text-muted">Este docente aún no tiene evaluaciones de estudiantes</p>
               </div>
             ) : (
-              <div className="d-flex flex-column gap-3">
-                {rankings.map((ranking) => (
-                  <div key={ranking.id} className="card p-4 border-0">
-                    <div className="d-flex align-items-start gap-3">
-                      <img src={getAvatarUrl(ranking.studentAvatar) ?? avatarFallback} alt="avatar" className="rounded-circle" style={{ width: '60px', height: '60px', flexShrink: 0, objectFit: 'cover' }} />
-                      <div className="flex-grow-1 overflow-x-auto">
-                        <div className="d-flex justify-content-between align-items-start mb-2">
-                          <div>
-                            <h6 className="text-dark mb-1 text-truncate">{ranking.studentName}</h6>
-                            <small className="text-muted">{formatDate(ranking.date)}</small>
+              <>
+                {/* Lista de evaluaciones */}
+                <div className="d-flex flex-column gap-3 mb-3">
+                  {paginatedRankings.map((ranking) => (
+                    <div key={ranking.id} className="card p-4 border-0">
+                      <div className="d-flex align-items-start gap-3">
+                        <img
+                          src={getDisplayAvatar(ranking.studentAvatar)}
+                          alt="avatar"
+                          className="rounded-circle"
+                          style={{
+                            width: '60px',
+                            height: '60px',
+                            flexShrink: 0,
+                            objectFit: 'cover',
+                          }}
+                        />
+                        <div className="flex-grow-1 overflow-x-auto">
+                          <div className="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                              <h6 className="text-dark mb-1 text-truncate">{getAnonymizedName(ranking.studentName)}</h6>
+                              <small className="text-muted">{formatDate(ranking.date)}</small>
+                            </div>
+                            <Rating value={ranking.star} readOnly cancel={false} className="ms-2" />
                           </div>
-                          <Rating value={ranking.star} readOnly cancel={false} className="ms-2" />
-                        </div>
 
-                        <div className="text-muted text-nowrap">
-                          {expandedComments[ranking.id] || !ranking.comment || ranking.comment.length <= 100 ? <p className="mb-0">{ranking.comment || 'Sin comentarios'}</p> : <p className="mb-0">{truncateComment(ranking.comment)}</p>}
+                          <div className="text-muted text-nowrap">
+                            {expandedComments[ranking.id] || !ranking.comment || ranking.comment.length <= 100 ? <p className="mb-0">{ranking.comment || 'Sin comentarios'}</p> : <p className="mb-0">{truncateComment(ranking.comment)}</p>}
 
-                          {ranking.comment && ranking.comment.length > 100 && <Button label={expandedComments[ranking.id] ? 'Ver menos' : 'Ver más'} link className="p-0 mt-1" style={{ fontSize: '0.875rem' }} onClick={() => toggleComment(ranking.id)} />}
+                            {ranking.comment && ranking.comment.length > 100 && <Button label={expandedComments[ranking.id] ? 'Ver menos' : 'Ver más'} link className="p-0 mt-1" style={{ fontSize: '0.875rem' }} onClick={() => toggleComment(ranking.id)} />}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+
+                {/* Paginador */}
+                {sortedRankings.length > rows && (
+                  <Paginator
+                    first={first}
+                    rows={rows}
+                    totalRecords={sortedRankings.length}
+                    rowsPerPageOptions={rowsPerPageOptions}
+                    onPageChange={onPageChange}
+                    template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown"
+                    currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} evaluaciones"
+                  />
+                )}
+              </>
             )}
           </div>
         </div>
