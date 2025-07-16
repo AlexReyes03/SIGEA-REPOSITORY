@@ -2,7 +2,6 @@ package com.utez.edu.sigeabackend.utils.security;
 
 import com.utez.edu.sigeabackend.auth.KeyService;
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.JwtException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -18,19 +17,30 @@ public class JWTUtil {
         this.keyService = keyService;
     }
 
-    private JwtParser parser() {
-        JwtParserBuilder b = Jwts.parserBuilder();
-        keyService.getAllKeys().values().forEach(b::setSigningKey);
-        return b.build();
-    }
-
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> resolver) {
-        Claims claims = parser().parseClaimsJws(token).getBody();
-        return resolver.apply(claims);
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(keyService.getSigningKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            return resolver.apply(claims);
+        } catch (JwtException e) {
+            try {
+                Claims claims = Jwts.parserBuilder()
+                        .setSigningKey(keyService.getAllKeys().get("previous"))
+                        .build()
+                        .parseClaimsJws(token)
+                        .getBody();
+                return resolver.apply(claims);
+            } catch (JwtException ex) {
+                throw e;
+            }
+        }
     }
 
     public String generateToken(UserDetails userDetails) {
