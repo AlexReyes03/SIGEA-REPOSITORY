@@ -37,7 +37,11 @@ public class JWTRequestFilter extends OncePerRequestFilter {
             try {
                 username = jwtUtil.extractUsername(jwt);
             } catch (ExpiredJwtException ex) {
-                logger.debug("JWT expirado, cerrando sesión del usuario", ex);
+                logger.debug("JWT expirado", ex);
+            } catch (io.jsonwebtoken.security.SignatureException ex) {
+                logger.debug("JWT signature inválida - posiblemente token de ambiente diferente", ex);
+            } catch (Exception ex) {
+                logger.debug("Error procesando JWT: " + ex.getMessage(), ex);
             }
         }
 
