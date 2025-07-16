@@ -22,23 +22,18 @@ export default function Qualifications() {
         if (user?.id) {
           const userData = await getUserById(user.id);
           setStudentData(userData);
-
-          // Obtener grupos del estudiante
           const studentsWithGroups = await getStudentsWithGroup();
-        
-          // Filtrar grupos del estudiante actual
           const studentGroups = studentsWithGroups.filter(
             item => item.studentId === user.id
           );
-          
+
           if (studentGroups.length > 0) {
             const primaryGroup = studentGroups.find(
               group => group.additionalEnrollmentsCount === 0
-            ) || studentGroups[0]; // Fallback al primer grupo
-            
+            ) || studentGroups[0];
+
             const groupDetails = await getGroupById(primaryGroup.groupId);
-            
-            // Estructura datos para el componente ConsultSubjects
+
             const groupForComponent = {
               groupId: primaryGroup.groupId,
               curriculumId: groupDetails.curriculumId,
@@ -47,10 +42,9 @@ export default function Qualifications() {
               schedule: `${groupDetails.weekDay} ${groupDetails.startTime} - ${groupDetails.endTime}`,
               teacherName: groupDetails.teacherName
             };
-            
+
             setSelectedGroup(groupForComponent);
-            
-            // Calcular promedio general
+
             await calculateGeneralAverage(primaryGroup.groupId, user.id);
           }
         }
@@ -67,11 +61,11 @@ export default function Qualifications() {
   const calculateGeneralAverage = async (groupId, studentId) => {
     try {
       const qualifications = await getQualificationsByGroupWithDetails(groupId);
-    
+
       const studentQualifications = qualifications.filter(
         q => q.studentId === studentId && q.grade != null && q.grade >= 6 && q.grade <= 10
       );
-      
+
       if (studentQualifications.length > 0) {
         const total = studentQualifications.reduce((sum, q) => sum + q.grade, 0);
         const average = (total / studentQualifications.length).toFixed(1);
@@ -95,7 +89,7 @@ export default function Qualifications() {
     );
   }
 
-  // Mostrar mensaje si no se encontró grupo
+  // Mensaje si no se encontró grupo
   if (!selectedGroup) {
     return (
       <div className="container mt-4">
@@ -106,6 +100,12 @@ export default function Qualifications() {
       </div>
     );
   }
+
+  //Manejo de estados 
+  const STATUS_LABELS = {
+    'ACTIVE': 'Activo',
+    'INACTIVE': 'Inactivo',
+  };
 
   return (
     <>
@@ -149,15 +149,15 @@ export default function Qualifications() {
                   <p className='fw-semibold'>{selectedGroup?.careerName || 'Carrera no disponible'}</p>
                   <p className="mb-0">Estudiante</p>
                   <p className="fw-semibold">
-                    {studentData ? 
-                      `${studentData.name} ${studentData.paternalSurname}${studentData.maternalSurname ? ` ${studentData.maternalSurname}` : ''}` 
+                    {studentData ?
+                      `${studentData.name} ${studentData.paternalSurname}${studentData.maternalSurname ? ` ${studentData.maternalSurname}` : ''}`
                       : 'N/A'
                     }
                   </p>
                   <p className="mb-0">Matrícula</p>
                   <p className="fw-semibold">{studentData?.primaryRegistrationNumber || 'N/A'}</p>
                   <p className='mb-0'>Estado</p>
-                  <p className='fw-semibold'>{studentData?.status || 'N/A'}</p>
+                  <p className='fw-semibold'>{STATUS_LABELS[studentData?.status] || 'N/A'}</p>
                 </div>
                 <div className='col-6'>
                   <p className='fw-semibold'>{selectedGroup?.name || 'Grupo A'}</p>

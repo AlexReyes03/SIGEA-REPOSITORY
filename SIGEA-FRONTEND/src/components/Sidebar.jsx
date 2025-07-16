@@ -81,6 +81,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
         return [
           { label: 'Inicio', path: '/student', Icon: MdHome },
           { label: 'Calificaciones', path: '/student/my-qualifications', Icon: MdSchool },
+          { label: 'Evaluación Docente', path: '/student/teacher-evaluation', Icon: MdLeaderboard },
           { label: 'Perfil', path: '/student/profile', Icon: MdPerson },
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },
         ];

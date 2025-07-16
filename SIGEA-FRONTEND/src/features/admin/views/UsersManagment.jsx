@@ -143,7 +143,7 @@ export default function UsersManagement() {
   const rolesMap = useMemo(() => {
     const map = {};
     roles
-      .filter((role) => role.roleName !== 'DEV') 
+      .filter((role) => role.roleName !== 'DEV')
       .forEach((role) => {
         map[role.id] = role;
         map[role.roleName] = role;
@@ -1068,8 +1068,8 @@ export default function UsersManagement() {
         </div>
         <div className="d-flex align-items-center gap-2">
           <InputText placeholder="Buscar ..." value={globalFilter} onChange={(e) => setGlobalFilter(e.target.value)} disabled={loading} className="me-2" style={{ minWidth: '250px' }} />
-          <Button icon={refreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} severity="primary" onClick={refreshCurrentView} disabled={loading || refreshing || !selectedTipoUsuario} tooltip="Actualizar datos" tooltipOptions={{ position: 'top' }} />
-          <Button icon="pi pi-upload" outlined={loading || !processedUsers.length} severity="help" onClick={() => dt.current?.exportCSV()} disabled={loading || !processedUsers.length}>
+          <Button icon={refreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} severity="secondary" outlined  onClick={refreshCurrentView} disabled={loading || refreshing || !selectedTipoUsuario} tooltip="Actualizar datos" tooltipOptions={{ position: 'top' }} />
+          <Button icon="pi pi-upload" outlined={loading || !processedUsers.length} severity="primary"  onClick={() => dt.current?.exportCSV()} disabled={loading || !processedUsers.length}>
             <span className="d-none d-sm-inline ms-2">Exportar</span>
           </Button>
         </div>
@@ -1098,8 +1098,8 @@ export default function UsersManagement() {
 
       return (
         <>
-          <Button icon="pi pi-pencil" rounded outlined className="me-2" severity="info" disabled={loading} tooltip="Editar usuario" tooltipOptions={{ position: 'top' }} onClick={() => openModal(row)} />
-          <Button icon={toggleIcon} rounded outlined severity={toggleSeverity} disabled={loading} tooltip={toggleTooltip} tooltipOptions={{ position: 'top' }} onClick={() => handleToggleStatus(row.id, row)} />
+          <Button icon="pi pi-pencil" rounded outlined className="me-2" severity="info" text disabled={loading} tooltip="Editar usuario" tooltipOptions={{ position: 'top' }} onClick={() => openModal(row)} />
+          <Button icon={toggleIcon} text severity={toggleSeverity} disabled={loading} tooltip={toggleTooltip} tooltipOptions={{ position: 'top' }} onClick={() => handleToggleStatus(row.id, row)} />
         </>
       );
     },
@@ -1248,7 +1248,7 @@ export default function UsersManagement() {
           end={() => (
             <div className="d-flex align-items-center gap-2">
               {selected.length > 0 && (
-                <Button icon="pi pi-toggle-off" severity="warning" className="me-2" onClick={() => handleToggleStatus(selected.map((u) => u.id))} disabled={loading}>
+                <Button icon="pi pi-toggle-off" severity="warning" text className="me-2" onClick={() => handleToggleStatus(selected.map((u) => u.id))} disabled={loading}>
                   <span className="d-none d-sm-inline ms-1">Deshabilitar ({selected.length})</span>
                 </Button>
               )}

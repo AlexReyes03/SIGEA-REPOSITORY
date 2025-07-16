@@ -1,7 +1,9 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, PDFDownloadLink, Image } from '@react-pdf/renderer';
 
-// Estilos que replican el formato tradicional de CETEC
+const LOGO_BASE64 = "";
+
+
 const styles = StyleSheet.create({
     page: {
         flexDirection: 'column',
