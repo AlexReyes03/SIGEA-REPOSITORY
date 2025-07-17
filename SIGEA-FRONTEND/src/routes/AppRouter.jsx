@@ -130,14 +130,11 @@ export default function AppRouter() {
           <Route path="supervisor/campuses-teachers" element={<SupervisorCampuses />} />
           <Route path="supervisor/campuses-teachers/teachers" element={<SupervisorTeachers />} />
           <Route path="supervisor/campuses-teachers/teachers/teacher-score" element={<SupervisorTeacherScore />} />
-<<<<<<< HEAD
-=======
 
->>>>>>> f5905996c8935336342eec138c5778cc9fb5566a
           <Route path="supervisor/profile" element={<Profile />} />
         </Route>
       </Route>
-
+          
       <Route element={<PrivateRoute allowedRoles={['STUDENT']} />}>
         <Route element={<AppLayout />}>
           {/* ESTUDIANTE */}
