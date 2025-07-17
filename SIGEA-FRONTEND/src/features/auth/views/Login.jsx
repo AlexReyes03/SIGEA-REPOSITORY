@@ -26,6 +26,15 @@ export default function LoginForm() {
     }
   };
 
+  const handlePasswordChangeRedirect = (userRole) => {
+    const rolePath = userRole.toLowerCase();
+    navigate(`/${rolePath}/profile`, { 
+      state: { 
+        shouldChangePassword: true 
+      } 
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) return;
@@ -33,22 +42,34 @@ export default function LoginForm() {
     try {
       const user = await login({ email, password });
       setAuthState('');
-      showSuccess('Bienvenido', `¡Qué gusto verte, ${user.name}!`);
-
-      switch (user.role.name) {
-        case 'ADMIN':
-          return navigate('/admin');
-        case 'SUPERVISOR':
-          return navigate('/supervisor');
-        case 'TEACHER':
-          return navigate('/teacher');
-        case 'STUDENT':
-          return navigate('/student');
-        case 'DEV':
-          return navigate('/developer');
-        default:
-          return navigate('/');
+      
+      if (email.trim() === password.trim()) {
+        showSuccess('Bienvenido', `¡Qué gusto verte, ${user.name}!`);
+        confirmAction({
+          header: 'Cambio de contraseña requerido',
+          message: 'Por motivos de seguridad es necesario que cambies tu contraseña. Te recomendamos usar una contraseña segura y única.',
+          icon: 'pi pi-exclamation-triangle',
+          acceptLabel: 'Sí, cambiar',
+          rejectLabel: 'Omitir por ahora',
+          acceptClassName: 'p-button-primary ms-2',
+          rejectClassName: 'p-button-text p-button-danger',
+          closable: false,
+          closeOnEscape: false,
+          dismissableMask: false,
+          onAccept: () => {
+            handlePasswordChangeRedirect(user.role.name);
+          },
+          onReject: () => {
+            return;
+          }
+        });
+        return;
       }
+
+      // Login normal - navegar al dashboard correspondiente
+      showSuccess('Bienvenido', `¡Qué gusto verte, ${user.name}!`);
+      redirectToRoleDashboard(user.role.name);
+
     } catch (err) {
       switch (err.status) {
         case 401:
@@ -72,6 +93,23 @@ export default function LoginForm() {
         default:
           showError('Error al iniciar sesión', 'Ha ocurrido un problema inesperado. Intenta de nuevo o vuelve a intentarlo más tarde.');
       }
+    }
+  };
+
+  const redirectToRoleDashboard = (roleName) => {
+    switch (roleName) {
+      case 'ADMIN':
+        return navigate('/admin');
+      case 'SUPERVISOR':
+        return navigate('/supervisor');
+      case 'TEACHER':
+        return navigate('/teacher');
+      case 'STUDENT':
+        return navigate('/student');
+      case 'DEV':
+        return navigate('/developer');
+      default:
+        return navigate('/');
     }
   };
 

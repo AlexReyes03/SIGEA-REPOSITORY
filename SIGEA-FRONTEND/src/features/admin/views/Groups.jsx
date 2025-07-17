@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MdOutlineGroup } from 'react-icons/md';
+import { MdOutlineGroup, MdOutlinePerson, MdOutlineAssignment, MdOutlineSchedule, MdOutlineCalendarToday } from 'react-icons/md';
 import { BreadCrumb } from 'primereact/breadcrumb';
 import { Toolbar } from 'primereact/toolbar';
 import { DataTable } from 'primereact/datatable';
@@ -11,6 +11,7 @@ import { Calendar } from 'primereact/calendar';
 import { Button } from 'primereact/button';
 import { Message } from 'primereact/message';
 import { ProgressSpinner } from 'primereact/progressspinner';
+import { Divider } from 'primereact/divider';
 import { Modal } from 'bootstrap';
 
 import { getTeachersByCareer } from '../../../api/academics/enrollmentService';
@@ -49,6 +50,18 @@ const validateTimeRange = (startTime, endTime) => {
   return null;
 };
 
+const validateDateRange = (startDate, endDate) => {
+  if (!startDate || !endDate) return null;
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (end <= start) {
+    return 'La fecha de fin debe ser posterior a la fecha de inicio';
+  }
+  return null;
+};
+
 const validateTeacherConflict = (teachers, selectedTeacher, weekDay, startTime, endTime, groups, excludeGroupId = null) => {
   if (!selectedTeacher || !weekDay || !startTime || !endTime) return null;
 
@@ -70,6 +83,42 @@ const validateTeacherConflict = (teachers, selectedTeacher, weekDay, startTime, 
   }
 
   return null;
+};
+
+// Función para calcular duración de un curriculum
+const calculateCurriculumDuration = (curriculum) => {
+  if (!curriculum?.modules || curriculum.modules.length === 0) {
+    return { weeks: 0, months: 0, years: 0 };
+  }
+
+  const totalWeeks = curriculum.modules.reduce((acc, module) => {
+    if (!module.subjects) return acc;
+    return acc + module.subjects.reduce((subAcc, subject) => subAcc + (subject.weeks || 0), 0);
+  }, 0);
+
+  const totalMonths = totalWeeks / 4;
+  const years = Math.floor(totalMonths / 12);
+  const remainingMonths = Math.floor(totalMonths % 12);
+
+  return {
+    weeks: totalWeeks,
+    months: totalMonths,
+    years: years,
+    remainingMonths: remainingMonths,
+  };
+};
+
+// Función para calcular fecha de fin basándose en el curriculum
+const calculateEndDate = (startDate, curriculum) => {
+  if (!startDate || !curriculum) return null;
+
+  const duration = calculateCurriculumDuration(curriculum);
+  const endDate = new Date(startDate);
+  
+  // Añadir la duración calculada
+  endDate.setDate(endDate.getDate() + (duration.weeks * 7));
+  
+  return endDate;
 };
 
 export default function Groups() {
@@ -100,6 +149,8 @@ export default function Groups() {
     endTime: midnight,
     teacher: null,
     curriculum: null,
+    startDate: new Date(),
+    endDate: null,
   });
   const [validationErrors, setValidationErrors] = useState({});
 
@@ -117,6 +168,14 @@ export default function Groups() {
       ...teacher,
     }));
   }, [careerTeachers]);
+
+  // Efecto para calcular automáticamente la fecha de fin
+  useEffect(() => {
+    if (form.startDate && form.curriculum) {
+      const calculatedEndDate = calculateEndDate(form.startDate, form.curriculum);
+      setForm(prev => ({ ...prev, endDate: calculatedEndDate }));
+    }
+  }, [form.startDate, form.curriculum]);
 
   // Validar formulario
   const validateForm = (formData = form) => {
@@ -138,10 +197,20 @@ export default function Groups() {
       errors.curriculum = 'Debe seleccionar un plan de estudios';
     }
 
+    if (!formData.startDate) {
+      errors.startDate = 'Debe seleccionar una fecha de inicio';
+    }
+
     // Validar rango de horarios
     const timeError = validateTimeRange(formData.startTime, formData.endTime);
     if (timeError) {
       errors.timeRange = timeError;
+    }
+
+    // Validar rango de fechas
+    const dateError = validateDateRange(formData.startDate, formData.endDate);
+    if (dateError) {
+      errors.dateRange = dateError;
     }
 
     const conflictError = validateTeacherConflict(careerTeachers, formData.teacher, formData.weekDay, formData.startTime, formData.endTime, data, editingGroupId);
@@ -154,7 +223,7 @@ export default function Groups() {
   };
 
   useEffect(() => {
-    if (form.name || form.weekDay || form.teacher || form.curriculum || form.startTime || form.endTime) {
+    if (form.name || form.weekDay || form.teacher || form.curriculum || form.startTime || form.endTime || form.startDate || form.endDate) {
       validateForm();
     }
   }, [form, data, editingGroupId]);
@@ -204,6 +273,8 @@ export default function Groups() {
       endTime: midnight,
       teacher: null,
       curriculum: null,
+      startDate: new Date(),
+      endDate: null,
     });
     setValidationErrors({});
   };
@@ -222,6 +293,8 @@ export default function Groups() {
       endTime: new Date(`1970-01-01T${group.endTime}`),
       teacher: careerTeachers.find((t) => t.id === group.teacherId) || null,
       curriculum: curriculums.find((c) => c.id === group.curriculumId) || null,
+      startDate: group.startDate ? new Date(group.startDate) : new Date(),
+      endDate: group.endDate ? new Date(group.endDate) : null,
     };
     setForm(updatedForm);
     setEditingGroupId(group.groupId);
@@ -244,6 +317,8 @@ export default function Groups() {
       teacherId: form.teacher?.id,
       careerId: career.id,
       curriculumId: form.curriculum.id,
+      startDate: form.startDate.toISOString().split('T')[0],
+      endDate: form.endDate ? form.endDate.toISOString().split('T')[0] : null,
     };
 
     try {
@@ -275,6 +350,8 @@ export default function Groups() {
         teacherId: form.teacher?.id,
         careerId: career.id,
         curriculumId: form.curriculum.id,
+        startDate: form.startDate.toISOString().split('T')[0],
+        endDate: form.endDate ? form.endDate.toISOString().split('T')[0] : null,
       };
       await updateGroup(editingGroupId, payload);
       await loadGroups();
@@ -367,7 +444,16 @@ export default function Groups() {
     </div>
   );
 
-  const isFormValid = Object.keys(validationErrors).length === 0 && form.name.trim() && form.weekDay && form.teacher && form.curriculum;
+  const dateBodyTemplate = (rowData) => {
+    if (!rowData.startDate) return <span className="text-muted">-</span>;
+    return new Date(rowData.startDate).toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  const isFormValid = Object.keys(validationErrors).length === 0 && form.name.trim() && form.weekDay && form.teacher && form.curriculum && form.startDate;
 
   if (loading) {
     return (
@@ -420,6 +506,12 @@ export default function Groups() {
 
   return (
     <>
+      <style jsx>{`
+        .btn-close {
+          --bs-btn-close-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23e31e24'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414'/%3e%3c/svg%3e");
+        }
+      `}</style>
+
       <div className="bg-white rounded-top p-2">
         <CareerTabs />
       </div>
@@ -450,8 +542,9 @@ export default function Groups() {
           <Column selectionMode="multiple" headerStyle={{ width: '3rem' }} />
           <Column field="name" header="Nombre" sortable />
           <Column field="weekDaySearchable" header="Día" body={(row) => weekLabel(row.weekDay)} sortable />
-          <Column field="startTime" header="Inicio" sortable />
-          <Column field="endTime" header="Fin" sortable />
+          <Column field="startTime" header="Hora Inicio" sortable />
+          <Column field="endTime" header="Hora Fin" sortable />
+          <Column field="startDate" header="Fecha Inicio" body={dateBodyTemplate} sortable />
           <Column field="teacherName" header="Docente" sortable />
           <Column field="curriculumName" header="Plan de estudios" sortable />
           <Column body={actions} header="Acciones" exportable={false} />
@@ -459,93 +552,199 @@ export default function Groups() {
       </div>
 
       {/* MODAL CREAR */}
-      <div className="modal fade" ref={createModalRef} tabIndex={-1}>
-        <div className="modal-dialog modal-dialog-centered">
+      <div className="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" ref={createModalRef} tabIndex={-1}>
+        <div className="modal-dialog modal-dialog-centered modal-xl">
           <div className="modal-content">
-            <form onSubmit={saveGroup}>
-              <div className="modal-header">
-                <h5 className="modal-title">Crear grupo</h5>
-                <button type="button" className="btn-close" data-bs-dismiss="modal" />
+            <div className="modal-header">
+              <div className="d-flex align-items-center">
+                <h5 className="modal-title text-blue-500 mb-0">Crear Grupo</h5>
               </div>
+              <button type="button" className="btn-close" data-bs-dismiss="modal" />
+            </div>
 
-              <div className="modal-body">
-                <div className="mb-3">
-                  <label className="form-label">Nombre *</label>
-                  <InputText className={`w-100 ${validationErrors.name ? 'p-invalid' : ''}`} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-                  {validationErrors.name && <small className="p-error">{validationErrors.name}</small>}
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">Día *</label>
-                  <Dropdown value={form.weekDay} options={weekDayOptions} placeholder="Seleccione día…" onChange={(e) => setForm({ ...form, weekDay: e.value })} className={`w-100 ${validationErrors.weekDay ? 'p-invalid' : ''}`} required />
-                  {validationErrors.weekDay && <small className="p-error">{validationErrors.weekDay}</small>}
-                </div>
-
-                <div className="row">
-                  <div className="col mb-3">
-                    <label className="form-label">Hora inicio *</label>
-                    <Calendar
-                      className={`w-100 gap-1 ${validationErrors.timeRange ? 'p-invalid' : ''}`}
-                      value={form.startTime}
-                      onChange={(e) => setForm({ ...form, startTime: e.value })}
-                      timeOnly
-                      hourFormat="24"
-                      showIcon
-                      icon={() => <i className="pi pi-clock" />}
-                      required
-                    />
+            <form onSubmit={saveGroup}>
+              <div className="modal-body p-4">
+                {/* Sección: Información General */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center mb-3">
+                    <MdOutlineGroup className="text-muted me-2" size={20} />
+                    <h6 className="text-muted fw-semibold mb-0">Información General</h6>
                   </div>
-                  <div className="col mb-3">
-                    <label className="form-label">Hora fin *</label>
-                    <Calendar
-                      className={`w-100 gap-1 ${validationErrors.timeRange ? 'p-invalid' : ''}`}
-                      value={form.endTime}
-                      onChange={(e) => setForm({ ...form, endTime: e.value })}
-                      timeOnly
-                      hourFormat="24"
-                      showIcon
-                      icon={() => <i className="pi pi-clock" />}
-                      required
-                    />
+                  <div className="px-3 rounded">
+                    <div className="row">
+                      <div className="col-12">
+                        <label className="form-label fw-semibold">Nombre del grupo *</label>
+                        <InputText
+                          className={`w-100 ${validationErrors.name ? 'p-invalid' : ''}`}
+                          value={form.name}
+                          onChange={(e) => setForm({ ...form, name: e.target.value })}
+                          placeholder="Ingrese el nombre del grupo"
+                          required
+                          autoFocus
+                        />
+                        {validationErrors.name && <small className="p-error">{validationErrors.name}</small>}
+                      </div>
+                    </div>
                   </div>
                 </div>
-                {validationErrors.timeRange && (
-                  <div className="mb-3">
-                    <small className="p-error">{validationErrors.timeRange}</small>
-                  </div>
-                )}
 
-                <div className="row">
-                  <div className="col-6 mb-3">
-                    <label className="form-label">
-                      Docente *<small className="text-secondary ms-1">({careerTeachers.length} disponibles)</small>
-                    </label>
-                    <Dropdown
-                      className={`w-100 ${validationErrors.teacher ? 'p-invalid' : ''}`}
-                      value={form.teacher}
-                      options={teacherOptions}
-                      optionLabel="label"
-                      placeholder="Seleccione docente…"
-                      filter
-                      onChange={(e) => setForm({ ...form, teacher: e.value })}
-                      required
-                    />
-                    {validationErrors.teacher && <small className="p-error">{validationErrors.teacher}</small>}
-                  </div>
+                <Divider />
 
-                  <div className="col-6 mb-3">
-                    <label className="form-label">Plan de estudios *</label>
-                    <Dropdown
-                      className={`w-100 ${validationErrors.curriculum ? 'p-invalid' : ''}`}
-                      value={form.curriculum}
-                      options={curriculums}
-                      optionLabel="name"
-                      placeholder="Seleccione plan…"
-                      filter
-                      onChange={(e) => setForm({ ...form, curriculum: e.value })}
-                      required
-                    />
-                    {validationErrors.curriculum && <small className="p-error">{validationErrors.curriculum}</small>}
+                {/* Sección: Asignación de Docente */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center mb-3">
+                    <MdOutlinePerson className="text-muted me-2" size={20} />
+                    <h6 className="text-muted fw-semibold mb-0">Asignación de Docente</h6>
+                  </div>
+                  <div className="px-3 rounded">
+                    <div className="row">
+                      <div className="col-12">
+                        <label className="form-label fw-semibold">
+                          Docente asignado *
+                          <small className="text-secondary ms-1">({careerTeachers.length} disponibles)</small>
+                        </label>
+                        <Dropdown
+                          className={`w-100 ${validationErrors.teacher ? 'p-invalid' : ''}`}
+                          value={form.teacher}
+                          options={teacherOptions}
+                          optionLabel="label"
+                          placeholder="Seleccione un docente"
+                          filter
+                          onChange={(e) => setForm({ ...form, teacher: e.value })}
+                          required
+                        />
+                        {validationErrors.teacher && <small className="p-error">{validationErrors.teacher}</small>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Divider />
+
+                {/* Sección: Plan de Estudios */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center mb-3">
+                    <MdOutlineAssignment className="text-muted me-2" size={20} />
+                    <h6 className="text-muted fw-semibold mb-0">Plan de Estudios</h6>
+                  </div>
+                  <div className="px-3 rounded">
+                    <div className="row">
+                      <div className="col-12">
+                        <label className="form-label fw-semibold">Plan de estudios *</label>
+                        <Dropdown
+                          className={`w-100 ${validationErrors.curriculum ? 'p-invalid' : ''}`}
+                          value={form.curriculum}
+                          options={curriculums}
+                          optionLabel="name"
+                          placeholder="Seleccione un plan de estudios"
+                          filter
+                          onChange={(e) => setForm({ ...form, curriculum: e.value })}
+                          required
+                        />
+                        {validationErrors.curriculum && <small className="p-error">{validationErrors.curriculum}</small>}
+                        {form.curriculum && (
+                          <small className="text-muted d-block mt-1">
+                            Duración: {calculateCurriculumDuration(form.curriculum).weeks} semanas
+                          </small>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Divider />
+
+                {/* Sección: Horario */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center mb-3">
+                    <MdOutlineSchedule className="text-muted me-2" size={20} />
+                    <h6 className="text-muted fw-semibold mb-0">Horario</h6>
+                  </div>
+                  <div className="px-3 rounded">
+                    <div className="row">
+                      <div className="col-12 mb-3">
+                        <label className="form-label fw-semibold">Día de la semana *</label>
+                        <Dropdown
+                          value={form.weekDay}
+                          options={weekDayOptions}
+                          placeholder="Seleccione un día"
+                          onChange={(e) => setForm({ ...form, weekDay: e.value })}
+                          className={`w-100 ${validationErrors.weekDay ? 'p-invalid' : ''}`}
+                          required
+                        />
+                        {validationErrors.weekDay && <small className="p-error">{validationErrors.weekDay}</small>}
+                      </div>
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label fw-semibold">Hora de inicio *</label>
+                        <Calendar
+                          className={`w-100 ${validationErrors.timeRange ? 'p-invalid' : ''}`}
+                          value={form.startTime}
+                          onChange={(e) => setForm({ ...form, startTime: e.value })}
+                          timeOnly
+                          hourFormat="24"
+                          showIcon
+                          icon={() => <i className="pi pi-clock" />}
+                          required
+                        />
+                      </div>
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label fw-semibold">Hora de fin *</label>
+                        <Calendar
+                          className={`w-100 ${validationErrors.timeRange ? 'p-invalid' : ''}`}
+                          value={form.endTime}
+                          onChange={(e) => setForm({ ...form, endTime: e.value })}
+                          timeOnly
+                          hourFormat="24"
+                          showIcon
+                          icon={() => <i className="pi pi-clock" />}
+                          required
+                        />
+                      </div>
+                    </div>
+                    {validationErrors.timeRange && <small className="p-error">{validationErrors.timeRange}</small>}
+                  </div>
+                </div>
+
+                <Divider />
+
+                {/* Sección: Fechas del Curso */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center mb-3">
+                    <MdOutlineCalendarToday className="text-muted me-2" size={20} />
+                    <h6 className="text-muted fw-semibold mb-0">Fechas del Curso</h6>
+                  </div>
+                  <div className="px-3 rounded">
+                    <div className="row">
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label fw-semibold">Fecha de inicio *</label>
+                        <Calendar
+                          className={`w-100 ${validationErrors.startDate ? 'p-invalid' : ''}`}
+                          value={form.startDate}
+                          onChange={(e) => setForm({ ...form, startDate: e.value })}
+                          showIcon
+                          dateFormat="dd/mm/yy"
+                          placeholder="Seleccione la fecha de inicio"
+                          required
+                        />
+                        {validationErrors.startDate && <small className="p-error">{validationErrors.startDate}</small>}
+                      </div>
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label fw-semibold">Fecha de finalización</label>
+                        <Calendar
+                          className="w-100"
+                          value={form.endDate}
+                          onChange={(e) => setForm({ ...form, endDate: e.value })}
+                          showIcon
+                          dateFormat="dd/mm/yy"
+                          placeholder="Se calcula automáticamente"
+                          disabled={!form.curriculum}
+                        />
+                        <small className="text-muted">
+                          {form.curriculum ? 'Se calcula automáticamente basándose en el plan de estudios' : 'Seleccione primero un plan de estudios'}
+                        </small>
+                      </div>
+                    </div>
+                    {validationErrors.dateRange && <small className="p-error">{validationErrors.dateRange}</small>}
                   </div>
                 </div>
 
@@ -558,10 +757,10 @@ export default function Groups() {
 
               <div className="modal-footer">
                 <Button type="button" icon="pi pi-times" severity="secondary" outlined data-bs-dismiss="modal" onClick={resetForm}>
-                  <span className="d-none d-sm-inline ms-1">Cancelar</span>
+                  <span className="ms-2">Cancelar</span>
                 </Button>
-                <Button type="submit" icon="pi pi-check" severity="primary" disabled={!isFormValid}>
-                  <span className="d-none d-sm-inline ms-1">Guardar</span>
+                <Button type="submit" icon="pi pi-save" severity="primary" disabled={!isFormValid}>
+                  <span className="ms-2">Guardar</span>
                 </Button>
               </div>
             </form>
@@ -570,83 +769,200 @@ export default function Groups() {
       </div>
 
       {/* MODAL MODIFICAR */}
-      <div className="modal fade" ref={updateModalRef} tabIndex={-1}>
-        <div className="modal-dialog modal-dialog-centered">
+      <div className="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" ref={updateModalRef} tabIndex={-1}>
+        <div className="modal-dialog modal-dialog-centered modal-xl">
           <div className="modal-content">
-            <form onSubmit={updateGroupAction}>
-              <div className="modal-header">
-                <h5 className="modal-title">Modificar grupo</h5>
-                <button type="button" className="btn-close" data-bs-dismiss="modal" />
+            <div className="modal-header">
+              <div className="d-flex align-items-center">
+                <h5 className="modal-title text-blue-500 mb-0">Modificar Grupo</h5>
               </div>
+              <button type="button" className="btn-close" data-bs-dismiss="modal" />
+            </div>
 
-              <div className="modal-body">
-                <div className="mb-3">
-                  <label className="form-label">Nombre *</label>
-                  <InputText className={`w-100 ${validationErrors.name ? 'p-invalid' : ''}`} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-                  {validationErrors.name && <small className="p-error">{validationErrors.name}</small>}
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">Día *</label>
-                  <Dropdown value={form.weekDay} options={weekDayOptions} placeholder="Seleccione…" onChange={(e) => setForm({ ...form, weekDay: e.value })} className={`w-100 ${validationErrors.weekDay ? 'p-invalid' : ''}`} required />
-                  {validationErrors.weekDay && <small className="p-error">{validationErrors.weekDay}</small>}
-                </div>
-
-                <div className="row">
-                  <div className="col mb-3">
-                    <label className="form-label">Hora inicio *</label>
-                    <Calendar
-                      className={`w-100 gap-1 ${validationErrors.timeRange ? 'p-invalid' : ''}`}
-                      value={form.startTime}
-                      onChange={(e) => setForm({ ...form, startTime: e.value })}
-                      timeOnly
-                      hourFormat="24"
-                      showIcon
-                      icon={() => <i className="pi pi-clock" />}
-                      required
-                    />
+            <form onSubmit={updateGroupAction}>
+              <div className="modal-body p-4">
+                {/* Sección: Información General */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center mb-3">
+                    <MdOutlineGroup className="text-muted me-2" size={20} />
+                    <h6 className="text-muted fw-semibold mb-0">Información General</h6>
                   </div>
-                  <div className="col mb-3">
-                    <label className="form-label">Hora fin *</label>
-                    <Calendar
-                      className={`w-100 gap-1 ${validationErrors.timeRange ? 'p-invalid' : ''}`}
-                      value={form.endTime}
-                      onChange={(e) => setForm({ ...form, endTime: e.value })}
-                      timeOnly
-                      hourFormat="24"
-                      showIcon
-                      icon={() => <i className="pi pi-clock" />}
-                      required
-                    />
+                  <div className="px-3 rounded">
+                    <div className="row">
+                      <div className="col-12">
+                        <label className="form-label fw-semibold">Nombre del grupo *</label>
+                        <InputText
+                          className={`w-100 ${validationErrors.name ? 'p-invalid' : ''}`}
+                          value={form.name}
+                          onChange={(e) => setForm({ ...form, name: e.target.value })}
+                          placeholder="Ingrese el nombre del grupo"
+                          required
+                          autoFocus
+                        />
+                        {validationErrors.name && <small className="p-error">{validationErrors.name}</small>}
+                      </div>
+                    </div>
                   </div>
                 </div>
-                {validationErrors.timeRange && (
-                  <div className="mb-3">
-                    <small className="p-error">{validationErrors.timeRange}</small>
-                  </div>
-                )}
 
-                <div className="mb-3">
-                  <label className="form-label">
-                    Docente *<small className="text-secondary ms-1">({careerTeachers.length} disponibles)</small>
-                  </label>
-                  <Dropdown className={`w-100 ${validationErrors.teacher ? 'p-invalid' : ''}`} value={form.teacher} options={teacherOptions} optionLabel="label" placeholder="Seleccione docente…" filter onChange={(e) => setForm({ ...form, teacher: e.value })} required />
-                  {validationErrors.teacher && <small className="p-error">{validationErrors.teacher}</small>}
+                <Divider />
+
+                {/* Sección: Asignación de Docente */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center mb-3">
+                    <MdOutlinePerson className="text-muted me-2" size={20} />
+                    <h6 className="text-muted fw-semibold mb-0">Asignación de Docente</h6>
+                  </div>
+                  <div className="px-3 rounded">
+                    <div className="row">
+                      <div className="col-12">
+                        <label className="form-label fw-semibold">
+                          Docente asignado *
+                          <small className="text-secondary ms-1">({careerTeachers.length} disponibles)</small>
+                        </label>
+                        <Dropdown
+                          className={`w-100 ${validationErrors.teacher ? 'p-invalid' : ''}`}
+                          value={form.teacher}
+                          options={teacherOptions}
+                          optionLabel="label"
+                          placeholder="Seleccione un docente"
+                          filter
+                          onChange={(e) => setForm({ ...form, teacher: e.value })}
+                          required
+                        />
+                        {validationErrors.teacher && <small className="p-error">{validationErrors.teacher}</small>}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="mb-3">
-                  <label className="form-label">Plan de estudios *</label>
-                  <Dropdown
-                    className={`w-100 ${validationErrors.curriculum ? 'p-invalid' : ''}`}
-                    value={form.curriculum}
-                    options={curriculums}
-                    optionLabel="name"
-                    placeholder="Seleccione plan…"
-                    filter
-                    onChange={(e) => setForm({ ...form, curriculum: e.value })}
-                    required
-                  />
-                  {validationErrors.curriculum && <small className="p-error">{validationErrors.curriculum}</small>}
+                <Divider />
+
+                {/* Sección: Plan de Estudios */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center mb-3">
+                    <MdOutlineAssignment className="text-muted me-2" size={20} />
+                    <h6 className="text-muted fw-semibold mb-0">Plan de Estudios</h6>
+                  </div>
+                  <div className="px-3 rounded">
+                    <div className="row">
+                      <div className="col-12">
+                        <label className="form-label fw-semibold">Plan de estudios *</label>
+                        <Dropdown
+                          className={`w-100 ${validationErrors.curriculum ? 'p-invalid' : ''}`}
+                          value={form.curriculum}
+                          options={curriculums}
+                          optionLabel="name"
+                          placeholder="Seleccione un plan de estudios"
+                          filter
+                          onChange={(e) => setForm({ ...form, curriculum: e.value })}
+                          required
+                        />
+                        {validationErrors.curriculum && <small className="p-error">{validationErrors.curriculum}</small>}
+                        {form.curriculum && (
+                          <small className="text-muted d-block mt-1">
+                            Duración: {calculateCurriculumDuration(form.curriculum).weeks} semanas
+                          </small>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Divider />
+
+                {/* Sección: Horario */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center mb-3">
+                    <MdOutlineSchedule className="text-muted me-2" size={20} />
+                    <h6 className="text-muted fw-semibold mb-0">Horario</h6>
+                  </div>
+                  <div className="px-3 rounded">
+                    <div className="row">
+                      <div className="col-12 mb-3">
+                        <label className="form-label fw-semibold">Día de la semana *</label>
+                        <Dropdown
+                          value={form.weekDay}
+                          options={weekDayOptions}
+                          placeholder="Seleccione un día"
+                          onChange={(e) => setForm({ ...form, weekDay: e.value })}
+                          className={`w-100 ${validationErrors.weekDay ? 'p-invalid' : ''}`}
+                          required
+                        />
+                        {validationErrors.weekDay && <small className="p-error">{validationErrors.weekDay}</small>}
+                      </div>
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label fw-semibold">Hora de inicio *</label>
+                        <Calendar
+                          className={`w-100 ${validationErrors.timeRange ? 'p-invalid' : ''}`}
+                          value={form.startTime}
+                          onChange={(e) => setForm({ ...form, startTime: e.value })}
+                          timeOnly
+                          hourFormat="24"
+                          showIcon
+                          icon={() => <i className="pi pi-clock" />}
+                          required
+                        />
+                      </div>
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label fw-semibold">Hora de fin *</label>
+                        <Calendar
+                          className={`w-100 ${validationErrors.timeRange ? 'p-invalid' : ''}`}
+                          value={form.endTime}
+                          onChange={(e) => setForm({ ...form, endTime: e.value })}
+                          timeOnly
+                          hourFormat="24"
+                          showIcon
+                          icon={() => <i className="pi pi-clock" />}
+                          required
+                        />
+                      </div>
+                    </div>
+                    {validationErrors.timeRange && <small className="p-error">{validationErrors.timeRange}</small>}
+                  </div>
+                </div>
+
+                <Divider />
+
+                {/* Sección: Fechas del Curso */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center mb-3">
+                    <MdOutlineCalendarToday className="text-muted me-2" size={20} />
+                    <h6 className="text-muted fw-semibold mb-0">Fechas del Curso</h6>
+                  </div>
+                  <div className="px-3 rounded">
+                    <div className="row">
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label fw-semibold">Fecha de inicio *</label>
+                        <Calendar
+                          className={`w-100 ${validationErrors.startDate ? 'p-invalid' : ''}`}
+                          value={form.startDate}
+                          onChange={(e) => setForm({ ...form, startDate: e.value })}
+                          showIcon
+                          dateFormat="dd/mm/yy"
+                          placeholder="Seleccione la fecha de inicio"
+                          required
+                        />
+                        {validationErrors.startDate && <small className="p-error">{validationErrors.startDate}</small>}
+                      </div>
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label fw-semibold">Fecha de finalización</label>
+                        <Calendar
+                          className="w-100"
+                          value={form.endDate}
+                          onChange={(e) => setForm({ ...form, endDate: e.value })}
+                          showIcon
+                          dateFormat="dd/mm/yy"
+                          placeholder="Se calcula automáticamente"
+                          disabled={!form.curriculum}
+                        />
+                        <small className="text-muted">
+                          {form.curriculum ? 'Se calcula automáticamente basándose en el plan de estudios' : 'Seleccione primero un plan de estudios'}
+                        </small>
+                      </div>
+                    </div>
+                    {validationErrors.dateRange && <small className="p-error">{validationErrors.dateRange}</small>}
+                  </div>
                 </div>
 
                 {validationErrors.teacherConflict && (
@@ -668,10 +984,10 @@ export default function Groups() {
                     resetForm();
                   }}
                 >
-                  <span className="d-none d-sm-inline ms-1">Cancelar</span>
+                  <span className="ms-2">Cancelar</span>
                 </Button>
-                <Button type="submit" icon="pi pi-check" severity="primary" disabled={!isFormValid}>
-                  <span className="d-none d-sm-inline ms-1">Modificar</span>
+                <Button type="submit" icon="pi pi-save" severity="primary" disabled={!isFormValid}>
+                  <span className="ms-2">Modificar</span>
                 </Button>
               </div>
             </form>

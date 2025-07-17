@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ProgressBar } from 'primereact/progressbar';
 import { Button } from 'primereact/button';
 import { Message } from 'primereact/message';
@@ -18,12 +19,14 @@ export default function Profile() {
   const { user } = useAuth();
   const { showSuccess, showError } = useToast();
   const { confirmAction } = useConfirmDialog();
+  const location = useLocation();
 
   const [value, setValue] = useState(0);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isOpening, setIsOpening] = useState(false);
 
   const interval = useRef(null);
   const changePasswordModalRef = useRef(null);
@@ -38,6 +41,33 @@ export default function Profile() {
     SUPERVISOR: 'Supervisor',
   };
   const roleLabel = ROLE_MAP[user.role?.name || user.role] || 'Sin rol';
+
+  useEffect(() => {
+    if (location.state?.shouldChangePassword) {
+      setIsOpening(true);
+      
+      setTimeout(() => {                   
+        if (changePasswordButtonRef.current) {
+          changePasswordButtonRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+          
+          setTimeout(() => {
+            changePasswordButtonRef.current.click();
+            setIsOpening(false);
+          }, 500);
+        } else {
+
+          setIsOpening(false);
+        }
+      }, 1000);
+      
+      if (location.state) {
+        window.history.replaceState({}, document.title);
+      }
+    }
+  }, [location.state]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Sin fecha';
@@ -207,6 +237,12 @@ export default function Profile() {
 
   return (
     <>
+      <style jsx>{`
+        .btn-close {
+          --bs-btn-close-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23e31e24'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414'/%3e%3c/svg%3e");
+        }
+      `}</style>
+
       <div className="bg-white rounded-top p-2">
         <h3 className="text-blue-500 fw-semibold mx-3 my-1">Perfil</h3>
       </div>
@@ -225,7 +261,12 @@ export default function Profile() {
                 </h5>
                 <p className="text-secondary my-2">{roleLabel || 'Sin rol'}</p>
                 <div className="d-flex flex-row justify-content-center mt-4 gap-2">
-                  <Button ref={changePasswordButtonRef} label="Cambiar contraseña" icon={<MdOutlineLock className="me-2" size={20} />} onClick={() => new Modal(changePasswordModalRef.current).show()} />
+                  <Button 
+                    ref={changePasswordButtonRef} 
+                    label="Cambiar contraseña" 
+                    icon={isOpening ? <i className="pi pi-spin pi-spinner me-2"></i> : <MdOutlineLock className="me-2" size={20} />}
+                    onClick={() => new Modal(changePasswordModalRef.current).show()} 
+                  />
                 </div>
               </div>
             </div>
