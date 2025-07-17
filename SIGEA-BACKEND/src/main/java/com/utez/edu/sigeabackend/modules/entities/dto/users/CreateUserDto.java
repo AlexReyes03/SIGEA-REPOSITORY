@@ -15,10 +15,6 @@ public record CreateUserDto(
         @Email(message = "Email inválido")
         String email,
 
-        @NotBlank(message = "La contraseña es obligatoria")
-        @Size(min=8, message = "La contraseña debe tener al menos 8 caracteres")
-        String password,
-
         @NotNull(message = "El campus es obligatorio")
         Long campusId,
 

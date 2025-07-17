@@ -191,7 +191,8 @@ public class UserService {
         user.setEmail(dto.email());
         user.setCampus(campus);
         user.setRole(role);
-        user.setPassword(passwordEncoder.encode(dto.password()));
+        //Settea el email como contraseña
+        user.setPassword(passwordEncoder.encode(dto.email()));
 
         var saved = userRepo.save(user);
         return ResponseEntity
