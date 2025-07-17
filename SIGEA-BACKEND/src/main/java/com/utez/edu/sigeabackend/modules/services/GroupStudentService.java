@@ -55,7 +55,6 @@ public class GroupStudentService {
         );
     }
 
-    //Inscribe un estudiante en un grupo.
     @Transactional
     public GroupStudentEntity enroll(GroupStudentDto dto) {
         long groupId   = dto.groupId();
@@ -71,9 +70,19 @@ public class GroupStudentService {
         }
 
         Id id = new Id(group.getId(), student.getId());
-        if (studentRepo.existsById(id)) {
-            throw new IllegalArgumentException("Ya inscrito en este grupo");
+
+        GroupStudentEntity existingEntity = studentRepo.findById(id).orElse(null);
+        if (existingEntity != null) {
+            if (existingEntity.isActive()) {
+                throw new IllegalArgumentException("Ya inscrito en este grupo");
+            } else {
+                // Reactivar inscripción existente
+                existingEntity.reactivate();
+                return studentRepo.save(existingEntity);
+            }
         }
+
+        // Crear nueva inscripción
         GroupStudentEntity entity = new GroupStudentEntity(group, student);
         return studentRepo.save(entity);
     }
@@ -81,16 +90,26 @@ public class GroupStudentService {
     @Transactional
     public ResponseEntity<?> delete(GroupStudentDto dto) {
         GroupStudentEntity.Id id = new GroupStudentEntity.Id(dto.groupId(), dto.studentId());
-        if (!studentRepo.existsById(id)) {
+        GroupStudentEntity entity = studentRepo.findById(id).orElse(null);
+
+        if (entity == null) {
             return responseService.get404Response();
         }
-        studentRepo.deleteById(id);
+
+        if (entity.isInactive()) {
+            return responseService.get400Response();
+        }
+
+        // 🆕 Marcar como inactivo en lugar de eliminar
+        entity.markAsInactive();
+        studentRepo.save(entity);
+
         return responseService.getOkResponse("Inscripción eliminada", null);
     }
 
     @Transactional(readOnly = true)
     public List<GroupStudentDto> getStudentsInGroup(long groupId) {
-        return studentRepo.findByGroupId(groupId)
+        return studentRepo.findActiveByGroupId(groupId)
                 .stream()
                 .map(this::toDto)
                 .toList();
@@ -98,24 +117,21 @@ public class GroupStudentService {
 
     @Transactional(readOnly = true)
     public List<GroupStudentDto> getAllStudentsWithGroup() {
-        return studentRepo.findAll()
+        return studentRepo.findAllActiveWithDetails()
                 .stream()
                 .map(this::toDto)
                 .toList();
     }
 
-    //Lista todas las inscripciones de un estudiante
     @Transactional(readOnly = true)
     public List<GroupStudentEntity> findByStudent(long studentId) {
-        return studentRepo.findByStudentId(studentId);
+        return studentRepo.findActiveByStudentId(studentId);
     }
 
     @Transactional(readOnly = true)
     public StudentGroupCheckDto checkStudentGroupsInCareer(Long userId, Long careerId) {
         long studentGroupCount = studentRepo.countGroupsByStudentAndCareer(userId, careerId);
-
         long teacherGroupCount = studentRepo.countGroupsByTeacherAndCareer(userId, careerId);
-
         long totalGroupCount = studentGroupCount + teacherGroupCount;
         boolean hasActiveGroups = totalGroupCount > 0;
 
@@ -136,5 +152,22 @@ public class GroupStudentService {
     @Transactional(readOnly = true)
     public List<GroupStudentEntity> findByStudentAndCareer(Long studentId, Long careerId) {
         return studentRepo.findByStudentIdAndCareerId(studentId, careerId);
+    }
+
+
+    /**
+     * Obtiene todas las inscripciones de un estudiante (historial completo)
+     */
+    @Transactional(readOnly = true)
+    public List<GroupStudentEntity> findAllByStudent(long studentId) {
+        return studentRepo.findAllByStudentId(studentId);
+    }
+
+    /**
+     * Verifica si un estudiante está activo en un grupo específico
+     */
+    @Transactional(readOnly = true)
+    public boolean isStudentActiveInGroup(long studentId, long groupId) {
+        return studentRepo.isStudentActiveInGroup(studentId, groupId);
     }
 }

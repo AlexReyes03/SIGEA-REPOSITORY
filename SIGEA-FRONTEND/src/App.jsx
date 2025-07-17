@@ -3,11 +3,11 @@ import { BrowserRouter } from 'react-router-dom';
 import AppRouter from './routes/AppRouter';
 import { ToastProvider } from './components/providers/ToastProvider';
 import { ConfirmDialogProvider } from './components/providers/ConfirmDialogProvider';
-import AuthInterceptor from './components/AuthInterceptor'; // ← NUEVO IMPORT
+import AuthInterceptor from './components/AuthInterceptor';
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/sigea">
       <ToastProvider>
         <ConfirmDialogProvider>
           <AuthInterceptor>

@@ -53,11 +53,59 @@ export const enrollStudentInGroup = async (groupId, studentId) => {
     method: 'POST',
     body: { groupId, studentId },
   });
-}
+};
 
 export const removeStudentFromGroup = async (groupId, studentId) => {
   return await request('/api/group-students/remove', {
     method: 'DELETE',
     body: { groupId, studentId },
   });
+};
+
+export const getStudentGroupHistory = async (studentId) => {
+  return await request(`/api/group-students/by-student/${studentId}`);
+};
+
+export const isStudentActiveInGroup = async (studentId, groupId) => {
+  try {
+    const history = await getStudentGroupHistory(studentId);
+    return history.some(entry => entry.groupId === groupId && entry.status === 'ACTIVE');
+  } catch (error) {
+    console.error('Error checking student group status:', error);
+    return false;
+  }
+};
+
+export const validateQualificationCopy = async (sourceGroupId, targetGroupId) => {
+  return await request(`/api/student-transfer/validate-copy?sourceGroupId=${sourceGroupId}&targetGroupId=${targetGroupId}`);
+};
+
+export const transferStudents = async (studentIds, sourceGroupId, targetGroupId, copyQualifications = false) => {
+  return await request('/api/student-transfer/transfer', {
+    method: 'POST',
+    body: {
+      studentIds,
+      sourceGroupId,
+      targetGroupId,
+      copyQualifications
+    }
+  });
+};
+
+export const getStudentTransferGroupHistory = async (studentId) => {
+  return await request(`/api/student-transfer/history/${studentId}`);
+};
+
+export const transferSingleStudent = async (studentId, sourceGroupId, targetGroupId, copyQualifications = false) => {
+  return await transferStudents([studentId], sourceGroupId, targetGroupId, copyQualifications);
+};
+
+export const haveSameCurriculum = async (sourceGroupId, targetGroupId) => {
+  try {
+    const validation = await validateQualificationCopy(sourceGroupId, targetGroupId);
+    return validation.sameCurriculum;
+  } catch (error) {
+    console.warn('Error validating curriculum compatibility:', error);
+    return false;
+  }
 };

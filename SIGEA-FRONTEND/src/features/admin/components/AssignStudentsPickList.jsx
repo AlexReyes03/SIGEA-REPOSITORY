@@ -5,11 +5,12 @@ import { Dropdown } from 'primereact/dropdown';
 import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
 import { Button } from 'primereact/button';
+import { Checkbox } from 'primereact/checkbox';
 
 import { useToast } from '../../../components/providers/ToastProvider';
 import { useConfirmDialog } from '../../../components/providers/ConfirmDialogProvider';
 import { getStudentsByCareer } from '../../../api/academics/enrollmentService';
-import { getGroupStudents, enrollStudentInGroup, removeStudentFromGroup, getStudentsWithGroup } from '../../../api/academics/groupService';
+import { getGroupStudents, enrollStudentInGroup, removeStudentFromGroup, getStudentsWithGroup, validateQualificationCopy, transferStudents } from '../../../api/academics/groupService';
 
 export default function AssignStudentsPickList({ group }) {
   const [source, setSource] = useState([]);
@@ -20,6 +21,8 @@ export default function AssignStudentsPickList({ group }) {
   const [careerStudents, setCareerStudents] = useState([]);
   const [currentGroupStudents, setCurrentGroupStudents] = useState([]);
   const [studentsWithGroup, setStudentsWithGroup] = useState([]);
+  const [curriculumValidations, setCurriculumValidations] = useState({});
+  const [loadingValidations, setLoadingValidations] = useState(false);
 
   const modes = [
     { name: ' Añadir al grupo', code: 'ADD', icon: 'pi-user-plus', color: 'success' },
@@ -55,6 +58,36 @@ export default function AssignStudentsPickList({ group }) {
     }
   };
 
+  const loadCurriculumValidations = useCallback(
+    async (students) => {
+      if (selectedMode.code !== 'MOVE' || !students.length) return;
+
+      setLoadingValidations(true);
+      const validations = {};
+
+      const uniqueGroupIds = [...new Set(students.map((s) => s.groupId).filter(Boolean))];
+
+      try {
+        for (const sourceGroupId of uniqueGroupIds) {
+          try {
+            const validation = await validateQualificationCopy(sourceGroupId, group.groupId);
+            validations[sourceGroupId] = validation;
+          } catch (error) {
+            console.error(`Error validating curriculum for group ${sourceGroupId}:`, error);
+            validations[sourceGroupId] = { sameCurriculum: false, canCopy: false };
+          }
+        }
+
+        setCurriculumValidations(validations);
+      } catch (error) {
+        console.error('Error loading curriculum validations:', error);
+      } finally {
+        setLoadingValidations(false);
+      }
+    },
+    [selectedMode.code, group.groupId]
+  );
+
   const resetToOriginalState = useCallback(() => {
     if (loading || !selectedMode?.code) return;
 
@@ -65,7 +98,6 @@ export default function AssignStudentsPickList({ group }) {
 
     switch (selectedMode.code) {
       case 'ADD':
-        // Estudiantes de la carrera que NO tienen grupo EN ESTA CARRERA
         originalSource = careerStudents
           .filter((student) => {
             const studentId = student.userId || student.id;
@@ -75,12 +107,12 @@ export default function AssignStudentsPickList({ group }) {
         break;
 
       case 'MOVE':
-        // Solo estudiantes que tienen grupo EN ESTA CARRERA pero NO en el grupo actual
-        originalSource = studentsWithGroupInCurrentCareer.filter((student) => student.groupId !== group.groupId).map((student) => normalizeStudent(student, true));
+        const moveStudents = studentsWithGroupInCurrentCareer.filter((student) => student.groupId !== group.groupId).map((student) => normalizeStudent(student, true));
+        originalSource = moveStudents;
+        loadCurriculumValidations(moveStudents);
         break;
 
       case 'REMOVE':
-        // Estudiantes que están en el grupo actual
         originalSource = currentGroupStudents.map((student) => normalizeStudent(student, true));
         break;
 
@@ -90,7 +122,7 @@ export default function AssignStudentsPickList({ group }) {
 
     setSource(originalSource);
     setTarget([]);
-  }, [selectedMode, careerStudents, currentGroupStudents, studentsWithGroup, loading, group?.groupId, group?.careerId]);
+  }, [selectedMode, careerStudents, currentGroupStudents, studentsWithGroup, loading, group?.groupId, group?.careerId, loadCurriculumValidations]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -132,10 +164,16 @@ export default function AssignStudentsPickList({ group }) {
   const itemTemplate = (item) => {
     if (!item) return <div>Estudiante no válido</div>;
 
+    const validation = item.groupId ? curriculumValidations[item.groupId] : null;
+    const showCurriculumBadge = selectedMode.code === 'MOVE' && validation !== undefined;
+
     return (
-      <div className="d-flex w-100">
+      <div className="d-flex w-100 align-items-center">
         <div className="flex-grow-1 d-flex flex-column gap-1">
-          <span className="fw-bold">{item.fullName}</span>
+          <div className="d-flex align-items-center gap-2">
+            <span className="fw-bold">{item.fullName}</span>
+            {showCurriculumBadge && <Tag value={validation.sameCurriculum ? 'Mismo plan' : 'Plan diferente'} severity={validation.sameCurriculum ? 'success' : 'danger'} icon={validation.sameCurriculum ? 'pi pi-check' : 'pi pi-times'} className="text-xs" />}
+          </div>
           {item.email && (
             <span className="text-secondary small">
               <i className="pi pi-envelope me-1" />
@@ -146,6 +184,12 @@ export default function AssignStudentsPickList({ group }) {
             <span className="text-secondary small">
               <i className="pi pi-id-card me-1" />
               {item.registrationNumber}
+            </span>
+          )}
+          {selectedMode.code === 'MOVE' && item.groupId && (
+            <span className="text-muted small">
+              <i className="pi pi-users me-1" />
+              Grupo {item.groupId}
             </span>
           )}
         </div>
@@ -164,6 +208,15 @@ export default function AssignStudentsPickList({ group }) {
       return;
     }
 
+    if (selectedMode.code !== 'MOVE') {
+      handleSave();
+      return;
+    }
+
+    handleMove();
+  };
+
+  const handleSave = () => {
     let actionText, confirmMessage;
 
     switch (selectedMode.code) {
@@ -171,13 +224,9 @@ export default function AssignStudentsPickList({ group }) {
         actionText = 'añadir';
         confirmMessage = `¿Confirma añadir ${target.length} estudiante(s) al grupo "${group.name}"?`;
         break;
-      case 'MOVE':
-        actionText = 'mover';
-        confirmMessage = `¿Confirma mover ${target.length} estudiante(s) a este grupo "${group.name}"?`;
-        break;
       case 'REMOVE':
         actionText = 'quitar';
-        confirmMessage = `¿Confirma quitar ${target.length} estudiante(s) del grupo "${group.name}"? Quedarán sin grupo asignado.`;
+        confirmMessage = `¿Confirma quitar ${target.length} estudiante(s) del grupo "${group.name}"?\n\nNOTA: Las calificaciones se conservarán en el historial.`;
         break;
       default:
         showError('Error', 'Modo de operación no reconocido');
@@ -199,33 +248,14 @@ export default function AssignStudentsPickList({ group }) {
             if (selectedMode.code === 'REMOVE') {
               await removeStudentFromGroup(group.groupId, student.id);
             } else {
-              // Para ADD y MOVE
-              if (selectedMode.code === 'MOVE' && student.groupId) {
-                await removeStudentFromGroup(student.groupId, student.id);
-              }
               await enrollStudentInGroup(group.groupId, student.id);
             }
           }
 
-          let successMessage;
-          switch (selectedMode.code) {
-            case 'ADD':
-              successMessage = `Se añadieron ${target.length} estudiante(s) al grupo correctamente`;
-              break;
-            case 'MOVE':
-              successMessage = `Se movieron ${target.length} estudiante(s) al grupo correctamente`;
-              break;
-            case 'REMOVE':
-              successMessage = `Se quitaron ${target.length} estudiante(s) del grupo correctamente`;
-              break;
-          }
+          const successMessage = selectedMode.code === 'ADD' ? `Se añadieron ${target.length} estudiante(s) al grupo correctamente` : `Se quitaron ${target.length} estudiante(s) del grupo correctamente`;
 
           showSuccess('Éxito', successMessage);
-
-          const [groupStudentsRes, studentsWithGroupRes] = await Promise.all([getGroupStudents(group.groupId), getStudentsWithGroup()]);
-
-          setCurrentGroupStudents(Array.isArray(groupStudentsRes) ? groupStudentsRes : []);
-          setStudentsWithGroup(Array.isArray(studentsWithGroupRes) ? studentsWithGroupRes : []);
+          await reloadData();
         } catch (error) {
           console.error('Error al guardar cambios:', error);
           showError('Error', `No se pudieron ${actionText} los estudiantes`);
@@ -234,6 +264,164 @@ export default function AssignStudentsPickList({ group }) {
         }
       },
     });
+  };
+
+  const handleMove = () => {
+    const compatibleStudents = [];
+    const incompatibleStudents = [];
+
+    target.forEach((student) => {
+      const validation = curriculumValidations[student.groupId];
+      if (validation?.sameCurriculum) {
+        compatibleStudents.push(student);
+      } else {
+        incompatibleStudents.push(student);
+      }
+    });
+
+    if (compatibleStudents.length > 0) {
+      handleCompatibleStudentsConfirmation(compatibleStudents, incompatibleStudents);
+    } else if (incompatibleStudents.length > 0) {
+      handleIncompatibleStudentsConfirmation(incompatibleStudents);
+    }
+  };
+
+  const handleCompatibleStudentsConfirmation = (compatibleStudents, incompatibleStudents) => {
+    const groupsInfo = getGroupsInfo(compatibleStudents);
+
+    confirmAction({
+      message: `¿Confirma mover ${compatibleStudents.length} estudiante(s) de ${groupsInfo} al grupo "${group.name}"? Estos grupos tienen el mismo plan de estudios.`,
+      header: 'Transferir estudiantes compatibles',
+      icon: 'pi pi-check-circle',
+      acceptClassName: 'p-button-success',
+      acceptLabel: 'Sí, transferir',
+      rejectLabel: 'Cancelar',
+      onAccept: () => {
+        // Añadir delay para que el diálogo actual se cierre completamente
+        setTimeout(() => {
+          showCopyQualificationsDialog(compatibleStudents, incompatibleStudents);
+        }, 300);
+      },
+    });
+  };
+
+  const showCopyQualificationsDialog = (compatibleStudents, incompatibleStudents) => {
+    confirmAction({
+      message: `¿Desea copiar las calificaciones al nuevo grupo "${group.name}"?\n\nLas calificaciones originales se conservarán en el historial.`,
+      header: 'Copiar calificaciones',
+      icon: 'pi pi-question-circle',
+      acceptLabel: 'Sí, copiar calificaciones',
+      rejectLabel: 'No copiar',
+      onAccept: async () => {
+        await executeCompatibleTransfer(compatibleStudents, true);
+        if (incompatibleStudents.length > 0) {
+          setTimeout(() => {
+            handleIncompatibleStudentsConfirmation(incompatibleStudents);
+          }, 500);
+        }
+      },
+      onReject: async () => {
+        await executeCompatibleTransfer(compatibleStudents, false);
+        if (incompatibleStudents.length > 0) {
+          setTimeout(() => {
+            handleIncompatibleStudentsConfirmation(incompatibleStudents);
+          }, 500);
+        }
+      },
+    });
+  };
+
+  const handleIncompatibleStudentsConfirmation = (incompatibleStudents) => {
+    const groupsInfo = getGroupsInfo(incompatibleStudents);
+
+    confirmAction({
+      message: `¿Confirma mover ${incompatibleStudents.length} estudiante(s) de ${groupsInfo} al grupo "${group.name}"?\n\nEstos grupos tienen planes de estudio diferentes.\nLas calificaciones NO se copiarán, pero se conservarán en el grupo original.`,
+      header: 'Transferir estudiantes incompatibles',
+      icon: 'pi pi-exclamation-triangle',
+      acceptClassName: 'p-button-warning',
+      acceptLabel: 'Sí, transferir sin calificaciones',
+      rejectLabel: 'Cancelar',
+      onAccept: async () => {
+        await executeIncompatibleTransfer(incompatibleStudents);
+      },
+    });
+  };
+
+  const executeCompatibleTransfer = async (students, copyQualifications) => {
+    try {
+      setLoading(true);
+
+      const studentsByGroup = groupStudentsBySourceGroup(students);
+
+      for (const [sourceGroupId, groupStudents] of Object.entries(studentsByGroup)) {
+        const studentIds = groupStudents.map((s) => s.id);
+
+        const result = await transferStudents(studentIds, parseInt(sourceGroupId), group.groupId, copyQualifications);
+
+        if (result.success) {
+          const copiedCount = result.results.filter((r) => r.qualificationsCopied).length;
+          showSuccess('Éxito', `Transferidos ${groupStudents.length} estudiante(s) del Grupo ${sourceGroupId}`);
+
+          if (copyQualifications && copiedCount > 0) {
+            showSuccess('Calificaciones', `Se copiaron calificaciones para ${copiedCount} estudiante(s)`);
+          }
+        }
+      }
+
+      await reloadData();
+    } catch (error) {
+      console.error('Error en transferencia compatible:', error);
+      showError('Error', 'No se pudieron transferir algunos estudiantes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const executeIncompatibleTransfer = async (students) => {
+    try {
+      setLoading(true);
+
+      const studentsByGroup = groupStudentsBySourceGroup(students);
+
+      for (const [sourceGroupId, groupStudents] of Object.entries(studentsByGroup)) {
+        const studentIds = groupStudents.map((s) => s.id);
+
+        const result = await transferStudents(studentIds, parseInt(sourceGroupId), group.groupId, false);
+
+        if (result.success) {
+          showSuccess('Éxito', `Transferidos ${groupStudents.length} estudiante(s) del Grupo ${sourceGroupId} (sin calificaciones)`);
+        }
+      }
+
+      await reloadData();
+    } catch (error) {
+      console.error('Error en transferencia incompatible:', error);
+      showError('Error', 'No se pudieron transferir algunos estudiantes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getGroupsInfo = (students) => {
+    const groups = [...new Set(students.map((s) => s.groupId))];
+    return groups.length === 1 ? `Grupo ${groups[0]}` : `${groups.length} grupos diferentes`;
+  };
+
+  const groupStudentsBySourceGroup = (students) => {
+    return students.reduce((acc, student) => {
+      if (!acc[student.groupId]) {
+        acc[student.groupId] = [];
+      }
+      acc[student.groupId].push(student);
+      return acc;
+    }, {});
+  };
+
+  const reloadData = async () => {
+    const [groupStudentsRes, studentsWithGroupRes] = await Promise.all([getGroupStudents(group.groupId), getStudentsWithGroup()]);
+
+    setCurrentGroupStudents(Array.isArray(groupStudentsRes) ? groupStudentsRes : []);
+    setStudentsWithGroup(Array.isArray(studentsWithGroupRes) ? studentsWithGroupRes : []);
   };
 
   const cancel = () => {
@@ -259,13 +447,10 @@ export default function AssignStudentsPickList({ group }) {
     }
   };
 
-  // Cálculos corregidos usando careerId
   const sourceCount = source.length;
   const targetCount = target.length;
   const hasSelectedStudents = targetCount > 0;
-  const careerStudentIds = careerStudents.map((s) => s.userId || s.id);
 
-  // CAMBIO: Filtrar por careerId
   const studentsWithGroupInCurrentCareer = studentsWithGroup.filter((s) => s.careerId === group.careerId);
   const studentsWithoutGroupInCurrentCareer = careerStudents.length - studentsWithGroupInCurrentCareer.length;
 
@@ -280,8 +465,8 @@ export default function AssignStudentsPickList({ group }) {
         icon={selectedMode?.code === 'REMOVE' ? 'pi pi-user-minus' : 'pi pi-save'}
         severity={selectedMode?.code === 'REMOVE' ? 'danger' : 'success'}
         onClick={saveChanges}
-        disabled={loading || !hasSelectedStudents}
-        tooltip={hasSelectedStudents ? `${selectedMode?.name} ${targetCount} estudiante(s)` : 'Selecciona estudiantes para continuar'}
+        disabled={loading || !hasSelectedStudents || (selectedMode.code === 'MOVE' && loadingValidations)}
+        tooltip={loadingValidations ? 'Cargando validaciones...' : hasSelectedStudents ? `${selectedMode?.name} ${targetCount} estudiante(s)` : 'Selecciona estudiantes para continuar'}
         tooltipOptions={{ position: 'top' }}
       >
         <span className="d-none d-sm-inline ms-2">{selectedMode?.code === 'REMOVE' ? 'Quitar del grupo' : 'Guardar cambios'}</span>
@@ -316,6 +501,12 @@ export default function AssignStudentsPickList({ group }) {
           )
         }
       />
+      {selectedMode.code === 'MOVE' && loadingValidations && (
+        <div className="d-flex align-items-center gap-2 text-muted">
+          <i className="pi pi-spinner pi-spin" style={{ fontSize: '0.8rem' }}></i>
+          <small>Validando planes de estudio...</small>
+        </div>
+      )}
     </div>
   );
 
@@ -460,17 +651,21 @@ export default function AssignStudentsPickList({ group }) {
         targetFilterPlaceholder="Buscar seleccionados..."
       />
 
-      {/* Mensajes informativos */}
       {infoMessage && (
         <div className="m-3 text-center">
           <Message severity={infoMessage.severity} text={infoMessage.text} />
         </div>
       )}
 
-      {/* Para modo REMOVE */}
       {selectedMode?.code === 'REMOVE' && sourceCount > 0 && (
         <div className="m-3 text-center">
-          <Message severity="warn" text="Los estudiantes eliminados del grupo quedarán sin grupo asignado hasta que sean añadidos a otro grupo." />
+          <Message severity="info" text="Los estudiantes eliminados del grupo conservarán sus calificaciones en el historial y podrán reactivarse si regresan al grupo." />
+        </div>
+      )}
+
+      {selectedMode?.code === 'MOVE' && sourceCount > 0 && (
+        <div className="m-3 text-center">
+          <Message severity="info" text="Los badges indican si el plan de estudios es compatible para copiar calificaciones. El sistema manejará automáticamente las transferencias." />
         </div>
       )}
     </div>

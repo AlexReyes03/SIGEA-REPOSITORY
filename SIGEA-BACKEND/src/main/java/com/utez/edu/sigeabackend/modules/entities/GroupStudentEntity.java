@@ -31,8 +31,7 @@ public class GroupStudentEntity {
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (!(o instanceof Id)) return false;
-            Id that = (Id) o;
+            if (!(o instanceof Id that)) return false;
             return Objects.equals(groupId, that.groupId) &&
                     Objects.equals(studentId, that.studentId);
         }
@@ -76,6 +75,13 @@ public class GroupStudentEntity {
     @Column(name = "entry_date", nullable = false)
     private LocalDateTime entryDate;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private GroupStudentStatus status;
+
+    @Column(name = "exit_date")
+    private LocalDateTime exitDate;
+
     public GroupStudentEntity() {}
 
     public GroupStudentEntity(GroupEntity group, UserEntity student) {
@@ -83,6 +89,18 @@ public class GroupStudentEntity {
         this.student = student;
         this.id = new Id(group.getId(), student.getId());
         this.entryDate = LocalDateTime.now();
+        this.status = GroupStudentStatus.ACTIVE;
+        this.exitDate = null;
+    }
+
+    public void markAsInactive() {
+        this.status = GroupStudentStatus.INACTIVE;
+        this.exitDate = LocalDateTime.now();
+    }
+
+    public void reactivate() {
+        this.status = GroupStudentStatus.ACTIVE;
+        this.exitDate = null;
     }
 
     // getters & setters
@@ -94,5 +112,16 @@ public class GroupStudentEntity {
     public void setStudent(UserEntity student) { this.student = student; }
     public LocalDateTime getEntryDate() { return entryDate; }
     public void setEntryDate(LocalDateTime entryDate) { this.entryDate = entryDate; }
+    public GroupStudentStatus getStatus() { return status; }
+    public void setStatus(GroupStudentStatus status) { this.status = status; }
+    public LocalDateTime getExitDate() { return exitDate; }
+    public void setExitDate(LocalDateTime exitDate) { this.exitDate = exitDate; }
 
+    public boolean isActive() {
+        return GroupStudentStatus.ACTIVE.equals(this.status);
+    }
+
+    public boolean isInactive() {
+        return GroupStudentStatus.INACTIVE.equals(this.status);
+    }
 }
