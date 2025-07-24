@@ -9,7 +9,7 @@ import java.util.Objects;
 @Entity
 @Table(name = "student_group")
 
-public class GroupStudentEntity {
+public class   GroupStudentEntity {
     @Embeddable
     public static class Id implements Serializable {
         @Column(name = "group_id")
