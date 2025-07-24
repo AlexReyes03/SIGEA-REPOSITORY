@@ -116,6 +116,28 @@ Button {
   transition: background-color 0.2s ease;
 }
 
+.btn-download {
+    background-color: #ffffff;
+    border: 1px solid #e0e6ed;
+    color: #495057;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    height: 50px;
+    min-height: 50px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+.btn-download:focus {
+    background-color: #f8f9fa;
+    border-color: #2c5aa0;
+    color: #2c5aa0;
+    box-shadow: 0 0 0 3px rgba(44, 90, 160, 0.1);
+}
+
 /* BADGES*/
 .cetec-badge-inactive {
   background-color: var(--bg-gray-700) !important;

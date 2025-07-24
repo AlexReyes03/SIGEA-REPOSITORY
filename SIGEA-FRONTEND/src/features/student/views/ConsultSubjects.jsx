@@ -263,7 +263,7 @@ export default function ConsultSubjects({ group, studentId, studentData }) {
 
                                     <div className="p-fluid">
                                         <InputText
-                                            placeholder="Buscar materia o docente..."
+                                            placeholder="Buscar..."
                                             value={search}
                                             onChange={(e) =>
                                                 setSearchTerms((prev) => ({

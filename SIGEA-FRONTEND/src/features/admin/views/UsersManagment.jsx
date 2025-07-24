@@ -554,7 +554,6 @@ export default function UsersManagement() {
           showWarn('Email inválido', 'Por favor ingresa un email válido.');
           return;
         }
-
         const userData = {
           ...formData,
           roleId: finalRoleId,
@@ -562,9 +561,6 @@ export default function UsersManagement() {
           campusId: formData.campusId || null,
         };
 
-        if (!isEdit) {
-          userData.password = 'usuarioCetec@';
-        }
 
         let savedUser;
         if (isEdit) {
