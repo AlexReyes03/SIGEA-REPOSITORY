@@ -54,6 +54,10 @@ export default function Curriculums() {
   const [editingModule, setEditingModule] = useState(null);
   const [editingSubject, setEditingSubject] = useState(null);
 
+  const [lastCreatedCurriculumId, setLastCreatedCurriculumId] = useState(null);
+  const [lastCreatedModuleId, setLastCreatedModuleId] = useState(null);
+  const [pendingFocus, setPendingFocus] = useState(null);
+
   const selectedCurriculum = data.find((c) => c.id === selectedCurriculumId) || null;
   const selectedModule = selectedCurriculum?.modules.find((m) => m.id === selectedModuleId) || null;
   const selectedSubject = selectedModule?.subjects.find((s) => s.id === selectedSubjectId) || null;
@@ -63,6 +67,58 @@ export default function Curriculums() {
   const [newModName, setNewModName] = useState('');
   const [newSubName, setNewSubName] = useState('');
   const [weeksNumber, setWeeksNumber] = useState(1);
+
+  // Función mejorada para hacer focus y selección
+  const focusAndSelectElement = (itemId, type) => {
+    setPendingFocus({ itemId, type });
+  };
+
+  // Efecto para manejar focus pendiente después de cargar datos
+  useEffect(() => {
+    if (pendingFocus && !loading) {
+      const { itemId, type } = pendingFocus;
+      
+      if (type === 'curriculum') {
+        // Simular click en el curriculum
+        setSelectedCurriculumId(itemId);
+        setSelectedModuleId(null);
+        setSelectedSubjectId(null);
+        setIsModuleCollapsed(false);
+        
+        // Hacer scroll al elemento
+        setTimeout(() => {
+          const element = document.querySelector(`[data-curriculum-id="${itemId}"]`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+        
+      } else if (type === 'module') {
+        // Simular click en el módulo
+        setSelectedModuleId(itemId);
+        setSelectedSubjectId(null);
+        setIsSubjectCollapsed(false);
+        
+        // Hacer scroll al elemento
+        setTimeout(() => {
+          const element = document.querySelector(`[data-module-id="${itemId}"]`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+      }
+      
+      // Limpiar el pending focus después de un tiempo
+      setTimeout(() => {
+        setPendingFocus(null);
+        if (type === 'curriculum') {
+          setLastCreatedCurriculumId(null);
+        } else if (type === 'module') {
+          setLastCreatedModuleId(null);
+        }
+      }, 2000);
+    }
+  }, [data, loading, pendingFocus]);
 
   // Calcular duración de un módulo específico
   const getModuleDuration = useMemo(() => {
@@ -163,14 +219,19 @@ export default function Curriculums() {
     e.preventDefault();
     if (!newCurrName.trim()) return;
     try {
-      await createCurriculum({
+      const newCurriculum = await createCurriculum({
         name: newCurrName,
         career: { id: career.id },
       });
       showSuccess('Hecho', 'Plan de estudios creado exitosamente');
       setNewCurrName('');
-      await loadCurriculums();
       Modal.getInstance(modalCurrRef.current).hide();
+      
+      // Configurar focus para después de cargar datos
+      setLastCreatedCurriculumId(newCurriculum.id);
+      focusAndSelectElement(newCurriculum.id, 'curriculum');
+      
+      await loadCurriculums();
     } catch (err) {
       showError('Error', 'No se pudo crear el plan');
     }
@@ -185,14 +246,19 @@ export default function Curriculums() {
     }
     if (!newModName.trim()) return;
     try {
-      await createModule({
+      const newModule = await createModule({
         name: newModName,
         curriculum: { id: selectedCurriculum.id },
       });
       showSuccess('Hecho', 'Módulo creado exitosamente');
       setNewModName('');
-      await loadCurriculums();
       Modal.getInstance(modalModRef.current).hide();
+      
+      // Configurar focus para después de cargar datos
+      setLastCreatedModuleId(newModule.id);
+      focusAndSelectElement(newModule.id, 'module');
+      
+      await loadCurriculums();
     } catch (err) {
       showError('Error', 'No se pudo crear el módulo');
     }
@@ -217,6 +283,7 @@ export default function Curriculums() {
       setWeeksNumber(1);
       await loadCurriculums();
       Modal.getInstance(modalSubRef.current).hide();
+      // No hacemos focus para materias como solicitado
     } catch (err) {
       showError('Error', 'No se pudo crear la materia');
     }
@@ -324,6 +391,32 @@ export default function Curriculums() {
 
   return (
     <>
+      <style jsx>{`
+        .btn-close {
+          --bs-btn-close-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23e31e24'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414'/%3e%3c/svg%3e");
+        }
+        
+        .card:focus {
+          outline: 2px solid #007bff;
+          outline-offset: 2px;
+          box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.25);
+        }
+        
+        .card[data-curriculum-id="${lastCreatedCurriculumId}"] {
+          animation: highlightPulse 2s ease-in-out;
+        }
+        
+        .card[data-module-id="${lastCreatedModuleId}"] {
+          animation: highlightPulse 2s ease-in-out;
+        }
+        
+        @keyframes highlightPulse {
+          0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7); }
+          50% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0.2); }
+          100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
+        }
+      `}</style>
+
       <div className="bg-white rounded-top p-2">
         <CareerTabs />
       </div>
@@ -389,6 +482,8 @@ export default function Curriculums() {
                             <div
                               className={`card p-3 hovereable d-flex flex-row align-items-center justify-content-between ${selectedCurriculumId === curriculum.id ? 'bg-blue-500 text-white' : ''}`}
                               style={{ cursor: 'pointer' }}
+                              data-curriculum-id={curriculum.id}
+                              tabIndex={0}
                               onClick={() => {
                                 if (selectedCurriculumId === curriculum.id) {
                                   setSelectedCurriculumId(null);
@@ -510,6 +605,8 @@ export default function Curriculums() {
                           <div
                             className={`card p-3 hovereable d-flex flex-row align-items-center justify-content-between ${selectedModuleId === module.id ? 'bg-blue-500 text-white' : ''}`}
                             style={{ cursor: 'pointer' }}
+                            data-module-id={module.id}
+                            tabIndex={0}
                             onClick={() => {
                               if (selectedModuleId === module.id) {
                                 setSelectedModuleId(null);
@@ -701,7 +798,7 @@ export default function Curriculums() {
       </div>
 
       {/*──────── modal: crear plan ────────*/}
-      <div className="modal fade" ref={modalCurrRef} tabIndex={-1}>
+      <div className="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" ref={modalCurrRef} tabIndex={-1}>
         <div className="modal-dialog">
           <form onSubmit={isEditingCurriculum ? handleUpdateCurriculum : handleCreateCurriculum} className="modal-content">
             <div className="modal-header">
@@ -710,7 +807,7 @@ export default function Curriculums() {
             </div>
             <div className="modal-body">
               <label className="form-label">Nombre del plan</label>
-              <InputText className="w-100" value={newCurrName} onChange={(e) => setNewCurrName(e.target.value)} required />
+              <InputText className="w-100" value={newCurrName} onChange={(e) => setNewCurrName(e.target.value)} autoFocus required />
             </div>
             <div className="modal-footer">
               <Button type="reset" icon="pi pi-times" severity="secondary" outlined data-bs-dismiss="modal" onClick={resetCurriculumModal}>
@@ -725,7 +822,7 @@ export default function Curriculums() {
       </div>
 
       {/*──────── modal: crear módulo ────────*/}
-      <div className="modal fade" ref={modalModRef} tabIndex={-1}>
+      <div className="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" ref={modalModRef} tabIndex={-1}>
         <div className="modal-dialog">
           <form onSubmit={isEditingModule ? handleUpdateModule : handleCreateModule} className="modal-content">
             <div className="modal-header">
@@ -734,7 +831,7 @@ export default function Curriculums() {
             </div>
             <div className="modal-body">
               <label className="form-label">Nombre del módulo</label>
-              <InputText className="w-100" value={newModName} onChange={(e) => setNewModName(e.target.value)} required />
+              <InputText className="w-100" value={newModName} onChange={(e) => setNewModName(e.target.value)} autoFocus required />
             </div>
             <div className="modal-footer">
               <Button type="reset" icon="pi pi-times" severity="secondary" outlined data-bs-dismiss="modal" onClick={resetModuleModal}>
@@ -749,7 +846,7 @@ export default function Curriculums() {
       </div>
 
       {/*──────── modal: crear materia ────────*/}
-      <div className="modal fade" ref={modalSubRef} tabIndex={-1}>
+      <div className="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" ref={modalSubRef} tabIndex={-1}>
         <div className="modal-dialog">
           <form onSubmit={isEditingSubject ? handleUpdateSubject : handleCreateSubject} className="modal-content">
             <div className="modal-header">
@@ -759,7 +856,7 @@ export default function Curriculums() {
             <div className="modal-body">
               <div className="mb-3">
                 <label className="form-label">Nombre de la materia</label>
-                <InputText className="w-100" value={newSubName} onChange={(e) => setNewSubName(e.target.value)} required />
+                <InputText className="w-100" value={newSubName} onChange={(e) => setNewSubName(e.target.value)} autoFocus required />
               </div>
               <div className="mb-3">
                 <label className="form-label">Semanas</label>
