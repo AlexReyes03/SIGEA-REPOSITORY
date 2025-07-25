@@ -1,9 +1,7 @@
 import { BASE_URL } from './common-url';
 
-// Referencia a las funciones de AuthContext
 let authHandlers = null;
 
-// Establecer los handlers de autenticación
 export const setAuthHandlers = (handlers) => {
   authHandlers = handlers;
 };
@@ -13,6 +11,8 @@ export default async function request(endpoint, { method = 'GET', body = null, h
   const token = localStorage.getItem('token');
 
   const opts = { method, headers: { ...headers }, signal };
+
+  const hadAuthToken = !!token;
 
   if (token) opts.headers.Authorization = `Bearer ${token}`;
 
@@ -37,8 +37,10 @@ export default async function request(endpoint, { method = 'GET', body = null, h
 
     if (!res.ok) {
       if (res.status === 401 || res.status === 403 || res.status === 500) {
-        if (authHandlers && authHandlers.handleAuthError) {
-          authHandlers.handleAuthError(res.status, data?.message || 'Sesión invalidada');
+        const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/login') || endpoint.includes('/register');
+
+        if (authHandlers && authHandlers.handleAuthError && hadAuthToken && !isAuthEndpoint) {
+          authHandlers.handleAuthError(res.status, data?.message || 'Sesión invalidada', endpoint, hadAuthToken);
         }
       }
 

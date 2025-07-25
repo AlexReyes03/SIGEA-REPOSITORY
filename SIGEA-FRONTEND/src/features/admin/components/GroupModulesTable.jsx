@@ -7,6 +7,7 @@ import { Tooltip } from 'primereact/tooltip';
 import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
 import { ProgressSpinner } from 'primereact/progressspinner';
+import { Tag } from 'primereact/tag';
 import { MdOutlineGroup } from 'react-icons/md';
 import { motion } from 'framer-motion';
 
@@ -14,8 +15,9 @@ import { useToast } from '../../../components/providers/ToastProvider';
 import { getCurriculumById } from '../../../api/academics/curriculumService';
 import { getGroupStudents } from '../../../api/academics/groupService';
 import { getQualificationsByGroupWithDetails } from '../../../api/academics/qualificationService';
+import { getUserById } from '../../../api/userService';
 
-export default function GroupModulesTableReadOnly({ group }) {
+export default function GroupModulesTable({ group }) {
   const [loading, setLoading] = useState(true);
   const { showError } = useToast();
 
@@ -25,8 +27,8 @@ export default function GroupModulesTableReadOnly({ group }) {
   const [tableData, setTableData] = useState([]);
   const [qualificationDetails, setQualificationDetails] = useState({});
   const [showQualificationDetails, setShowQualificationDetails] = useState({});
+  const [showHistoricalStudents, setShowHistoricalStudents] = useState(true);
 
-  // Estado para forzar re-render del Tooltip
   const [forceUpdate, setForceUpdate] = useState(0);
 
   const loadData = useCallback(async () => {
@@ -34,11 +36,11 @@ export default function GroupModulesTableReadOnly({ group }) {
       const curriculumData = await getCurriculumById(group.curriculumId);
       setCurriculum(curriculumData);
 
-      const studentsData = await getGroupStudents(group.groupId);
-      const qualificationsData = await getQualificationsByGroupWithDetails(group.groupId);
+      const [activeStudentsData, qualificationsData] = await Promise.all([getGroupStudents(group.groupId), getQualificationsByGroupWithDetails(group.groupId)]);
 
       const gradeMap = {};
       const detailsMap = {};
+      const studentsWithGrades = new Set();
 
       qualificationsData.forEach((q) => {
         if (!gradeMap[q.studentId]) gradeMap[q.studentId] = {};
@@ -49,14 +51,67 @@ export default function GroupModulesTableReadOnly({ group }) {
           teacherName: q.teacherName,
           dateFormatted: q.dateFormatted,
         };
+
+        studentsWithGrades.add(q.studentId);
       });
 
       setQualificationDetails(detailsMap);
 
-      const rows = studentsData.map((s) => {
+      const activeStudentsMap = new Map();
+      activeStudentsData.forEach((s) => {
+        activeStudentsMap.set(s.studentId, {
+          studentId: s.studentId,
+          fullName: s.fullName,
+          isActive: true,
+        });
+      });
+
+      const allStudents = new Map(activeStudentsMap);
+
+      const historicalStudentIds = Array.from(studentsWithGrades).filter((id) => !allStudents.has(id));
+
+      if (historicalStudentIds.length > 0) {
+        try {
+          const historicalStudentsInfo = await Promise.all(
+            historicalStudentIds.map(async (studentId) => {
+              try {
+                const studentInfo = await getUserById(studentId);
+                return {
+                  studentId: studentId,
+                  fullName: `${studentInfo.name || ''} ${studentInfo.paternalSurname || ''} ${studentInfo.maternalSurname || ''}`.trim(),
+                  isActive: false,
+                };
+              } catch (error) {
+                console.error(`Error obteniendo información del estudiante ${studentId}:`, error);
+                return {
+                  studentId: studentId,
+                  fullName: `Estudiante ${studentId}`,
+                  isActive: false,
+                };
+              }
+            })
+          );
+
+          historicalStudentsInfo.forEach((student) => {
+            allStudents.set(student.studentId, student);
+          });
+        } catch (error) {
+          console.error('Error obteniendo información de estudiantes históricos:', error);
+          historicalStudentIds.forEach((studentId) => {
+            allStudents.set(studentId, {
+              studentId: studentId,
+              fullName: `Estudiante ${studentId}`,
+              isActive: false,
+            });
+          });
+        }
+      }
+
+      const rows = Array.from(allStudents.values()).map((s) => {
         const row = {
           studentId: s.studentId,
           fullName: s.fullName,
+          isActive: s.isActive,
         };
         curriculumData.modules.forEach((mod) =>
           mod.subjects.forEach((subj) => {
@@ -66,9 +121,14 @@ export default function GroupModulesTableReadOnly({ group }) {
         return row;
       });
 
+      rows.sort((a, b) => {
+        if (a.isActive && !b.isActive) return -1;
+        if (!a.isActive && b.isActive) return 1;
+        return a.fullName.localeCompare(b.fullName);
+      });
+
       setTableData(rows);
 
-      // Forzar actualización para resolver problemas de renderizado
       setTimeout(() => {
         setForceUpdate((prev) => prev + 1);
       }, 100);
@@ -107,7 +167,6 @@ export default function GroupModulesTableReadOnly({ group }) {
     });
   }, []);
 
-  // Función para manejar el toggle de detalles (simplificada)
   const handleToggleDetails = useCallback((moduleId) => {
     setShowQualificationDetails((prev) => ({
       ...prev,
@@ -115,13 +174,22 @@ export default function GroupModulesTableReadOnly({ group }) {
     }));
   }, []);
 
-  // Módulos ordenados
+  const toggleHistoricalStudents = useCallback(() => {
+    setShowHistoricalStudents((prev) => !prev);
+  }, []);
+
   const sortedModules = useMemo(() => {
     if (!curriculum?.modules) return [];
     return [...curriculum.modules].sort((a, b) => b.id - a.id);
   }, [curriculum?.modules]);
 
-  // Estilos
+  const filteredTableData = useMemo(() => {
+    if (showHistoricalStudents) {
+      return tableData;
+    }
+    return tableData.filter((row) => row.isActive);
+  }, [tableData, showHistoricalStudents]);
+
   const gridLinesX = useMemo(
     () => ({
       borderLeft: '1px solid #ededed',
@@ -130,7 +198,6 @@ export default function GroupModulesTableReadOnly({ group }) {
     []
   );
 
-  // Crear header groups para todos los módulos
   const headerGroups = useMemo(() => {
     const groups = {};
     sortedModules.forEach((module) => {
@@ -152,15 +219,23 @@ export default function GroupModulesTableReadOnly({ group }) {
     return groups;
   }, [sortedModules]);
 
-  // Crear table keys para todos los módulos
   const tableKeys = useMemo(() => {
     const keys = {};
     sortedModules.forEach((module) => {
       const detailsShown = showQualificationDetails[module.id];
-      keys[module.id] = `${module.id}-readonly-${detailsShown ? 'details' : 'nodetails'}-${forceUpdate}`;
+      keys[module.id] = `${module.id}-enhanced-${detailsShown ? 'details' : 'nodetails'}-${forceUpdate}-${showHistoricalStudents}`;
     });
     return keys;
-  }, [sortedModules, showQualificationDetails, forceUpdate]);
+  }, [sortedModules, showQualificationDetails, forceUpdate, showHistoricalStudents]);
+
+  const studentNameTemplate = (row) => {
+    return (
+      <div className="d-flex align-items-center gap-2">
+        <span className={row.isActive ? '' : 'text-muted'}>{row.fullName}</span>
+        {!row.isActive && <Tag value="Inactivo" severity="danger" className="text-xs" style={{ fontSize: '0.65rem', padding: '0.25rem 0.5rem' }} />}
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -172,19 +247,19 @@ export default function GroupModulesTableReadOnly({ group }) {
 
   return (
     <>
-      <Tooltip key={`tooltip-readonly-${forceUpdate}`} target="[data-pr-tooltip]" />
+      <Tooltip key={`tooltip-enhanced-${forceUpdate}`} target="[data-pr-tooltip]" />
 
       {sortedModules.map((module) => {
         const isCollapsed = isModuleCollapsed[module.id];
         const search = searchTerms[module.id] || '';
 
-        // Obtener header group y table key
         const headerGroup = headerGroups[module.id];
         const tableKey = tableKeys[module.id];
 
+        const historicalCount = tableData.filter((row) => !row.isActive).length;
+
         return (
           <div className="card border-0 mt-3" key={`module-${module.id}`}>
-            {/* Header módulo */}
             <div className="d-flex flex-wrap gap-2 align-items-center justify-content-between w-100">
               <div className="d-flex align-items-center my-md-3 mt-3 mx-3">
                 <div className="title-icon p-1 rounded-circle">
@@ -195,14 +270,27 @@ export default function GroupModulesTableReadOnly({ group }) {
               </div>
 
               {!isCollapsed && (
-                <div className="d-flex align-items-center justify-content-end mx-3 mb-3 mb-md-0">
+                <div className="d-flex align-items-center justify-content-end mx-3 mb-3 mb-md-0 gap-2">
+                  {historicalCount > 0 && (
+                    <Button
+                      icon={showHistoricalStudents ? 'pi pi-eye-slash' : 'pi pi-eye'}
+                      className={`${showHistoricalStudents ? 'p-button-info' : 'p-button-secondary'}`}
+                      outlined={!showHistoricalStudents}
+                      onClick={toggleHistoricalStudents}
+                      data-pr-tooltip={showHistoricalStudents ? `Ocultar ${historicalCount} estudiante(s) del historial` : `Mostrar ${historicalCount} estudiante(s) del historial`}
+                      data-pr-position="top"
+                      size="small"
+                    />
+                  )}
+
                   <Button
                     icon="pi pi-question-circle"
-                    className={`me-2 ${showQualificationDetails[module.id] ? 'p-button-help' : 'p-button-secondary'}`}
+                    className={`${showQualificationDetails[module.id] ? 'p-button-help' : 'p-button-secondary'}`}
                     outlined={!showQualificationDetails[module.id]}
                     onClick={() => handleToggleDetails(module.id)}
                     data-pr-tooltip={showQualificationDetails[module.id] ? 'Ocultar detalles de calificación' : 'Mostrar detalles de calificación'}
                     data-pr-position="top"
+                    size="small"
                   />
 
                   <div className="p-fluid">
@@ -221,7 +309,6 @@ export default function GroupModulesTableReadOnly({ group }) {
               )}
             </div>
 
-            {/* DataTable */}
             <motion.div
               initial={false}
               animate={{
@@ -245,7 +332,7 @@ export default function GroupModulesTableReadOnly({ group }) {
               <div className="m-3 mt-0">
                 <DataTable
                   key={tableKey}
-                  value={tableData}
+                  value={filteredTableData}
                   headerColumnGroup={headerGroup}
                   size="small"
                   stripedRows
@@ -260,14 +347,13 @@ export default function GroupModulesTableReadOnly({ group }) {
                     borderLeft: '1px solid #ededed',
                     borderRight: '1px solid #ededed',
                   }}
+                  rowClassName={(row) => (row.isActive ? '' : 'bg-light')}
                 >
-                  {/* Nombre */}
-                  <Column field="fullName" header="Nombre del estudiante" bodyClassName="text-nowrap" style={gridLinesX} />
+                  <Column field="fullName" header="Nombre del estudiante" body={studentNameTemplate} bodyClassName="text-nowrap" style={gridLinesX} />
 
-                  {/* Materias */}
                   {module.subjects.map((subj) => (
                     <Column
-                      key={`subject-readonly-${subj.id}`}
+                      key={`subject-enhanced-${subj.id}`}
                       field={String(subj.id)}
                       header={<span className="fw-bold">{subj.id}</span>}
                       style={{
@@ -289,6 +375,7 @@ export default function GroupModulesTableReadOnly({ group }) {
                                 display: 'block',
                                 textAlign: 'center',
                                 cursor: showQualificationDetails[module.id] ? 'help' : 'default',
+                                opacity: row.isActive ? 1 : 0.7,
                               }}
                               data-pr-tooltip={showQualificationDetails[module.id] ? tooltipContent : undefined}
                               data-pr-position={showQualificationDetails[module.id] ? 'top' : undefined}
@@ -298,7 +385,6 @@ export default function GroupModulesTableReadOnly({ group }) {
                           );
                         }
 
-                        // Sin calificación
                         return (
                           <span
                             style={{
@@ -306,6 +392,7 @@ export default function GroupModulesTableReadOnly({ group }) {
                               textAlign: 'center',
                               color: '#6c757d',
                               fontStyle: 'italic',
+                              opacity: row.isActive ? 1 : 0.5,
                             }}
                           >
                             SC
@@ -315,15 +402,15 @@ export default function GroupModulesTableReadOnly({ group }) {
                     />
                   ))}
 
-                  {/* Promedio */}
                   <Column
                     header="Promedio"
                     className="fw-semibold"
                     style={gridLinesX}
                     body={(row) => {
                       const grades = module.subjects.map((s) => row[s.id]).filter((v) => v != null && v >= 6 && v <= 10);
+                      const average = grades.length ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(1) : '—';
 
-                      return grades.length ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(1) : '—';
+                      return <span style={{ opacity: row.isActive ? 1 : 0.7 }}>{average}</span>;
                     }}
                   />
                 </DataTable>

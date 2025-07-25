@@ -12,13 +12,13 @@ export default function AuthInterceptor({ children }) {
   const { showError } = useToast();
 
   useEffect(() => {
-    const authHandler = async (status, message) => {
-      const result = await handleAuthError(status, message);
+    const authHandler = async (status, message, endpoint, hadAuthToken) => {
+      const result = await handleAuthError(status, message, endpoint, hadAuthToken);
 
       if (result && result.shouldShowError) {
         showError(
           'Sesión Invalidada',
-          'Tu sesión ha sido invalidada y se cerró la sesión de forma automática.',
+          'Tu sesión ha sido invalidada. Los datos de tu cuenta fueron modificados por otro usuario.',
           5000 // 5 segundos
         );
       }

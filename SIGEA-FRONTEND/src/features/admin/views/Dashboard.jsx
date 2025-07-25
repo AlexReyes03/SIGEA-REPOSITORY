@@ -96,7 +96,7 @@ export default function Dashboard() {
                     <div className="title-icon p-1 rounded-circle">
                       <MdOutlineRadioButtonChecked size={40} className="p-1" />
                     </div>
-                    <h6 className="text-secondary ms-2 mb-0">Usuarios activos</h6>
+                    <h6 className="text-secondary text-truncate ms-2 mb-0">Usuarios activos</h6>
                   </div>
                   <div className="d-flex flex-column align-items-center">
                     <p className="fs-1 fw-bold text-blue-500 mb-0">{usersActive}</p>
@@ -112,7 +112,7 @@ export default function Dashboard() {
                     <div className="title-icon p-1 rounded-circle">
                       <MdOutlinePerson size={40} className="p-1" />
                     </div>
-                    <h6 className="text-secondary ms-2 mb-0">Administrativos</h6>
+                    <h6 className="text-secondary text-truncate ms-2 mb-0">Administrativos</h6>
                   </div>
                   <div className="d-flex flex-column align-items-center">
                     <p className="fs-1 fw-bold text-blue-500 mb-0">{adminCount}</p>
@@ -130,7 +130,7 @@ export default function Dashboard() {
                     <div className="title-icon p-1 rounded-circle">
                       <MdOutlineCoPresent size={40} className="p-1" />
                     </div>
-                    <h6 className="text-secondary ms-2 mb-0">Total de docentes</h6>
+                    <h6 className="text-secondary text-truncate ms-2 mb-0">Total de docentes</h6>
                   </div>
                   <div className="d-flex flex-column align-items-center">
                     <p className="fs-1 fw-bold text-blue-500 mb-0">{teachersCount}</p>
@@ -146,7 +146,7 @@ export default function Dashboard() {
                     <div className="title-icon p-1 rounded-circle">
                       <MdOutlineGroup size={40} className="p-1" />
                     </div>
-                    <h6 className="text-secondary ms-2 mb-0">Total de estudiantes</h6>
+                    <h6 className="text-secondary text-truncate ms-2 mb-0">Total de estudiantes</h6>
                   </div>
                   <div className="d-flex flex-column align-items-center">
                     <p className="fs-1 fw-bold text-blue-500 mb-0">{studentsCount}</p>
@@ -164,7 +164,7 @@ export default function Dashboard() {
                 <div className="title-icon p-1 rounded-circle">
                   <MdOutlineEmojiEvents size={40} className="p-1 text-blue-500" />
                 </div>
-                <h6 className="text-secondary ms-2 mb-0">Desempeño docente</h6>
+                <h6 className="text-secondary text-truncate ms-2 mb-0">Desempeño docente</h6>
               </div>
               <div className="d-flex flex-column align-items-center flex-grow-1 justify-content-center">
                 <div>

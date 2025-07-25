@@ -39,6 +39,7 @@ export default function Profile() {
     TEACHER: 'Maestro',
     STUDENT: 'Estudiante',
     SUPERVISOR: 'Supervisor',
+    DEV: 'Desarrollador',
   };
   const roleLabel = ROLE_MAP[user.role?.name || user.role] || 'Sin rol';
 

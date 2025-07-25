@@ -114,10 +114,10 @@ const calculateEndDate = (startDate, curriculum) => {
 
   const duration = calculateCurriculumDuration(curriculum);
   const endDate = new Date(startDate);
-  
+
   // Añadir la duración calculada
-  endDate.setDate(endDate.getDate() + (duration.weeks * 7));
-  
+  endDate.setDate(endDate.getDate() + duration.weeks * 7);
+
   return endDate;
 };
 
@@ -173,7 +173,7 @@ export default function Groups() {
   useEffect(() => {
     if (form.startDate && form.curriculum) {
       const calculatedEndDate = calculateEndDate(form.startDate, form.curriculum);
-      setForm(prev => ({ ...prev, endDate: calculatedEndDate }));
+      setForm((prev) => ({ ...prev, endDate: calculatedEndDate }));
     }
   }, [form.startDate, form.curriculum]);
 
@@ -314,11 +314,11 @@ export default function Groups() {
       weekDay: form.weekDay,
       startTime: fmtTime(form.startTime),
       endTime: fmtTime(form.endTime),
+      startDate: form.startDate.toISOString().split('T')[0], // Formato: "yyyy-MM-dd"
+      endDate: form.endDate ? form.endDate.toISOString().split('T')[0] : null,
       teacherId: form.teacher?.id,
       careerId: career.id,
       curriculumId: form.curriculum.id,
-      startDate: form.startDate.toISOString().split('T')[0],
-      endDate: form.endDate ? form.endDate.toISOString().split('T')[0] : null,
     };
 
     try {
@@ -347,11 +347,11 @@ export default function Groups() {
         weekDay: form.weekDay,
         startTime: fmtTime(form.startTime),
         endTime: fmtTime(form.endTime),
+        startDate: form.startDate.toISOString().split('T')[0], // Formato: "yyyy-MM-dd"
+        endDate: form.endDate ? form.endDate.toISOString().split('T')[0] : null,
         teacherId: form.teacher?.id,
         careerId: career.id,
         curriculumId: form.curriculum.id,
-        startDate: form.startDate.toISOString().split('T')[0],
-        endDate: form.endDate ? form.endDate.toISOString().split('T')[0] : null,
       };
       await updateGroup(editingGroupId, payload);
       await loadGroups();
@@ -453,6 +453,15 @@ export default function Groups() {
     });
   };
 
+  const endDateBodyTemplate = (rowData) => {
+    if (!rowData.endDate) return <span className="text-muted">-</span>;
+    return new Date(rowData.endDate).toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
   const isFormValid = Object.keys(validationErrors).length === 0 && form.name.trim() && form.weekDay && form.teacher && form.curriculum && form.startDate;
 
   if (loading) {
@@ -506,12 +515,6 @@ export default function Groups() {
 
   return (
     <>
-      <style jsx>{`
-        .btn-close {
-          --bs-btn-close-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23e31e24'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414'/%3e%3c/svg%3e");
-        }
-      `}</style>
-
       <div className="bg-white rounded-top p-2">
         <CareerTabs />
       </div>
@@ -545,6 +548,7 @@ export default function Groups() {
           <Column field="startTime" header="Hora Inicio" sortable />
           <Column field="endTime" header="Hora Fin" sortable />
           <Column field="startDate" header="Fecha Inicio" body={dateBodyTemplate} sortable />
+          <Column field="endDate" header="Fecha Fin" body={endDateBodyTemplate} sortable />
           <Column field="teacherName" header="Docente" sortable />
           <Column field="curriculumName" header="Plan de estudios" sortable />
           <Column body={actions} header="Acciones" exportable={false} />
@@ -574,14 +578,7 @@ export default function Groups() {
                     <div className="row">
                       <div className="col-12">
                         <label className="form-label fw-semibold">Nombre del grupo *</label>
-                        <InputText
-                          className={`w-100 ${validationErrors.name ? 'p-invalid' : ''}`}
-                          value={form.name}
-                          onChange={(e) => setForm({ ...form, name: e.target.value })}
-                          placeholder="Ingrese el nombre del grupo"
-                          required
-                          autoFocus
-                        />
+                        <InputText className={`w-100 ${validationErrors.name ? 'p-invalid' : ''}`} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ingrese el nombre del grupo" required autoFocus />
                         {validationErrors.name && <small className="p-error">{validationErrors.name}</small>}
                       </div>
                     </div>
@@ -600,8 +597,7 @@ export default function Groups() {
                     <div className="row">
                       <div className="col-12">
                         <label className="form-label fw-semibold">
-                          Docente asignado *
-                          <small className="text-secondary ms-1">({careerTeachers.length} disponibles)</small>
+                          Docente asignado *<small className="text-secondary ms-1">({careerTeachers.length} disponibles)</small>
                         </label>
                         <Dropdown
                           className={`w-100 ${validationErrors.teacher ? 'p-invalid' : ''}`}
@@ -642,11 +638,7 @@ export default function Groups() {
                           required
                         />
                         {validationErrors.curriculum && <small className="p-error">{validationErrors.curriculum}</small>}
-                        {form.curriculum && (
-                          <small className="text-muted d-block mt-1">
-                            Duración: {calculateCurriculumDuration(form.curriculum).weeks} semanas
-                          </small>
-                        )}
+                        {form.curriculum && <small className="text-muted d-block mt-1">Duración: {calculateCurriculumDuration(form.curriculum).weeks} semanas</small>}
                       </div>
                     </div>
                   </div>
@@ -664,14 +656,7 @@ export default function Groups() {
                     <div className="row">
                       <div className="col-12 mb-3">
                         <label className="form-label fw-semibold">Día de la semana *</label>
-                        <Dropdown
-                          value={form.weekDay}
-                          options={weekDayOptions}
-                          placeholder="Seleccione un día"
-                          onChange={(e) => setForm({ ...form, weekDay: e.value })}
-                          className={`w-100 ${validationErrors.weekDay ? 'p-invalid' : ''}`}
-                          required
-                        />
+                        <Dropdown value={form.weekDay} options={weekDayOptions} placeholder="Seleccione un día" onChange={(e) => setForm({ ...form, weekDay: e.value })} className={`w-100 ${validationErrors.weekDay ? 'p-invalid' : ''}`} required />
                         {validationErrors.weekDay && <small className="p-error">{validationErrors.weekDay}</small>}
                       </div>
                       <div className="col-md-6 mb-3">
@@ -689,16 +674,7 @@ export default function Groups() {
                       </div>
                       <div className="col-md-6 mb-3">
                         <label className="form-label fw-semibold">Hora de fin *</label>
-                        <Calendar
-                          className={`w-100 ${validationErrors.timeRange ? 'p-invalid' : ''}`}
-                          value={form.endTime}
-                          onChange={(e) => setForm({ ...form, endTime: e.value })}
-                          timeOnly
-                          hourFormat="24"
-                          showIcon
-                          icon={() => <i className="pi pi-clock" />}
-                          required
-                        />
+                        <Calendar className={`w-100 ${validationErrors.timeRange ? 'p-invalid' : ''}`} value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.value })} timeOnly hourFormat="24" showIcon icon={() => <i className="pi pi-clock" />} required />
                       </div>
                     </div>
                     {validationErrors.timeRange && <small className="p-error">{validationErrors.timeRange}</small>}
@@ -730,18 +706,8 @@ export default function Groups() {
                       </div>
                       <div className="col-md-6 mb-3">
                         <label className="form-label fw-semibold">Fecha de finalización</label>
-                        <Calendar
-                          className="w-100"
-                          value={form.endDate}
-                          onChange={(e) => setForm({ ...form, endDate: e.value })}
-                          showIcon
-                          dateFormat="dd/mm/yy"
-                          placeholder="Se calcula automáticamente"
-                          disabled={!form.curriculum}
-                        />
-                        <small className="text-muted">
-                          {form.curriculum ? 'Se calcula automáticamente basándose en el plan de estudios' : 'Seleccione primero un plan de estudios'}
-                        </small>
+                        <Calendar className="w-100" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.value })} showIcon dateFormat="dd/mm/yy" placeholder="Se calcula automáticamente" disabled={!form.curriculum} />
+                        <small className="text-muted">{form.curriculum ? 'Se calcula automáticamente basándose en el plan de estudios' : 'Seleccione primero un plan de estudios'}</small>
                       </div>
                     </div>
                     {validationErrors.dateRange && <small className="p-error">{validationErrors.dateRange}</small>}
@@ -791,14 +757,7 @@ export default function Groups() {
                     <div className="row">
                       <div className="col-12">
                         <label className="form-label fw-semibold">Nombre del grupo *</label>
-                        <InputText
-                          className={`w-100 ${validationErrors.name ? 'p-invalid' : ''}`}
-                          value={form.name}
-                          onChange={(e) => setForm({ ...form, name: e.target.value })}
-                          placeholder="Ingrese el nombre del grupo"
-                          required
-                          autoFocus
-                        />
+                        <InputText className={`w-100 ${validationErrors.name ? 'p-invalid' : ''}`} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ingrese el nombre del grupo" required autoFocus />
                         {validationErrors.name && <small className="p-error">{validationErrors.name}</small>}
                       </div>
                     </div>
@@ -817,8 +776,7 @@ export default function Groups() {
                     <div className="row">
                       <div className="col-12">
                         <label className="form-label fw-semibold">
-                          Docente asignado *
-                          <small className="text-secondary ms-1">({careerTeachers.length} disponibles)</small>
+                          Docente asignado *<small className="text-secondary ms-1">({careerTeachers.length} disponibles)</small>
                         </label>
                         <Dropdown
                           className={`w-100 ${validationErrors.teacher ? 'p-invalid' : ''}`}
@@ -859,11 +817,7 @@ export default function Groups() {
                           required
                         />
                         {validationErrors.curriculum && <small className="p-error">{validationErrors.curriculum}</small>}
-                        {form.curriculum && (
-                          <small className="text-muted d-block mt-1">
-                            Duración: {calculateCurriculumDuration(form.curriculum).weeks} semanas
-                          </small>
-                        )}
+                        {form.curriculum && <small className="text-muted d-block mt-1">Duración: {calculateCurriculumDuration(form.curriculum).weeks} semanas</small>}
                       </div>
                     </div>
                   </div>
@@ -881,14 +835,7 @@ export default function Groups() {
                     <div className="row">
                       <div className="col-12 mb-3">
                         <label className="form-label fw-semibold">Día de la semana *</label>
-                        <Dropdown
-                          value={form.weekDay}
-                          options={weekDayOptions}
-                          placeholder="Seleccione un día"
-                          onChange={(e) => setForm({ ...form, weekDay: e.value })}
-                          className={`w-100 ${validationErrors.weekDay ? 'p-invalid' : ''}`}
-                          required
-                        />
+                        <Dropdown value={form.weekDay} options={weekDayOptions} placeholder="Seleccione un día" onChange={(e) => setForm({ ...form, weekDay: e.value })} className={`w-100 ${validationErrors.weekDay ? 'p-invalid' : ''}`} required />
                         {validationErrors.weekDay && <small className="p-error">{validationErrors.weekDay}</small>}
                       </div>
                       <div className="col-md-6 mb-3">
@@ -906,16 +853,7 @@ export default function Groups() {
                       </div>
                       <div className="col-md-6 mb-3">
                         <label className="form-label fw-semibold">Hora de fin *</label>
-                        <Calendar
-                          className={`w-100 ${validationErrors.timeRange ? 'p-invalid' : ''}`}
-                          value={form.endTime}
-                          onChange={(e) => setForm({ ...form, endTime: e.value })}
-                          timeOnly
-                          hourFormat="24"
-                          showIcon
-                          icon={() => <i className="pi pi-clock" />}
-                          required
-                        />
+                        <Calendar className={`w-100 ${validationErrors.timeRange ? 'p-invalid' : ''}`} value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.value })} timeOnly hourFormat="24" showIcon icon={() => <i className="pi pi-clock" />} required />
                       </div>
                     </div>
                     {validationErrors.timeRange && <small className="p-error">{validationErrors.timeRange}</small>}
@@ -947,18 +885,8 @@ export default function Groups() {
                       </div>
                       <div className="col-md-6 mb-3">
                         <label className="form-label fw-semibold">Fecha de finalización</label>
-                        <Calendar
-                          className="w-100"
-                          value={form.endDate}
-                          onChange={(e) => setForm({ ...form, endDate: e.value })}
-                          showIcon
-                          dateFormat="dd/mm/yy"
-                          placeholder="Se calcula automáticamente"
-                          disabled={!form.curriculum}
-                        />
-                        <small className="text-muted">
-                          {form.curriculum ? 'Se calcula automáticamente basándose en el plan de estudios' : 'Seleccione primero un plan de estudios'}
-                        </small>
+                        <Calendar className="w-100" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.value })} showIcon dateFormat="dd/mm/yy" placeholder="Se calcula automáticamente" disabled={!form.curriculum} />
+                        <small className="text-muted">{form.curriculum ? 'Se calcula automáticamente basándose en el plan de estudios' : 'Seleccione primero un plan de estudios'}</small>
                       </div>
                     </div>
                     {validationErrors.dateRange && <small className="p-error">{validationErrors.dateRange}</small>}

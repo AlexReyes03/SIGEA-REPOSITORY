@@ -28,10 +28,10 @@ export default function LoginForm() {
 
   const handlePasswordChangeRedirect = (userRole) => {
     const rolePath = userRole.toLowerCase();
-    navigate(`/${rolePath}/profile`, { 
-      state: { 
-        shouldChangePassword: true 
-      } 
+    navigate(`/${rolePath}/profile`, {
+      state: {
+        shouldChangePassword: true,
+      },
     });
   };
 
@@ -42,7 +42,7 @@ export default function LoginForm() {
     try {
       const user = await login({ email, password });
       setAuthState('');
-      
+
       if (email.trim() === password.trim()) {
         showSuccess('Bienvenido', `¡Qué gusto verte, ${user.name}!`);
         confirmAction({
@@ -61,7 +61,7 @@ export default function LoginForm() {
           },
           onReject: () => {
             return;
-          }
+          },
         });
         return;
       }
@@ -69,7 +69,6 @@ export default function LoginForm() {
       // Login normal - navegar al dashboard correspondiente
       showSuccess('Bienvenido', `¡Qué gusto verte, ${user.name}!`);
       redirectToRoleDashboard(user.role.name);
-
     } catch (err) {
       switch (err.status) {
         case 401:
@@ -150,10 +149,11 @@ export default function LoginForm() {
 
           <Button type="submit" label="Iniciar Sesión" className="button-blue-800 w-100 rounded-3 fs-4" loading={loading} disabled={isDisabled} />
 
-          {authState === 'warn' && <Message className="mt-2" severity="warn" text="Cuidado. Cinco intentos fallidos bloquearán tu cuenta temporalmente." />}
+          <div className='text-center'>
+            {authState === 'warn' && <Message className="mt-2" severity="warn" text="Cuidado. Cinco intentos fallidos bloquearán tu cuenta temporalmente." />}
 
-          {authState === 'locked' && <Message className="mt-2" severity="error" text="Cuenta bloqueada temporalmente por demasiados intentos fallidos. Espera o restablece tu contraseña." />}
-
+            {authState === 'locked' && <Message className="mt-2" severity="error" text="Cuenta bloqueada temporalmente por demasiados intentos fallidos. Espera o restablece tu contraseña." />}
+          </div>
           <div className="text-end my-3 text-muted fw-semibold">
             ¿Olvidaste tu contraseña?
             <span onClick={() => navigate('/security/recover')} className="ms-2 text-primary" style={{ cursor: 'pointer' }}>

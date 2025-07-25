@@ -77,14 +77,14 @@ export default function Curriculums() {
   useEffect(() => {
     if (pendingFocus && !loading) {
       const { itemId, type } = pendingFocus;
-      
+
       if (type === 'curriculum') {
         // Simular click en el curriculum
         setSelectedCurriculumId(itemId);
         setSelectedModuleId(null);
         setSelectedSubjectId(null);
         setIsModuleCollapsed(false);
-        
+
         // Hacer scroll al elemento
         setTimeout(() => {
           const element = document.querySelector(`[data-curriculum-id="${itemId}"]`);
@@ -92,13 +92,12 @@ export default function Curriculums() {
             element.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
         }, 100);
-        
       } else if (type === 'module') {
         // Simular click en el módulo
         setSelectedModuleId(itemId);
         setSelectedSubjectId(null);
         setIsSubjectCollapsed(false);
-        
+
         // Hacer scroll al elemento
         setTimeout(() => {
           const element = document.querySelector(`[data-module-id="${itemId}"]`);
@@ -107,7 +106,7 @@ export default function Curriculums() {
           }
         }, 100);
       }
-      
+
       // Limpiar el pending focus después de un tiempo
       setTimeout(() => {
         setPendingFocus(null);
@@ -226,11 +225,11 @@ export default function Curriculums() {
       showSuccess('Hecho', 'Plan de estudios creado exitosamente');
       setNewCurrName('');
       Modal.getInstance(modalCurrRef.current).hide();
-      
+
       // Configurar focus para después de cargar datos
       setLastCreatedCurriculumId(newCurriculum.id);
       focusAndSelectElement(newCurriculum.id, 'curriculum');
-      
+
       await loadCurriculums();
     } catch (err) {
       showError('Error', 'No se pudo crear el plan');
@@ -253,11 +252,11 @@ export default function Curriculums() {
       showSuccess('Hecho', 'Módulo creado exitosamente');
       setNewModName('');
       Modal.getInstance(modalModRef.current).hide();
-      
+
       // Configurar focus para después de cargar datos
       setLastCreatedModuleId(newModule.id);
       focusAndSelectElement(newModule.id, 'module');
-      
+
       await loadCurriculums();
     } catch (err) {
       showError('Error', 'No se pudo crear el módulo');
@@ -392,28 +391,30 @@ export default function Curriculums() {
   return (
     <>
       <style jsx>{`
-        .btn-close {
-          --bs-btn-close-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23e31e24'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414'/%3e%3c/svg%3e");
-        }
-        
         .card:focus {
           outline: 2px solid #007bff;
           outline-offset: 2px;
           box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.25);
         }
-        
-        .card[data-curriculum-id="${lastCreatedCurriculumId}"] {
+
+        .card[data-curriculum-id='${lastCreatedCurriculumId}'] {
           animation: highlightPulse 2s ease-in-out;
         }
-        
-        .card[data-module-id="${lastCreatedModuleId}"] {
+
+        .card[data-module-id='${lastCreatedModuleId}'] {
           animation: highlightPulse 2s ease-in-out;
         }
-        
+
         @keyframes highlightPulse {
-          0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7); }
-          50% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0.2); }
-          100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
+          0% {
+            box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7);
+          }
+          50% {
+            box-shadow: 0 0 0 10px rgba(0, 123, 255, 0.2);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(0, 123, 255, 0);
+          }
         }
       `}</style>
 
@@ -469,7 +470,7 @@ export default function Curriculums() {
                     </div>
                   </div>
                 ) : (
-                  <div className="d-grid gap-2 px-2 overflow-auto" style={{ maxHeight: '33rem' }}>
+                  <div className="d-grid gap-2 p-2 overflow-auto" style={{ maxHeight: '33rem' }}>
                     {data.length === 0 ? (
                       <div className="text-center">
                         <Message severity="info" text="Aún no hay planes de estudio" />
@@ -596,7 +597,7 @@ export default function Curriculums() {
                 }}
               >
                 <hr />
-                <div className="d-grid gap-2 px-2 overflow-auto" style={{ maxHeight: '33rem' }}>
+                <div className="d-grid gap-2 p-2 overflow-auto" style={{ maxHeight: '33rem' }}>
                   {selectedCurriculum && selectedCurriculum.modules.length > 0 ? (
                     selectedCurriculum.modules.map((module) => {
                       const duration = getModuleDuration(module);
@@ -718,7 +719,7 @@ export default function Curriculums() {
                 }}
               >
                 <hr />
-                <div className="d-grid gap-2 px-2 overflow-auto" style={{ maxHeight: '33rem' }}>
+                <div className="d-grid gap-2 p-2 overflow-auto" style={{ maxHeight: '33rem' }}>
                   {selectedModule && selectedModule.subjects.length > 0 ? (
                     selectedModule.subjects.map((subject) => (
                       <React.Fragment key={subject.id}>
