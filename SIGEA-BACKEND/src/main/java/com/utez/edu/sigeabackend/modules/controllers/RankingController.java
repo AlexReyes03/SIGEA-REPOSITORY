@@ -29,20 +29,20 @@ public class RankingController {
         return service.findByTeacher(teacherId);
     }
 
-    @GetMapping("/student/{studentId}/modules")
-    public ResponseEntity<?> getStudentEvaluationModules(@PathVariable Long studentId) {
-        return service.getStudentEvaluationModules(studentId);
-    }
-
     /**
      * Check if student has evaluated a specific teacher
      * GET /sigea/api/rankings/student/{studentId}/teacher/{teacherId}
      */
-    @GetMapping("/student/{studentId}/teacher/{teacherId}")
+    @GetMapping("/student/{studentId}/teacher/{teacherId}/module/{moduleId}")
     public ResponseEntity<?> checkStudentTeacherEvaluation(
             @PathVariable Long studentId,
-            @PathVariable Long teacherId) {
-        return service.checkStudentTeacherEvaluation(studentId, teacherId);
+            @PathVariable Long teacherId, @PathVariable Long moduleId) {
+        return service.checkStudentTeacherEvaluation(studentId, teacherId, moduleId);
+    }
+
+    @GetMapping("/student/{studentId}/modules")
+    public ResponseEntity<?> getStudentEvaluationModules(@PathVariable Long studentId) {
+        return service.getStudentEvaluationModules(studentId);
     }
 
     @GetMapping("/student/{studentId}")

@@ -20,6 +20,9 @@ public class RankingEntity {
     @Column(name = "date", nullable = false)
     private LocalDateTime date;
 
+    @Column(name = "module_id")
+    private Long moduleId;
+
     // ******* RELACIONES ********
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -53,13 +56,16 @@ public class RankingEntity {
         this.student = student;
     }
 
-    public RankingEntity(long id, String comment, int star, LocalDateTime date, UserEntity teacher, UserEntity student) {
+    public RankingEntity(long id, String comment, int star, LocalDateTime date, Long moduleId, UserEntity teacher, UserEntity student, Long teacherId, Long studentId) {
         this.id = id;
         this.comment = comment;
         this.star = star;
         this.date = date;
+        this.moduleId = moduleId;
         this.teacher = teacher;
         this.student = student;
+        this.teacherId = teacherId;
+        this.studentId = studentId;
     }
 
     // Getters and Setters
@@ -93,6 +99,14 @@ public class RankingEntity {
 
     public void setDate(LocalDateTime date) {
         this.date = date;
+    }
+
+    public Long getModuleId() {
+        return moduleId;
+    }
+
+    public void setModuleId(Long moduleId) {
+        this.moduleId = moduleId;
     }
 
     public UserEntity getTeacher() {

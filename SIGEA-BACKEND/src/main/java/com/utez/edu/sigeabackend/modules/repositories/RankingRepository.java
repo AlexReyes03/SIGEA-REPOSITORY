@@ -40,7 +40,8 @@ public interface RankingRepository extends JpaRepository<RankingEntity, Long> {
             "WHERE r.teacher.id = :teacherId")
     List<RankingEntity> findByTeacher_IdWithDetails(@Param("teacherId") long teacherId);
 
-    Optional<RankingEntity> findByStudent_IdAndTeacher_Id(Long studentId, Long teacherId);
+    //Find ranking by student, teacher and module
+    Optional<RankingEntity> findByStudent_IdAndTeacher_IdAndModuleId(Long studentId, Long teacherId, Long moduleId);
 
     /**
      * Find all rankings by student with details
@@ -52,4 +53,5 @@ public interface RankingRepository extends JpaRepository<RankingEntity, Long> {
             "LEFT JOIN FETCH s.avatar " +
             "WHERE s.id = :studentId")
     List<RankingEntity> findByStudent_IdWithDetails(@Param("studentId") Long studentId);
+
 }

@@ -4,7 +4,11 @@ import com.utez.edu.sigeabackend.config.CustomResponseEntity;
 import com.utez.edu.sigeabackend.modules.entities.GroupStudentEntity;
 import com.utez.edu.sigeabackend.modules.entities.RankingEntity;
 import com.utez.edu.sigeabackend.modules.entities.UserEntity;
-import com.utez.edu.sigeabackend.modules.entities.dto.academics.*;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.EvaluationModuleDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.EvaluationStatusDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.ModuleDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.RankingDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.SubjectDto;
 import com.utez.edu.sigeabackend.modules.entities.dto.groupDtos.GroupResponseDto;
 import com.utez.edu.sigeabackend.modules.repositories.RankingRepository;
 import com.utez.edu.sigeabackend.modules.repositories.UserRepository;
@@ -12,10 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,7 +31,10 @@ public class RankingService {
 
     public RankingService(RankingRepository repository,
                           UserRepository userRepository,
-                          CustomResponseEntity responseService, GroupService groupService, GroupStudentService groupStudentService, ModuleService moduleService) {
+                          CustomResponseEntity responseService,
+                          GroupService groupService,
+                          GroupStudentService groupStudentService,
+                          ModuleService moduleService) {
         this.repository = repository;
         this.userRepository = userRepository;
         this.responseService = responseService;
@@ -126,7 +130,7 @@ public class RankingService {
     @Transactional
     public ResponseEntity<?> create(RankingEntity ranking) {
         try {
-            // Validar que teacherId y studentId estén presentes
+            // Validar que teacherId, studentId y moduleId estén presentes
             if (ranking.getTeacherId() == null) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "El ID del docente es obligatorio"));
@@ -135,6 +139,11 @@ public class RankingService {
             if (ranking.getStudentId() == null) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "El ID del estudiante es obligatorio"));
+            }
+
+            if (ranking.getModuleId() == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "El ID del módulo es obligatorio"));
             }
 
             // Validar que teacher y student existan
@@ -149,12 +158,6 @@ public class RankingService {
             if (studentOpt.isEmpty()) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "El estudiante especificado no existe"));
-            }
-
-            // Validar que el estudiante no haya calificado ya al docente
-            if (repository.existsByStudent_IdAndTeacher_Id(ranking.getStudentId(), ranking.getTeacherId())) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Este estudiante ya ha calificado a este docente"));
             }
 
             // Validar estrellas (1-5)
@@ -220,41 +223,39 @@ public class RankingService {
                     if (modulesResponse.getStatusCode().is2xxSuccessful()) {
                         List<ModuleDto> modules = modulesResponse.getBody();
 
-                        // Verificar si ya evaluó a este teacher
-                        boolean isEvaluated = repository.existsByStudent_IdAndTeacher_Id(
-                                studentId, group.teacherId()
-                        );
+                        for (ModuleDto module : modules) {
+                            // Verificar si ya evaluó a este teacher en este módulo específico
+                            List<RankingEntity> teacherRankings = repository.findByTeacher_IdWithDetails(group.teacherId());
+                            Optional<RankingEntity> existingRanking = teacherRankings.stream()
+                                    .filter(r -> Objects.equals(r.getStudent().getId(), studentId))
+                                    .filter(r -> Objects.equals(r.getModuleId(), module.id()))
+                                    .findFirst();
 
-                        // Obtener evaluación existente si existe
-                        RankingEntity existingRanking = null;
-                        if (isEvaluated) {
-                            existingRanking = repository.findByStudent_IdAndTeacher_Id(
-                                    studentId, group.teacherId()
-                            ).orElse(null);
+                            boolean isEvaluated = existingRanking.isPresent();
+
+                            // Extraer nombres de materias SOLO de este módulo
+                            List<String> subjectNames = module.subjects().stream()
+                                    .map(SubjectDto::name)
+                                    .collect(Collectors.toList());
+
+                            // Crear DTO de evaluación POR MÓDULO
+                            EvaluationModuleDto evaluationModule = new EvaluationModuleDto(
+                                    group.groupId() + "-" + group.teacherId() + "-" + module.id(), // String id
+                                    module.name(), // String moduleName
+                                    module.id(), // Long moduleId
+                                    group.teacherName(), // String teacherName
+                                    group.teacherId(), // Long teacherId
+                                    group.groupId(), // Long groupId
+                                    group.curriculumName(), // String curriculumName
+                                    group.weekDay() + " " + group.startTime() + "-" + group.endTime(), // String schedule
+                                    subjectNames, // List<String> subjects
+                                    isEvaluated, // boolean isEvaluated
+                                    existingRanking.isPresent() ? existingRanking.get().getStar() : null, // Integer submittedRating
+                                    existingRanking.isPresent() ? existingRanking.get().getComment() : null // String submittedComment
+                            );
+
+                            evaluationModules.add(evaluationModule);
                         }
-
-                        // Extraer nombres de materias
-                        List<String> subjectNames = modules.stream()
-                                .flatMap(module -> module.subjects().stream())
-                                .map(SubjectDto::name)
-                                .collect(Collectors.toList());
-
-                        // Crear DTO de evaluación
-                        EvaluationModuleDto evaluationModule = new EvaluationModuleDto(
-                                group.groupId() + "-" + group.teacherId(), // unique ID
-                                group.curriculumName() + " - Grupo " + group.name(),
-                                group.teacherName(),
-                                group.teacherId(),
-                                group.groupId(),
-                                group.curriculumName(),
-                                group.weekDay() + " " + group.startTime() + "-" + group.endTime(),
-                                subjectNames,
-                                isEvaluated,
-                                existingRanking != null ? existingRanking.getStar() : null,
-                                existingRanking != null ? existingRanking.getComment() : null
-                        );
-
-                        evaluationModules.add(evaluationModule);
                     }
                 }
             }
@@ -267,14 +268,7 @@ public class RankingService {
         }
     }
 
-    /**
-     * Check if a student has already evaluated a specific teacher
-     *
-     * @param studentId Student ID
-     * @param teacherId Teacher ID
-     * @return ResponseEntity with evaluation status
-     */
-    public ResponseEntity<?> checkStudentTeacherEvaluation(Long studentId, Long teacherId) {
+    public ResponseEntity<?> checkStudentTeacherEvaluation(Long studentId, Long teacherId, Long moduleId) {
         try {
             // Validar que ambos usuarios existen
             if (!userRepository.existsById(studentId)) {
@@ -287,10 +281,12 @@ public class RankingService {
                         .body(Map.of("error", "El docente especificado no existe"));
             }
 
-            // Buscar evaluación existente
-            Optional<RankingEntity> existingRanking = repository.findByStudent_IdAndTeacher_Id(
-                    studentId, teacherId
-            );
+            // Buscar evaluación existente por student, teacher Y module usando método existente
+            List<RankingEntity> teacherRankings = repository.findByTeacher_IdWithDetails(teacherId);
+            Optional<RankingEntity> existingRanking = teacherRankings.stream()
+                    .filter(r -> Objects.equals(r.getStudent().getId(), studentId))
+                    .filter(r -> r.getModuleId() != null && r.getModuleId().equals(moduleId))
+                    .findFirst();
 
             if (existingRanking.isPresent()) {
                 RankingEntity ranking = existingRanking.get();
@@ -314,12 +310,7 @@ public class RankingService {
         }
     }
 
-    /**
-     * Get all evaluations made by a specific student
-     *
-     * @param studentId Student ID
-     * @return ResponseEntity with student's evaluations
-     */
+
     public ResponseEntity<?> findByStudent(Long studentId) {
         try {
             if (!userRepository.existsById(studentId)) {
@@ -327,13 +318,17 @@ public class RankingService {
                         .body(Map.of("error", "El estudiante especificado no existe"));
             }
 
-            List<RankingEntity> rankings = repository.findByStudent_IdWithDetails(studentId);
+            // Usar método existente y filtrar por student
+            List<RankingEntity> allRankings = repository.findAllWithDetails();
+            List<RankingEntity> studentRankings = allRankings.stream()
+                    .filter(r -> Objects.equals(r.getStudent().getId(), studentId))
+                    .collect(Collectors.toList());
 
-            if (rankings.isEmpty()) {
+            if (studentRankings.isEmpty()) {
                 return responseService.getOkResponse("Evaluaciones del estudiante", List.of());
             }
 
-            List<RankingDto> dtos = rankings.stream()
+            List<RankingDto> dtos = studentRankings.stream()
                     .map(this::toDto)
                     .collect(Collectors.toList());
 
