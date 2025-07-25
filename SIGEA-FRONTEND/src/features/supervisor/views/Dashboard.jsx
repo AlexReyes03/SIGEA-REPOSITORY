@@ -22,14 +22,12 @@ export default function Dashboard() {
   const [ratingValue, setRatingValue] = useState(4.6);
   const [isUp, setIsUp] = useState(true);
 
-  // Estados para estadísticas
   const [supervisorData, setSupervisorData] = useState(null);
   const [totalStudents, setTotalStudents] = useState(0);
   const [totalTeachers, setTotalTeachers] = useState(0);
   const [totalCareers, setTotalCareers] = useState(0);
   const [campusWithStats, setCampusWithStats] = useState([]);
 
-  // Animación del rating
   useEffect(() => {
     let mounted = true;
 
@@ -55,13 +53,12 @@ export default function Dashboard() {
     };
   }, []);
 
-  // Función para cargar estadísticas de un plantel
   const loadCampusStats = useCallback(async (campusId) => {
     try {
       const [careers, students, teachers] = await Promise.all([
         getCareerByPlantelId(campusId),
-        getUserByRoleAndPlantel(4, campusId), // 4 = STUDENT
-        getUserByRoleAndPlantel(3, campusId), // 3 = TEACHER
+        getUserByRoleAndPlantel(4, campusId),
+        getUserByRoleAndPlantel(3, campusId),
       ]);
 
       return {
@@ -79,7 +76,6 @@ export default function Dashboard() {
     }
   }, []);
 
-  // Función principal para cargar datos del supervisor
   const loadSupervisorData = useCallback(async () => {
     if (!user?.id) return;
 
@@ -88,25 +84,23 @@ export default function Dashboard() {
       const data = await getSupervisorCampuses(user.id);
       setSupervisorData(data);
 
-      // Preparar array de todos los planteles
-      const allCampus = [
-        {
-          id: data.primaryCampusId,
-          name: data.primaryCampusName,
-          type: 'PRIMARY',
-          isPrimary: true,
-        },
-        ...data.additionalCampuses.map((campus) => ({
-          id: campus.campusId,
-          name: campus.campusName,
-          type: 'ADDITIONAL',
-          isPrimary: false,
-          assignedAt: campus.assignedAt,
-        })),
-      ];
+      const supervisedCampus = data.additionalCampuses.map((campus) => ({
+        id: campus.campusId,
+        name: campus.campusName,
+        type: 'SUPERVISED',
+        isPrimary: false,
+        assignedAt: campus.assignedAt,
+      }));
 
-      // Cargar estadísticas para cada plantel
-      const campusStatsPromises = allCampus.map(async (campus) => {
+      if (supervisedCampus.length === 0) {
+        setCampusWithStats([]);
+        setTotalStudents(0);
+        setTotalTeachers(0);
+        setTotalCareers(0);
+        return;
+      }
+
+      const campusStatsPromises = supervisedCampus.map(async (campus) => {
         const stats = await loadCampusStats(campus.id);
         return {
           ...campus,
@@ -117,7 +111,6 @@ export default function Dashboard() {
       const campusWithStatsData = await Promise.all(campusStatsPromises);
       setCampusWithStats(campusWithStatsData);
 
-      // Calcular totales
       const totals = campusWithStatsData.reduce(
         (acc, campus) => ({
           students: acc.students + campus.studentsCount,
@@ -131,6 +124,7 @@ export default function Dashboard() {
       setTotalTeachers(totals.teachers);
       setTotalCareers(totals.careers);
     } catch (err) {
+      console.error('Error loading supervisor data:', err);
       showError('Error', 'Error al cargar los datos del supervisor');
       setSupervisorData(null);
       setCampusWithStats([]);
@@ -139,26 +133,24 @@ export default function Dashboard() {
     }
   }, [user?.id, showError, loadCampusStats]);
 
-  // Cargar datos al montar el componente
   useEffect(() => {
     if (user?.id) {
       loadSupervisorData();
     }
   }, [loadSupervisorData]);
 
-  // Función para navegar a un plantel específico
   const handleCampusClick = useCallback(
-  (campus) => {
-    navigate('/supervisor/campuses-careers/careers', {
-      state: {
-        campusId: campus.id,
-        campusName: campus.name,
-        isPrimary: campus.isPrimary,
-      },
-    });
-  },
-  [navigate]
-);
+    (campus) => {
+      navigate('/supervisor/campuses-careers/careers', {
+        state: {
+          campusId: campus.id,
+          campusName: campus.name,
+          isPrimary: campus.isPrimary,
+        },
+      });
+    },
+    [navigate]
+  );
 
   if (loading) {
     return (
@@ -196,7 +188,7 @@ export default function Dashboard() {
                 <h6 className="text-secondary ms-2 mb-0 text-truncate">Planteles supervisados</h6>
               </div>
               <div className="text-center">
-                <p className="fs-1 fw-bold text-blue-500 mb-0">{supervisorData ? 1 + supervisorData.additionalCampuses.length : 0}</p>
+                <p className="fs-1 fw-bold text-blue-500 mb-0">{supervisorData ? supervisorData.additionalCampuses.length : 0}</p>
               </div>
             </div>
           </div>
@@ -268,19 +260,15 @@ export default function Dashboard() {
                   <h5 className="text-blue-500 fw-semibold ms-3 mb-0">Planteles supervisados</h5>
                 </div>
                 {campusWithStats.length > 0 && (
-  <Button 
-    size="small" 
-    outlined 
-    icon="pi pi-arrow-up-right" 
-    onClick={() => navigate('/supervisor/campuses-careers')}
-  >
-    <span className="d-none d-md-inline ms-2">Ver todos</span>
-  </Button>
-)}
+                  <Button size="small" outlined icon="pi pi-arrow-up-right" onClick={() => navigate('/supervisor/campuses-careers')}>
+                    <span className="d-none d-md-inline ms-2">Ver todos</span>
+                  </Button>
+                )}
               </div>
               {campusWithStats.length === 0 ? (
                 <div className="text-center py-5">
-                  <Message severity="info" text="No tienes planteles asignados." />
+                  <Message severity="info" text="No tienes planteles asignados para supervisión." />
+                  <p className="text-muted mt-2">Contacta al administrador para que te asigne planteles a supervisar</p>
                 </div>
               ) : (
                 <div className="overflow-auto" style={{ maxHeight: '300px' }}>

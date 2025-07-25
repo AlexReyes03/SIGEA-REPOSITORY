@@ -6,8 +6,19 @@ export const assignCampusToSupervisor = async (supervisorId, campusId, assignedB
     body: {
       supervisorId,
       campusId,
-      assignedByUserId
-    }
+      assignedByUserId,
+    },
+  });
+};
+
+export const updateSupervisorCampuses = async (supervisorId, campusIds, updatedByUserId) => {
+  return await request(`/api/supervision/supervisor/${supervisorId}/campuses`, {
+    method: 'PUT',
+    body: {
+      supervisorId,
+      campusIds,
+      updatedByUserId,
+    },
   });
 };
 
@@ -16,8 +27,8 @@ export const removeCampusFromSupervisor = async (supervisorId, campusId) => {
     method: 'DELETE',
     body: {
       supervisorId,
-      campusId
-    }
+      campusId,
+    },
   });
 };
 
@@ -32,20 +43,18 @@ export const getSupervisorsByCampus = async (campusId) => {
 };
 
 export const assignMultipleCampusToSupervisor = async (supervisorId, campusIds, assignedByUserId) => {
-  const promises = campusIds.map(campusId => 
-    assignCampusToSupervisor(supervisorId, campusId, assignedByUserId)
-  );
-  
+  const promises = campusIds.map((campusId) => assignCampusToSupervisor(supervisorId, campusId, assignedByUserId));
+
   try {
     const results = await Promise.allSettled(promises);
-    const successful = results.filter(result => result.status === 'fulfilled');
-    const failed = results.filter(result => result.status === 'rejected');
-    
+    const successful = results.filter((result) => result.status === 'fulfilled');
+    const failed = results.filter((result) => result.status === 'rejected');
+
     return {
       successful: successful.length,
       failed: failed.length,
       total: campusIds.length,
-      errors: failed.map(f => f.reason)
+      errors: failed.map((f) => f.reason),
     };
   } catch (error) {
     throw error;

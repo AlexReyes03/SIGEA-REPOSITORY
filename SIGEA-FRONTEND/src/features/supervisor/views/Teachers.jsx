@@ -28,7 +28,6 @@ export default function Teachers() {
   const location = useLocation();
   const { showError } = useToast();
 
-  // Obtener datos del plantel desde el state de navegación
   const { campusId, campusName, isPrimary } = location.state || {};
 
   const [teachers, setTeachers] = useState([]);
@@ -36,7 +35,6 @@ export default function Teachers() {
   const [refreshing, setRefreshing] = useState(false);
   const [globalFilter, setGlobalFilter] = useState('');
 
-  // Función para cargar docentes del plantel
   const loadTeachers = useCallback(async () => {
     if (!campusId) {
       showError('Error', 'No se pudo identificar el plantel seleccionado');
@@ -46,12 +44,11 @@ export default function Teachers() {
 
     try {
       setLoading(true);
-      
-      // Obtener el ID del rol TEACHER
-      let teacherRoleId = 3; // Valor por defecto
+
+      let teacherRoleId = 3;
       try {
         const roles = await getAllRoles();
-        const teacherRole = roles.find(role => role.roleName === 'TEACHER');
+        const teacherRole = roles.find((role) => role.roleName === 'TEACHER');
         if (teacherRole) {
           teacherRoleId = teacherRole.id;
         }
@@ -70,18 +67,16 @@ export default function Teachers() {
     }
   }, [campusId, showError, navigate]);
 
-  // Función para refrescar datos manualmente
   const refreshTeachers = useCallback(async () => {
     if (!campusId) return;
 
     try {
       setRefreshing(true);
-      
-      // Obtener el ID del rol TEACHER
-      let teacherRoleId = 3; // Valor por defecto
+
+      let teacherRoleId = 3;
       try {
         const roles = await getAllRoles();
-        const teacherRole = roles.find(role => role.roleName === 'TEACHER');
+        const teacherRole = roles.find((role) => role.roleName === 'TEACHER');
         if (teacherRole) {
           teacherRoleId = teacherRole.id;
         }
@@ -99,17 +94,14 @@ export default function Teachers() {
     }
   }, [campusId, showError]);
 
-  // Cargar datos al montar el componente
   useEffect(() => {
     if (campusId) {
       loadTeachers();
     } else {
-      // Si no hay campusId, redirigir a la selección de planteles
       navigate('/supervisor/campuses-teachers');
     }
   }, [loadTeachers, campusId, navigate]);
 
-  // Procesar datos de docentes para la tabla
   const processedTeachers = useMemo(() => {
     if (!Array.isArray(teachers)) return [];
 
@@ -135,7 +127,6 @@ export default function Teachers() {
     });
   }, [teachers]);
 
-  // Función para navegar a teacher-score
   const handleViewTeacherScore = useCallback(
     (teacher) => {
       navigate('/supervisor/campuses-teachers/teachers/teacher-score', {
@@ -159,9 +150,10 @@ export default function Teachers() {
     },
     {
       label: campusName || 'Plantel',
-      command: () => navigate('/supervisor/campuses-teachers/teachers', { 
-        state: { campusId, campusName, isPrimary } 
-      }),
+      command: () =>
+        navigate('/supervisor/campuses-teachers/teachers', {
+          state: { campusId, campusName, isPrimary },
+        }),
     },
   ];
 
@@ -182,29 +174,9 @@ export default function Teachers() {
           <span className="badge bg-blue-500 p-2 me-2">{processedTeachers.length}</span>
         </div>
         <div className="d-flex align-items-center gap-2">
-          <InputText 
-            placeholder="Buscar docente..." 
-            value={globalFilter} 
-            onChange={(e) => setGlobalFilter(e.target.value)} 
-            disabled={loading} 
-            className="me-2" 
-            style={{ minWidth: '250px' }} 
-          />
-          <Button 
-            icon={refreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} 
-            severity="primary" 
-            onClick={refreshTeachers} 
-            disabled={loading || refreshing} 
-            tooltip="Actualizar datos" 
-            tooltipOptions={{ position: 'top' }} 
-          />
-          <Button 
-            icon="pi pi-upload" 
-            outlined={loading || !processedTeachers.length} 
-            severity="help" 
-            onClick={() => dt.current?.exportCSV()} 
-            disabled={loading || !processedTeachers.length}
-          >
+          <InputText placeholder="Buscar docente..." value={globalFilter} onChange={(e) => setGlobalFilter(e.target.value)} disabled={loading} className="me-2" style={{ minWidth: '250px' }} />
+          <Button icon={refreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} severity="primary" onClick={refreshTeachers} disabled={loading || refreshing} tooltip="Actualizar datos" tooltipOptions={{ position: 'top' }} />
+          <Button icon="pi pi-upload" outlined={loading || !processedTeachers.length} severity="help" onClick={() => dt.current?.exportCSV()} disabled={loading || !processedTeachers.length}>
             <span className="d-none d-sm-inline ms-2">Exportar</span>
           </Button>
         </div>
@@ -213,7 +185,6 @@ export default function Teachers() {
     [campusName, processedTeachers.length, isPrimary, globalFilter, loading, refreshing, refreshTeachers]
   );
 
-  // Templates para las columnas
   const statusBodyTemplate = useCallback((rowData) => {
     const statusConfig = getStatusConfig(rowData.status);
     return <Tag value={statusConfig.label} severity={statusConfig.severity} />;
@@ -226,18 +197,7 @@ export default function Teachers() {
 
   const actionsTemplate = useCallback(
     (row) => {
-      return (
-        <Button 
-          icon="pi pi-chart-line" 
-          rounded 
-          outlined 
-          severity="info" 
-          disabled={loading} 
-          tooltip="Ver desempeño" 
-          tooltipOptions={{ position: 'top' }} 
-          onClick={() => handleViewTeacherScore(row)}
-        />
-      );
+      return <Button icon="pi pi-chart-line" rounded outlined severity="info" disabled={loading} tooltip="Ver desempeño" tooltipOptions={{ position: 'top' }} onClick={() => handleViewTeacherScore(row)} />;
     },
     [loading, handleViewTeacherScore]
   );
@@ -273,12 +233,7 @@ export default function Teachers() {
             <MdOutlineCoPresent className="text-secondary" size={70} />
             <h5 className="mt-3 text-muted">No hay docentes registrados</h5>
             <p className="text-muted">Este plantel no tiene docentes asignados</p>
-            <Button 
-              label="Volver a planteles" 
-              severity="secondary" 
-              outlined 
-              onClick={() => navigate('/supervisor/campuses-teachers')} 
-            />
+            <Button label="Volver a planteles" severity="secondary" outlined onClick={() => navigate('/supervisor/campuses-teachers')} />
           </div>
         </div>
       ) : (
@@ -292,69 +247,22 @@ export default function Teachers() {
             rowsPerPageOptions={[5, 10, 25, 50]}
             filterDisplay="menu"
             globalFilter={globalFilter}
-            globalFilterFields={[
-              'name', 
-              'paternalSurname', 
-              'maternalSurname', 
-              'fullName', 
-              'email', 
-              'primaryRegistrationNumber', 
-              'searchableStatus', 
-              'displayCreatedAt'
-            ]}
+            globalFilterFields={['name', 'paternalSurname', 'maternalSurname', 'fullName', 'email', 'primaryRegistrationNumber', 'searchableStatus', 'displayCreatedAt']}
             header={header}
             className="text-nowrap"
             emptyMessage={
               <div className="text-center my-5">
                 <MdOutlineCoPresent size={70} className="text-secondary" />
-                <p className="mt-2">
-                  {!globalFilter 
-                    ? 'No hay docentes registrados en este plantel' 
-                    : `No se encontraron docentes para "${globalFilter}"`
-                  }
-                </p>
+                <p className="mt-2">{!globalFilter ? 'No hay docentes registrados en este plantel' : `No se encontraron docentes para "${globalFilter}"`}</p>
               </div>
             }
           >
-            <Column 
-              field="primaryRegistrationNumber" 
-              header="Matrícula" 
-              body={registrationBodyTemplate} 
-              sortable 
-              style={{ minWidth: '120px' }} 
-            />
-            <Column 
-              field="fullName" 
-              header="Nombre Completo" 
-              sortable 
-              style={{ minWidth: '200px' }} 
-            />
-            <Column 
-              field="email" 
-              header="Correo Electrónico" 
-              sortable 
-              style={{ minWidth: '200px' }} 
-            />
-            <Column 
-              field="statusLabel" 
-              header="Estado" 
-              body={statusBodyTemplate} 
-              sortable 
-              style={{ minWidth: '100px' }} 
-            />
-            <Column 
-              field="createdAt" 
-              header="Fecha de Registro" 
-              body={dateTemplate} 
-              sortable 
-              style={{ minWidth: '150px' }} 
-            />
-            <Column 
-              body={actionsTemplate} 
-              header="Acciones" 
-              exportable={false} 
-              style={{ minWidth: '80px' }} 
-            />
+            <Column field="primaryRegistrationNumber" header="Matrícula" body={registrationBodyTemplate} sortable style={{ minWidth: '120px' }} />
+            <Column field="fullName" header="Nombre Completo" sortable style={{ minWidth: '200px' }} />
+            <Column field="email" header="Correo Electrónico" sortable style={{ minWidth: '200px' }} />
+            <Column field="statusLabel" header="Estado" body={statusBodyTemplate} sortable style={{ minWidth: '100px' }} />
+            <Column field="createdAt" header="Fecha de Registro" body={dateTemplate} sortable style={{ minWidth: '150px' }} />
+            <Column body={actionsTemplate} header="Acciones" exportable={false} style={{ minWidth: '80px' }} />
           </DataTable>
         </div>
       )}

@@ -20,7 +20,7 @@ import { getAllRoles } from '../../../api/roleService';
 import { getCareerByPlantelId } from '../../../api/academics/careerService';
 import { createEnrollment, generateRegistrationNumber, getEnrollmentsByUser, updateEnrollmentRegistration, deleteEnrollment, canRemoveUserFromCareer } from '../../../api/academics/enrollmentService';
 import { getAllCampus } from '../../../api/academics/campusService';
-import { assignMultipleCampusToSupervisor } from '../../../api/supervisorService';
+import { assignMultipleCampusToSupervisor, updateSupervisorCampuses, getSupervisorCampuses } from '../../../api/supervisorService';
 import { useToast } from '../../../components/providers/ToastProvider';
 import { useConfirmDialog } from '../../../components/providers/ConfirmDialogProvider';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -132,7 +132,6 @@ export default function UsersManagement() {
   const [selectedCareers, setSelectedCareers] = useState([]);
   const [careerChips, setCareerChips] = useState([]);
   const [editCareerChips, setEditCareerChips] = useState([]);
-  // Nuevos estados para campus
   const [selectedCampus, setSelectedCampus] = useState([]);
   const [campusChips, setCampusChips] = useState([]);
   const [registerMore, setRegisterMore] = useState(false);
@@ -178,7 +177,6 @@ export default function UsersManagement() {
     return ROLE_NEEDS_CAREERS.includes(getCurrentRole.roleName);
   }, [getCurrentRole]);
 
-  // Nuevo computed para campus
   const currentRoleNeedsCampus = useMemo(() => {
     if (!getCurrentRole) return false;
     return ROLE_NEEDS_CAMPUS.includes(getCurrentRole.roleName);
@@ -195,17 +193,14 @@ export default function UsersManagement() {
     [careers]
   );
 
-  // Nuevas opciones para campus
   const campusOptions = useMemo(
     () =>
-      campus
-        .filter((camp) => camp.id !== user?.campus?.id) // Filtrar el campus principal del usuario
-        .map((camp) => ({
-          label: camp.name,
-          value: camp.id,
-          name: camp.name,
-        })),
-    [campus, user?.campus?.id]
+      campus.map((camp) => ({
+        label: camp.name,
+        value: camp.id,
+        name: camp.name,
+      })),
+    [campus]
   );
 
   const getRoleLabel = useCallback(
@@ -321,7 +316,6 @@ export default function UsersManagement() {
     }
   };
 
-  // Nueva función para manejar selección de campus
   const handleCampusSelection = (selectedCampusIds) => {
     setSelectedCampus(selectedCampusIds);
 
@@ -336,7 +330,6 @@ export default function UsersManagement() {
     setCampusChips(newChips);
   };
 
-  // Nueva función para remover chip de campus
   const removeCampusChip = (campusId) => {
     setCampusChips((prev) => prev.filter((chip) => chip.campusId !== campusId));
     setSelectedCampus((prev) => prev.filter((id) => id !== campusId));
@@ -373,7 +366,6 @@ export default function UsersManagement() {
     async (roleId, campusId) => {
       const cacheKey = `${roleId}_${campusId}`;
 
-      // Verificar si ya tenemos los datos en cache
       if (cachedUsersByRole[cacheKey]) {
         setUsers(cachedUsersByRole[cacheKey]);
         return;
@@ -384,7 +376,6 @@ export default function UsersManagement() {
         const data = await getUserByRoleAndPlantel(roleId, campusId);
         const usersArray = Array.isArray(data) ? data : [];
 
-        // Guardar en cache
         setCachedUsersByRole((prev) => ({
           ...prev,
           [cacheKey]: usersArray,
@@ -561,7 +552,6 @@ export default function UsersManagement() {
           campusId: formData.campusId || null,
         };
 
-
         let savedUser;
         if (isEdit) {
           // Detectar carreras que se van a eliminar antes de proceder
@@ -608,11 +598,11 @@ export default function UsersManagement() {
               const result = await assignMultipleCampusToSupervisor(savedUser.id, campusIds, user.id);
 
               if (result.failed > 0) {
-                showWarn('Advertencia', `Usuario creado pero ${result.failed} campus no pudieron ser asignados`);
+                showWarn('Advertencia', `Usuario creado pero ${result.failed} planteles no pudieron ser asignados para supervisión`);
               }
             } catch (campusError) {
               console.error('Error assigning campus:', campusError);
-              showWarn('Advertencia', 'Usuario creado pero hubo un error al asignar algunos campus');
+              showWarn('Advertencia', 'Usuario creado pero hubo un error al asignar algunos planteles para supervisión');
             }
           }
 
@@ -635,7 +625,6 @@ export default function UsersManagement() {
 
           reloadCurrentView();
         }
-
         async function proceedWithUserUpdate() {
           try {
             savedUser = await updateUser(formData.id, userData);
@@ -672,7 +661,6 @@ export default function UsersManagement() {
                 }
               }
 
-              // Remover carreras (con validación de grupos)
               const existingCareerIds = originalUserEnrollments.map((e) => e.careerId);
               const removedCareerIds = existingCareerIds.filter((careerId) => !selectedCareers.includes(careerId));
 
@@ -694,6 +682,16 @@ export default function UsersManagement() {
                   const career = careers.find((c) => c.id === careerId);
                   showWarn('Advertencia', `Error al quitar ${career?.name || 'carrera'}`);
                 }
+              }
+            }
+
+            if (currentRoleNeedsCampus) {
+              try {
+                const campusIds = campusChips.map((chip) => chip.campusId);
+
+                await updateSupervisorCampuses(savedUser.id, campusIds, user.id);
+              } catch (campusError) {
+                showWarn('Advertencia', 'Usuario actualizado pero hubo un error al actualizar algunos planteles supervisados');
               }
             }
 
@@ -828,13 +826,6 @@ export default function UsersManagement() {
           const enrollments = await getEnrollmentsByUser(userData.id);
           const activeEnrollments = enrollments.filter((e) => e.status === 'ACTIVE');
 
-          console.log('Total enrollments:', enrollments.length);
-          console.log('Active enrollments:', activeEnrollments.length);
-          console.log(
-            'Enrollments:',
-            enrollments.map((e) => ({ id: e.id, careerName: e.careerName, status: e.status }))
-          );
-
           setUserEnrollments(activeEnrollments);
           setOriginalUserEnrollments([...activeEnrollments]);
 
@@ -853,6 +844,34 @@ export default function UsersManagement() {
           setEnrollmentInputs({});
           setSelectedCareers([]);
           setEditCareerChips([]);
+        }
+
+        const role = rolesMap[userData.roleId];
+        if (role && ROLE_NEEDS_CAMPUS.includes(role.roleName)) {
+          try {
+            const supervisorData = await getSupervisorCampuses(userData.id);
+
+            if (supervisorData && supervisorData.additionalCampuses) {
+              const supervisedCampusIds = supervisorData.additionalCampuses.map((sc) => sc.campusId);
+              const supervisedChips = supervisorData.additionalCampuses.map((sc) => ({
+                campusId: sc.campusId,
+                campusName: sc.campusName,
+              }));
+
+              setSelectedCampus(supervisedCampusIds);
+              setCampusChips(supervisedChips);
+            } else {
+              setSelectedCampus([]);
+              setCampusChips([]);
+            }
+          } catch (error) {
+            console.error('Error loading supervised campuses:', error);
+            setSelectedCampus([]);
+            setCampusChips([]);
+          }
+        } else {
+          setSelectedCampus([]);
+          setCampusChips([]);
         }
 
         new bootstrap.Modal(editModalRef.current).show();
@@ -878,7 +897,7 @@ export default function UsersManagement() {
         new bootstrap.Modal(createModalRef.current).show();
       }
     },
-    [user?.campus?.id, selectedTipoUsuario]
+    [user?.campus?.id, selectedTipoUsuario, rolesMap]
   );
 
   const handleEditCareerSelection = async (newSelectedCareerIds) => {
@@ -969,7 +988,6 @@ export default function UsersManagement() {
 
   const updateExistingCareerMatricula = (enrollmentId, field, value) => {
     if (field === 'year') {
-      // Para cambiar año de una carrera existente, necesitamos reconstruir toda la matrícula
       const enrollment = userEnrollments.find((e) => e.id === enrollmentId);
       if (enrollment) {
         const parts = extractMatriculaParts(enrollment.registrationNumber);
@@ -1011,6 +1029,8 @@ export default function UsersManagement() {
     setOriginalUserEnrollments([]);
     setEnrollmentInputs({});
     setSelectedCareers([]);
+    setSelectedCampus([]);
+    setCampusChips([]);
     setEditingUser(null);
   };
 
@@ -1060,8 +1080,8 @@ export default function UsersManagement() {
         </div>
         <div className="d-flex align-items-center gap-2">
           <InputText placeholder="Buscar ..." value={globalFilter} onChange={(e) => setGlobalFilter(e.target.value)} disabled={loading} className="me-2" style={{ minWidth: '250px' }} />
-          <Button icon={refreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} severity="secondary" outlined  onClick={refreshCurrentView} disabled={loading || refreshing || !selectedTipoUsuario} tooltip="Actualizar datos" tooltipOptions={{ position: 'top' }} />
-          <Button icon="pi pi-upload" outlined={loading || !processedUsers.length} severity="primary"  onClick={() => dt.current?.exportCSV()} disabled={loading || !processedUsers.length}>
+          <Button icon={refreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} severity="secondary" outlined onClick={refreshCurrentView} disabled={loading || refreshing || !selectedTipoUsuario} tooltip="Actualizar datos" tooltipOptions={{ position: 'top' }} />
+          <Button icon="pi pi-upload" outlined={loading || !processedUsers.length} severity="primary" onClick={() => dt.current?.exportCSV()} disabled={loading || !processedUsers.length}>
             <span className="d-none d-sm-inline ms-2">Exportar</span>
           </Button>
         </div>
@@ -1199,11 +1219,10 @@ export default function UsersManagement() {
     []
   );
 
-  // Nuevo componente de chip de campus
   const CampusChipComponent = useCallback(
     ({ chip, onRemove }) => (
-      <div className="col-md-6 mb-2">
-        <Chip label={chip.campusName} removable onRemove={() => onRemove(chip.campusId)} className="mb-2" />
+      <div>
+        <Chip label={chip.campusName} removable onRemove={() => onRemove(chip.campusId)} className="mb-0" />
       </div>
     ),
     []
@@ -1368,27 +1387,19 @@ export default function UsersManagement() {
                     <div className="mb-4">
                       <div className="d-flex align-items-center mb-3">
                         <MdOutlineBusiness className="text-muted me-2" size={20} />
-                        <h6 className="text-muted fw-semibold mb-0">Campus Supervisados</h6>
+                        <h6 className="text-muted fw-semibold mb-0">Planteles Supervisados</h6>
                       </div>
                       <div className="px-3 rounded">
                         <div className="row">
-                          <div className="col-12 mb-3">
-                            <label className="form-label fw-semibold">Campus principal</label>
-                            <div className="mt-1">
-                              <Chip label={user?.campus?.name || 'No definido'} className="me-2 mb-2" />
-                            </div>
-                            <small className="text-muted">Este es el campus principal asignado automáticamente</small>
-                          </div>
-
                           <div className="col-12">
-                            <label className="form-label fw-semibold">Planteles adicionales</label>
+                            <label className="form-label fw-semibold">Planteles supervisados</label>
                             <MultiSelect
                               value={selectedCampus}
                               options={campusOptions}
                               onChange={(e) => handleCampusSelection(e.value)}
                               optionLabel="label"
                               optionValue="value"
-                              placeholder="Selecciona planteles adicionales para supervisar"
+                              placeholder="Selecciona los planteles que supervisará"
                               emptyMessage="Sin planteles disponibles"
                               className="w-100"
                               maxSelectedLabels={0}
@@ -1399,7 +1410,7 @@ export default function UsersManagement() {
                             {campusChips.length > 0 && (
                               <div className="mt-3">
                                 <small className="text-muted d-block mb-2">Planteles seleccionados:</small>
-                                <div className="d-flex flex-wrap">
+                                <div className="d-flex flex-wrap gap-2">
                                   {campusChips.map((chip) => (
                                     <CampusChipComponent key={chip.campusId} chip={chip} onRemove={removeCampusChip} />
                                   ))}
@@ -1569,6 +1580,49 @@ export default function UsersManagement() {
                     </div>
                   </div>
                 </div>
+
+                {currentRoleNeedsCampus && (
+                  <>
+                    <Divider />
+                    <div className="mb-4">
+                      <div className="d-flex align-items-center mb-3">
+                        <MdOutlineBusiness className="text-muted me-2" size={20} />
+                        <h6 className="text-muted fw-semibold mb-0">Planteles Supervisados</h6>
+                      </div>
+                      <div className="px-3 rounded">
+                        <div className="row">
+                          <div className="col-12">
+                            <label className="form-label fw-semibold">Planteles</label>
+                            <MultiSelect
+                              value={selectedCampus}
+                              options={campusOptions}
+                              onChange={(e) => handleCampusSelection(e.value)}
+                              optionLabel="label"
+                              optionValue="value"
+                              placeholder="Selecciona los planteles que supervisará"
+                              emptyMessage="Sin planteles disponibles"
+                              className="w-100"
+                              maxSelectedLabels={0}
+                              selectedItemsLabel="{0} planteles seleccionados"
+                              disabled={loading}
+                            />
+
+                            {campusChips.length > 0 && (
+                              <div className="mt-3">
+                                <small className="text-muted d-block mb-2">Planteles seleccionados:</small>
+                                <div className="d-flex flex-wrap gap-2">
+                                  {campusChips.map((chip) => (
+                                    <CampusChipComponent key={chip.campusId} chip={chip} onRemove={removeCampusChip} />
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Sección: Gestión de Carreras - Solo para TEACHER/STUDENT */}
                 {currentRoleNeedsCareers && (

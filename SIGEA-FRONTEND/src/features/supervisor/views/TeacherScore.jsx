@@ -23,7 +23,6 @@ export default function TeacherScore() {
   const location = useLocation();
   const { showError, showSuccess } = useToast();
 
-  // Obtener teacherId desde el state de navegación
   const { teacherId, teacherName, campusId, campusName, isPrimary } = location.state || {};
 
   const [loading, setLoading] = useState(true);
@@ -31,27 +30,21 @@ export default function TeacherScore() {
   const [rankings, setRankings] = useState([]);
   const [expandedComments, setExpandedComments] = useState({});
 
-  // Estados para paginación
   const [first, setFirst] = useState(0);
   const [rows, setRows] = useState(5);
 
-  // Estados para filtros
   const [sortOption, setSortOption] = useState('recent');
 
-  // Estado para modo privacidad
-  const [privacyMode, setPrivacyMode] = useState(false);
+  const [privacyMode, setPrivacyMode] = useState(true);
 
-  // Opciones de filas por página
   const rowsPerPageOptions = [5, 10, 15];
 
-  // Opciones de ordenamiento
   const sortOptions = [
     { label: 'Más recientes', value: 'recent' },
     { label: 'Mayor puntaje', value: 'highest' },
     { label: 'Menor puntaje', value: 'lowest' },
   ];
 
-  // Función para mapear los datos del DTO del backend al formato esperado por el componente
   const mapRankingData = useCallback((rankingDto) => {
     return {
       id: rankingDto.id,
@@ -68,7 +61,6 @@ export default function TeacherScore() {
     };
   }, []);
 
-  // Función para ordenar rankings
   const sortedRankings = useMemo(() => {
     if (!rankings.length) return [];
 
@@ -88,14 +80,12 @@ export default function TeacherScore() {
     return sorted;
   }, [rankings, sortOption]);
 
-  // Función para obtener datos paginados
   const paginatedRankings = useMemo(() => {
     const startIndex = first;
     const endIndex = first + rows;
     return sortedRankings.slice(startIndex, endIndex);
   }, [sortedRankings, first, rows]);
 
-  // Función para generar nombre anonimizado
   const getAnonymizedName = useCallback(
     (originalName) => {
       if (!privacyMode) return originalName;
@@ -104,7 +94,6 @@ export default function TeacherScore() {
     [privacyMode]
   );
 
-  // Función para obtener avatar (normal o anonimizado)
   const getDisplayAvatar = useCallback(
     (avatarUrl) => {
       if (privacyMode) return avatarFallback;
@@ -113,7 +102,6 @@ export default function TeacherScore() {
     [privacyMode]
   );
 
-  // Función para cargar datos del docente y sus rankings
   const loadTeacherData = useCallback(async () => {
     if (!teacherId) {
       showError('Error', 'No se pudo identificar al docente');
@@ -124,22 +112,18 @@ export default function TeacherScore() {
     try {
       setLoading(true);
 
-      // Cargar datos del docente y rankings en paralelo
       const [teacherData, rankingsResponse] = await Promise.all([getUserById(teacherId), getRankingsByTeacher(teacherId)]);
 
       setTeacher(teacherData);
 
-      // Verificar si la respuesta contiene datos válidos
       let rankingsData = [];
       if (rankingsResponse && rankingsResponse.data && Array.isArray(rankingsResponse.data)) {
         rankingsData = rankingsResponse.data.map(mapRankingData);
       } else if (Array.isArray(rankingsResponse)) {
-        // En caso de que la respuesta sea directamente un array
         rankingsData = rankingsResponse.map(mapRankingData);
       }
 
       setRankings(rankingsData);
-      // Resetear paginación al cargar nuevos datos
       setFirst(0);
 
       if (rankingsData.length === 0) {
@@ -148,9 +132,7 @@ export default function TeacherScore() {
     } catch (err) {
       console.error('Error loading teacher data:', err);
 
-      // Si el error es 404 para rankings, no es un error crítico
       if (err.status === 404 && err.message.includes('ranking')) {
-        // Intentar cargar solo los datos del docente
         try {
           const teacherData = await getUserById(teacherId);
           setTeacher(teacherData);
@@ -169,7 +151,6 @@ export default function TeacherScore() {
     }
   }, [teacherId, showError, navigate, mapRankingData]);
 
-  // Cargar datos al montar el componente
   useEffect(() => {
     if (teacherId) {
       loadTeacherData();
@@ -178,7 +159,6 @@ export default function TeacherScore() {
     }
   }, [loadTeacherData, teacherId, navigate]);
 
-  // Función para alternar comentarios expandidos
   const toggleComment = useCallback((rankingId) => {
     setExpandedComments((prev) => ({
       ...prev,
@@ -186,14 +166,12 @@ export default function TeacherScore() {
     }));
   }, []);
 
-  // Función para obtener avatar por defecto
   const getAvatarUrl = (avatarUrl) => {
     if (!avatarUrl) return avatarFallback;
     if (/^https?:\/\//.test(avatarUrl)) return avatarUrl;
     return `${BACKEND_BASE_URL}${avatarUrl}`;
   };
 
-  // Función para formatear fecha
   const formatDate = (dateString) => {
     try {
       const date = new Date(dateString);
@@ -214,22 +192,18 @@ export default function TeacherScore() {
     }
   };
 
-  // Función para manejar cambio de página
   const onPageChange = (event) => {
     setFirst(event.first);
     setRows(event.rows);
   };
 
-  // Función para alternar modo privacidad
   const togglePrivacyMode = () => {
     setPrivacyMode(!privacyMode);
   };
 
-  // Calcular estadísticas
   const averageRating = rankings.length > 0 ? rankings.reduce((sum, ranking) => sum + ranking.star, 0) / rankings.length : 0;
   const totalEvaluations = rankings.length;
 
-  // Función para truncar comentarios
   const truncateComment = (comment, maxLength = 100) => {
     if (!comment || comment.length <= maxLength) return comment;
     return comment.substring(0, maxLength) + '...';

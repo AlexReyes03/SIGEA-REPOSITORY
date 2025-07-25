@@ -72,7 +72,7 @@ const Navbar = forwardRef(function Navbar({ toggleSidebar }, toggleRef) {
 
         {/* logo + campus */}
         <img src={logo} height={32} alt="logo" className="me-2" title="Corporativo CETEC ©" style={{ cursor: 'pointer' }} onClick={() => navigate('/')} />
-        <h6 className="mb-0 me-auto text-truncate fw-semibold fs-5 user-select-none text-blue-500" title="Sistema de Gestión Académica">{`SIGEA - ${campusName}`}</h6>
+        <h6 className="mb-0 me-auto text-truncate fw-semibold fs-5 user-select-none text-blue-500" title="Sistema de Gestión Académica">{`SIGEA - ${roleName === 'Supervisor' ? 'Supervisión' : campusName}`}</h6>
 
         {/* Elemento invisible para medir texto */}
         <div

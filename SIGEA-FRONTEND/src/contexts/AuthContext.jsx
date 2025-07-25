@@ -102,8 +102,6 @@ export function AuthProvider({ children }) {
 
       if (logoutInProgressRef.current) return;
 
-      console.log('🚨 JWT inválido detectado - Cerrando sesión...', { status, endpoint });
-
       errorShownRef.current = true;
       await logout('auth_error');
 

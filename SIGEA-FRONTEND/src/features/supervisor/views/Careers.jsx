@@ -14,7 +14,6 @@ export default function Careers() {
   const navigate = useNavigate();
   const { showError } = useToast();
 
-  // Obtener datos del plantel desde el state de navegación
   const campusData = location.state;
   const campusId = campusData?.campusId;
   const campusName = campusData?.campusName || 'Plantel';
@@ -23,7 +22,6 @@ export default function Careers() {
   const [careers, setCareers] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Función optimizada para cargar carreras
   const loadCareers = useCallback(async () => {
     if (!campusId) {
       showError('Error', 'No se especificó el plantel a consultar');
@@ -44,17 +42,14 @@ export default function Careers() {
     }
   }, [campusId, showError, navigate]);
 
-  // Efecto optimizado
   useEffect(() => {
     if (campusId) {
       loadCareers();
     } else {
-      // Si no hay plantel ID, redirigir al dashboard
       navigate('/supervisor/campuses-careers');
     }
   }, [loadCareers, campusId, navigate]);
 
-  // Función para navegar a grupos
   const handleCareerClick = useCallback(
     (career) => {
       navigate('/supervisor/campuses-careers/careers/groups', {

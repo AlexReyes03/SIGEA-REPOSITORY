@@ -23,19 +23,16 @@ export default function Campuses() {
   const [loading, setLoading] = useState(true);
   const [loadingStats, setLoadingStats] = useState(false);
 
-  // Detectar el contexto basado en la ruta actual
   const isTeachersContext = location.pathname.includes('campuses-teachers');
   const contextTitle = isTeachersContext ? 'Planteles - Docentes' : 'Planteles - Carreras';
   const homeRoute = isTeachersContext ? '/supervisor/campuses-teachers' : '/supervisor/campuses-careers';
 
-  // Función para cargar estadísticas completas de un plantel
   const loadCampusStats = useCallback(async (campusId) => {
     try {
-      // Obtener el ID del rol TEACHER
-      let teacherRoleId = 3; // Valor por defecto
+      let teacherRoleId = 3;
       try {
         const roles = await getAllRoles();
-        const teacherRole = roles.find(role => role.roleName === 'TEACHER');
+        const teacherRole = roles.find((role) => role.roleName === 'TEACHER');
         if (teacherRole) {
           teacherRoleId = teacherRole.id;
         }
@@ -43,11 +40,7 @@ export default function Campuses() {
         console.warn('Error loading roles, using default teacher role ID:', roleError);
       }
 
-      const [careers, students, teachers] = await Promise.all([
-        getCareerByPlantelId(campusId),
-        getUserByRoleAndPlantel(4, campusId), // 4 = STUDENT
-        getUserByRoleAndPlantel(teacherRoleId, campusId), // teacherRoleId = TEACHER
-      ]);
+      const [careers, students, teachers] = await Promise.all([getCareerByPlantelId(campusId), getUserByRoleAndPlantel(4, campusId), getUserByRoleAndPlantel(teacherRoleId, campusId)]);
 
       return {
         careersCount: Array.isArray(careers) ? careers.length : 0,
@@ -66,7 +59,6 @@ export default function Campuses() {
     }
   }, []);
 
-  // Función para cargar datos del supervisor
   const loadSupervisorData = useCallback(async () => {
     if (!user?.id) return;
 
@@ -75,41 +67,22 @@ export default function Campuses() {
       const data = await getSupervisorCampuses(user.id);
       setSupervisorData(data);
 
-      // Preparar array de todos los planteles (principal + adicionales)
-      const allCampus = [
-        {
-          id: data.primaryCampusId,
-          name: data.primaryCampusName,
-          type: 'PRIMARY',
-          isPrimary: true,
-        },
-        ...data.additionalCampuses.map((campus) => ({
-          id: campus.campusId,
-          name: campus.campusName,
-          type: 'ADDITIONAL',
-          isPrimary: false,
-          assignedAt: campus.assignedAt,
-        })),
-      ];
+      const supervisedCampus = data.additionalCampuses.map((campus) => ({
+        id: campus.campusId,
+        name: campus.campusName,
+        type: 'SUPERVISED',
+        isPrimary: false,
+        assignedAt: campus.assignedAt,
+      }));
 
-      // Cargar estadísticas completas para cada plantel
-      await loadCompleteStats(allCampus);
-    } catch (err) {
-      console.error('Error loading supervisor data:', err);
-      showError('Error', 'Error al cargar los datos del supervisor');
-      setSupervisorData(null);
-      setCampusWithStats([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id, showError]);
+      if (supervisedCampus.length === 0) {
+        setCampusWithStats([]);
+        return;
+      }
 
-  // Función para cargar estadísticas completas por plantel
-  const loadCompleteStats = useCallback(
-    async (campusList) => {
       setLoadingStats(true);
 
-      const campusPromises = campusList.map(async (campus) => {
+      const campusPromises = supervisedCampus.map(async (campus) => {
         const stats = await loadCampusStats(campus.id);
         return {
           ...campus,
@@ -123,7 +96,7 @@ export default function Campuses() {
       } catch (error) {
         console.error('Error loading complete stats:', error);
         setCampusWithStats(
-          campusList.map((campus) => ({
+          supervisedCampus.map((campus) => ({
             ...campus,
             careersCount: 0,
             studentsCount: 0,
@@ -134,29 +107,30 @@ export default function Campuses() {
       } finally {
         setLoadingStats(false);
       }
-    },
-    [loadCampusStats]
-  );
+    } catch (err) {
+      console.error('Error loading supervisor data:', err);
+      showError('Error', 'Error al cargar los datos del supervisor');
+      setSupervisorData(null);
+      setCampusWithStats([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, showError, loadCampusStats]);
 
-  // Función para navegar según el contexto
   const handleCampusClick = useCallback(
     (campus) => {
       if (isTeachersContext) {
-        // Contexto de docentes
         navigate('/supervisor/campuses-teachers/teachers', {
           state: {
             campusId: campus.id,
             campusName: campus.name,
-            isPrimary: campus.isPrimary,
           },
         });
       } else {
-        // Contexto de carreras
         navigate('/supervisor/campuses-careers/careers', {
           state: {
             campusId: campus.id,
             campusName: campus.name,
-            isPrimary: campus.isPrimary,
           },
         });
       }
@@ -164,7 +138,6 @@ export default function Campuses() {
     [navigate, isTeachersContext]
   );
 
-  // Efecto optimizado
   useEffect(() => {
     if (user?.id) {
       loadSupervisorData();
@@ -237,7 +210,11 @@ export default function Campuses() {
           <div className="text-center">
             <MdOutlineLocationOn className="text-secondary" size={70} />
             <h5 className="mt-3 text-muted">No hay planteles asignados</h5>
-            <p className="text-muted">Contacta al administrador para asignar planteles</p>
+            <p className="text-muted">
+              No tienes planteles asignados para supervisión.
+              <br />
+              Contacta al administrador para solicitar planteles a supervisar.
+            </p>
           </div>
         </div>
       ) : (
@@ -252,22 +229,15 @@ export default function Campuses() {
                         <h6 className="fw-semibold lh-sm mb-0 text-dark text-truncate">{campus.name}</h6>
                       </div>
                       <div className="mb-3">
-                        {campus.isPrimary ? (
-                          <small className="text-muted">
-                            <i className="pi pi-star me-1"></i>
-                            Plantel principal
-                          </small>
-                        ) : (
-                          <small className="text-muted">
-                            <i className="pi pi-users me-1"></i>
-                            Plantel supervisado
-                          </small>
-                        )}
+                        <small className="text-muted">
+                          <i className="pi pi-users me-1"></i>
+                          Plantel supervisado
+                        </small>
                       </div>
                     </div>
                   </div>
 
-                  {/* Contadores mejorados */}
+                  {/* Contadores (sin cambios) */}
                   <div className="row g-2 text-center">
                     <div className="col-4">
                       <div className="p-2 rounded bg-light h-100 text-truncate">
