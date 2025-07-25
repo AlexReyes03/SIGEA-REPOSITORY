@@ -421,17 +421,17 @@ export default function Groups() {
 
   const toolbarLeft = () => (
     <div className="flex flex-wrap align-items-center">
-      <Button ref={createButtonRef} icon="pi pi-plus" severity="primary" disabled={curriculums.length === 0 || careerTeachers.length === 0} className="me-2" onClick={openCreateModal}>
+      <Button ref={createButtonRef} icon="pi pi-plus" disabled={curriculums.length === 0 || careerTeachers.length === 0} className="me-2 cetec-btn-blue" onClick={openCreateModal}>
         <span className="d-none d-sm-inline ms-1">Crear grupo</span>
       </Button>
-      <Button icon="pi pi-trash" severity="danger" disabled={!selected?.length} onClick={removeSelected}>
+      <Button icon="pi pi-trash" severity="danger" hidden={!selected?.length} onClick={removeSelected}>
         <span className="d-none d-sm-inline ms-1">Eliminar</span>
       </Button>
     </div>
   );
 
   const toolbarRight = () => (
-    <Button icon="pi pi-upload" severity="help" disabled={data.length === 0} onClick={() => dt.current.exportCSV()}>
+    <Button icon="pi pi-upload" severity="primary" disabled={data.length === 0} onClick={() => dt.current.exportCSV()}>
       <span className="d-none d-sm-inline ms-1">Exportar</span>
     </Button>
   );
