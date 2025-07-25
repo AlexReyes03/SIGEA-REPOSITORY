@@ -438,9 +438,9 @@ export default function Groups() {
 
   const actions = (row) => (
     <div className="d-flex align-items-center justify-content-center">
-      <Button icon="pi pi-pencil" rounded outlined tooltip="Editar" onClick={() => openUpdateModal(row)} />
-      <Button icon="pi pi-trash" rounded outlined severity="danger" className="mx-2" tooltip="Eliminar este grupo" tooltipOptions={{ position: 'left' }} onClick={() => removeGroup(row)} />
-      <Button icon="pi pi-arrow-up-right" rounded outlined tooltip="Ver detalles" tooltipOptions={{ position: 'left' }} onClick={() => navigate('/admin/careers/groups/details', { state: { group: row, career } })} />
+      <Button icon="pi pi-pencil" text rounded outlined tooltip="Editar" onClick={() => openUpdateModal(row)} />
+      <Button icon="pi pi-trash" text rounded outlined severity="danger" className="mx-2" tooltip="Eliminar este grupo" tooltipOptions={{ position: 'left' }} onClick={() => removeGroup(row)} />
+      <Button icon="pi pi-arrow-up-right" text rounded outlined tooltip="Ver detalles" tooltipOptions={{ position: 'left' }} onClick={() => navigate('/admin/careers/groups/details', { state: { group: row, career } })} />
     </div>
   );
 

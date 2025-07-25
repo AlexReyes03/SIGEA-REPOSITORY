@@ -1078,8 +1078,8 @@ export default function UsersManagement() {
           <h5 className="title-text ms-2 me-2 mb-0">{getCurrentFilterLabel()}</h5>
           <span className="badge bg-blue-500 p-2 me-2">{processedUsers.length}</span>
         </div>
-        <div className="d-flex align-items-center gap-2">
-          <InputText placeholder="Buscar ..." value={globalFilter} onChange={(e) => setGlobalFilter(e.target.value)} disabled={loading} className="me-2" style={{ minWidth: '250px' }} />
+        <div className="d-flex align-items-center gap-2 ">
+          <InputText placeholder="Buscar ..." value={globalFilter} onChange={(e) => setGlobalFilter(e.target.value)} disabled={loading} className="me-2 flex" style={{ minWidth: '250px' }} />
           <Button icon={refreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} severity="secondary" outlined onClick={refreshCurrentView} disabled={loading || refreshing || !selectedTipoUsuario} tooltip="Actualizar datos" tooltipOptions={{ position: 'top' }} />
           <Button icon="pi pi-upload" outlined={loading || !processedUsers.length} severity="primary" onClick={() => dt.current?.exportCSV()} disabled={loading || !processedUsers.length}>
             <span className="d-none d-sm-inline ms-2">Exportar</span>
