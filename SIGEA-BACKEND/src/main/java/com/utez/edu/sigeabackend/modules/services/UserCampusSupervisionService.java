@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -74,13 +75,6 @@ public class UserCampusSupervisionService {
             );
         }
 
-        // Verificar que no sea su campus principal
-        if (Long.valueOf(supervisor.getCampus().getId()).equals(dto.campusId())) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "No se puede asignar el campus principal como supervisión adicional"
-            );
-        }
-
         // Crear la asignación
         UserCampusSupervisionEntity supervision = new UserCampusSupervisionEntity(
                 supervisor,
@@ -89,8 +83,72 @@ public class UserCampusSupervisionService {
                 dto.assignedByUserId()
         );
 
-        UserCampusSupervisionEntity saved = supervisionRepository.save(supervision);
-        return ResponseEntity.status(HttpStatus.CREATED).body(toDto(saved));
+        UserCampusSupervisionEntity savedSupervision = supervisionRepository.save(supervision);
+        return ResponseEntity.ok(toDto(savedSupervision));
+    }
+
+    /**
+     * Actualiza completamente los campus supervisados de un supervisor
+     */
+    @Transactional
+    public ResponseEntity<SupervisorCampusesResponseDto> updateSupervisorCampuses(UpdateSupervisorCampusesDto dto) {
+        // Verificar que el supervisor existe y es supervisor
+        UserEntity supervisor = userRepository.findById(dto.supervisorId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Supervisor no encontrado"
+                ));
+
+        if (!supervisor.isSupervisor()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "El usuario no es un supervisor"
+            );
+        }
+
+        // Verificar que todos los campus existen
+        List<CampusEntity> campusesToAssign = campusRepository.findAllById(dto.campusIds());
+        if (campusesToAssign.size() != dto.campusIds().size()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Uno o más campus no existen"
+            );
+        }
+
+        // Eliminar las asignaciones existentes
+        List<UserCampusSupervisionEntity> existingSupervisions =
+                supervisionRepository.findByUserIdAndSupervisionType(
+                        dto.supervisorId(),
+                        UserCampusSupervisionEntity.SupervisionType.ADDITIONAL
+                );
+
+        for (UserCampusSupervisionEntity existing : existingSupervisions) {
+            supervisionRepository.delete(existing);
+        }
+
+        supervisionRepository.flush();
+
+        // Crear nuevas asignaciones
+        for (Long campusId : dto.campusIds()) {
+            boolean alreadyExists = supervisionRepository.existsByUserIdAndCampusId(dto.supervisorId(), campusId);
+
+            if (!alreadyExists) {
+                CampusEntity campus = campusesToAssign.stream()
+                        .filter(c -> c.getId() == campusId)
+                        .findFirst()
+                        .orElseThrow(() -> new ResponseStatusException(
+                                HttpStatus.BAD_REQUEST, "Campus no encontrado: " + campusId
+                        ));
+
+                UserCampusSupervisionEntity newSupervision = new UserCampusSupervisionEntity(
+                        supervisor,
+                        campus,
+                        UserCampusSupervisionEntity.SupervisionType.ADDITIONAL,
+                        dto.updatedByUserId()
+                );
+
+                supervisionRepository.save(newSupervision);
+            }
+        }
+
+        return getSupervisorCampuses(dto.supervisorId());
     }
 
     /**

@@ -4,6 +4,8 @@ import com.utez.edu.sigeabackend.modules.entities.dto.users.*;
 import com.utez.edu.sigeabackend.modules.services.UserCampusSupervisionService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,6 +25,20 @@ public class UserCampusSupervisionController {
     public ResponseEntity<CampusSupervisionDto> assignCampusToSupervisor(
             @Valid @RequestBody AssignCampusToSupervisorDto dto) {
         return supervisionService.assignCampusToSupervisor(dto);
+    }
+
+    /** PUT /sigea/api/supervision/supervisor/{supervisorId}/campuses - Actualizar campus supervisados */
+    @PutMapping("/supervisor/{supervisorId}/campuses")
+    public ResponseEntity<SupervisorCampusesResponseDto> updateSupervisorCampuses(
+            @PathVariable Long supervisorId,
+            @Valid @RequestBody UpdateSupervisorCampusesDto dto) {
+        if (!supervisorId.equals(dto.supervisorId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "El ID del supervisor no coincide"
+            );
+        }
+
+        return supervisionService.updateSupervisorCampuses(dto);
     }
 
     /** DELETE /sigea/api/supervision/remove - Remover campus de supervisor */
