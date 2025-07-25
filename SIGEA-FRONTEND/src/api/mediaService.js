@@ -21,3 +21,14 @@ export async function uploadAvatar(userId, file) {
     isMultipart: true
   });
 }
+
+export const uploadCareerImage = async (careerId, file) => {
+  const form = new FormData();
+  form.append('file', file);
+
+  return await request(`/api/careers/${careerId}/image`, {
+    method: 'POST',
+    body: form,
+    isMultipart: true
+  });
+};

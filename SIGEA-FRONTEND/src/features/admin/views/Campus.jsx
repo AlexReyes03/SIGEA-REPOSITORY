@@ -5,7 +5,7 @@ import { Dropdown } from 'primereact/dropdown';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Message } from 'primereact/message';
 import { Divider } from 'primereact/divider';
-import { MdOutlineBusiness, MdOutlinePerson, MdOutlineLocationOn, MdOutlinePhone, MdOutlineAssignment, MdApartment } from 'react-icons/md';
+import { MdOutlineBusiness, MdOutlinePerson, MdOutlineLocationOn, MdOutlinePhone, MdOutlineAssignment, MdApartment, MdOutlineImage } from 'react-icons/md';
 import { Modal } from 'bootstrap';
 
 import { useAuth } from '../../../contexts/AuthContext';
@@ -15,6 +15,7 @@ import { getCampusById, updateCampus } from '../../../api/academics/campusServic
 import { getUserByRoleAndPlantel } from '../../../api/userService';
 import { getAllRoles } from '../../../api/roleService';
 import useBootstrapModalFocus from '../../../utils/hooks/useBootstrapModalFocus';
+import CareerImageUpload from '../components/CareerImageUpload';
 
 export default function Campus() {
   const { user } = useAuth();
@@ -389,6 +390,19 @@ export default function Campus() {
                           <strong className="text-secondary">RFC</strong>
                         </div>
                         <p className="mb-0 text-dark">{campus.rfc || 'Sin RFC'}</p>
+                      </div>
+                    </div>
+
+                    <div className="col-12 col-md-6 mb-4">
+                      <div className="info-item p-3 border rounded bg-light">
+                        <div className="d-flex align-items-center mb-2">
+                          <MdOutlineImage className="text-secondary me-2" size={20} />
+                          <strong className="text-secondary">Imágenes de Carreras</strong>
+                        </div>
+                        <p className="mb-2 text-muted small">Gestiona las imágenes que se mostrarán en el carrusel del login para cada carrera del plantel</p>
+                        <div className="mt-3">
+                          <CareerImageUpload onImagesUpdated={() => {/* Opcional: refrescar datos */}} />
+                        </div>
                       </div>
                     </div>
                   </div>
