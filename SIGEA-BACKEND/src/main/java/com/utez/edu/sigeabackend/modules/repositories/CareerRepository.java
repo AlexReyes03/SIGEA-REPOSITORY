@@ -1,7 +1,6 @@
 package com.utez.edu.sigeabackend.modules.repositories;
 
 import com.utez.edu.sigeabackend.modules.entities.CareerEntity;
-import com.utez.edu.sigeabackend.modules.entities.dto.academics.CareerDto;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -21,43 +20,6 @@ public interface CareerRepository extends JpaRepository<CareerEntity, Long> {
 
     // Encontrar carrera por diferenciador y campus
     Optional<CareerEntity> findByDifferentiatorAndCampusId(String differentiator, Long campusId);
-
-    @Query("SELECT new com.utez.edu.sigeabackend.modules.entities.dto.academics.CareerDto(" +
-            "c.id, c.name, c.differentiator, c.campus.id, c.campus.name, " +
-            "CAST(" +
-            "  (SELECT COUNT(g) FROM GroupEntity g WHERE g.career.id = c.id)" +
-            " AS int), " +
-            "CAST(" +
-            "  (SELECT COUNT(DISTINCT e1.user.id) FROM UserCareerEnrollmentEntity e1 " +
-            "   WHERE e1.career.id = c.id AND e1.status = 'ACTIVE' AND e1.user.role.roleName = 'STUDENT')" +
-            " AS int), " +
-            "CAST(" +
-            "  (SELECT COUNT(DISTINCT e2.user.id) FROM UserCareerEnrollmentEntity e2 " +
-            "   WHERE e2.career.id = c.id AND e2.status = 'ACTIVE' AND e2.user.role.roleName = 'TEACHER')" +
-            " AS int)" +
-            ") " +
-            "FROM CareerEntity c " +
-            "ORDER BY c.name ASC")
-    List<CareerDto> findAllWithCounts();
-
-    @Query("SELECT new com.utez.edu.sigeabackend.modules.entities.dto.academics.CareerDto(" +
-            "c.id, c.name, c.differentiator, c.campus.id, c.campus.name, " +
-            "CAST(" +
-            "  (SELECT COUNT(g) FROM GroupEntity g WHERE g.career.id = c.id)" +
-            " AS int), " +
-            "CAST(" +
-            "  (SELECT COUNT(DISTINCT e1.user.id) FROM UserCareerEnrollmentEntity e1 " +
-            "   WHERE e1.career.id = c.id AND e1.status = 'ACTIVE' AND e1.user.role.roleName = 'STUDENT')" +
-            " AS int), " +
-            "CAST(" +
-            "  (SELECT COUNT(DISTINCT e2.user.id) FROM UserCareerEnrollmentEntity e2 " +
-            "   WHERE e2.career.id = c.id AND e2.status = 'ACTIVE' AND e2.user.role.roleName = 'TEACHER')" +
-            " AS int)" +
-            ") " +
-            "FROM CareerEntity c " +
-            "WHERE c.campus.id = :campusId " +
-            "ORDER BY c.name ASC")
-    List<CareerDto> findAllWithCountsByCampus(@Param("campusId") Long campusId);
 
     // Obtener solo carreras con estudiantes activos
     @Query("SELECT DISTINCT c FROM CareerEntity c " +
