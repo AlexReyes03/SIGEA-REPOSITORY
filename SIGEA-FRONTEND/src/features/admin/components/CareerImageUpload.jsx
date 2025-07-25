@@ -10,7 +10,8 @@ import { MdOutlineSchool } from 'react-icons/md';
 
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/providers/ToastProvider';
-import { getCareerByPlantelId, uploadCareerImage } from '../../../api/academics/careerService';
+import { getCareerByPlantelId } from '../../../api/academics/careerService';
+import { uploadCareerImage } from '../../../api/mediaService';
 import { BACKEND_BASE_URL } from '../../../api/common-url';
 
 export default function CareerImageUpload({ onImagesUpdated }) {

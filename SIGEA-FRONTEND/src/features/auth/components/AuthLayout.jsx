@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '../../../assets/img/logo_cetec.png';
-import CareerCarousel from '../../components/CareerCarousel';
-import { getAllCareers } from '../../api/academics/careerService';
+import CareerCarousel from '../components/CareerCarousel';
+import { getAllCareers } from '../../../api/academics/careerService';
 
 export default function AuthLayout({ title, subtitle, children }) {
   const [showCarousel, setShowCarousel] = useState(false);

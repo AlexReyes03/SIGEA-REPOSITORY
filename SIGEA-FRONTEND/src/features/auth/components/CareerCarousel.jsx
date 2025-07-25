@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Carousel } from 'primereact/carousel';
 import { ProgressSpinner } from 'primereact/progressspinner';
-import { getAllCareers } from '../api/academics/careerService';
-import { BACKEND_BASE_URL } from '../api/common-url';
+import { getAllCareers } from '../../../api/academics/careerService';
+import { BACKEND_BASE_URL } from '../../../api/common-url';
 
 export default function CareerCarousel() {
   const [careers, setCareers] = useState([]);
