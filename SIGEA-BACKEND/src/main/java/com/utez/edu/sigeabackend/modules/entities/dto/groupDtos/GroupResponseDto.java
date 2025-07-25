@@ -6,6 +6,8 @@ public record GroupResponseDto(
         String weekDay,
         String startTime,
         String endTime,
+        String startDate,
+        String endDate,
         Long teacherId,
         String teacherName,
         Long careerId,

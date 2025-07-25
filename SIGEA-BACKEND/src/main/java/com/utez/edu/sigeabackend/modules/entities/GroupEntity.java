@@ -2,6 +2,7 @@ package com.utez.edu.sigeabackend.modules.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -28,6 +29,12 @@ public class GroupEntity {
     @Column(name = "week_day", nullable = false)
     private WeekDays weekDay;
 
+    @Column(name = "start_date", nullable = false)
+    private LocalDate startDate;
+
+    @Column(name = "end_date", nullable = false)
+    private LocalDate endDate;
+
     // Relación Many-To-One hacia UserEntity (rol=TEACHER)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id", nullable = false)
@@ -51,18 +58,24 @@ public class GroupEntity {
 
     public GroupEntity() { }
 
-    public GroupEntity(long id, String name, LocalTime startTime, LocalTime endTime, WeekDays weekDay, UserEntity teacher, CareerEntity career, CurriculumEntity curriculum, Set<GroupStudentEntity> students) {
+    public GroupEntity(long id, String name, LocalTime startTime, LocalTime endTime,
+                       WeekDays weekDay, LocalDate startDate, LocalDate endDate,
+                       UserEntity teacher, CareerEntity career, CurriculumEntity curriculum,
+                       Set<GroupStudentEntity> students) {
         this.id = id;
         this.name = name;
         this.startTime = startTime;
         this.endTime = endTime;
         this.weekDay = weekDay;
+        this.startDate = startDate;
+        this.endDate = endDate;
         this.teacher = teacher;
         this.career = career;
         this.curriculum = curriculum;
         this.students = students;
     }
 
+    // Getters y Setters existentes
     public long getId() {
         return id;
     }
@@ -101,6 +114,23 @@ public class GroupEntity {
 
     public void setWeekDay(WeekDays weekDay) {
         this.weekDay = weekDay;
+    }
+
+    // NUEVOS GETTERS Y SETTERS PARA LAS FECHAS
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
     }
 
     public UserEntity getTeacher() {

@@ -16,6 +16,12 @@ public record GroupRequestDto(
         @NotBlank
         String endTime,
 
+        @NotBlank
+        String startDate,
+
+        @NotBlank
+        String endDate,
+
         @NotNull
         Long teacherId,
 

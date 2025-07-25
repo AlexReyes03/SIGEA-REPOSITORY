@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Objects;
@@ -43,6 +44,8 @@ public class GroupService {
                 g.getWeekDay().name(),
                 g.getStartTime().toString(),
                 g.getEndTime().toString(),
+                g.getStartDate().toString(),
+                g.getEndDate().toString(),
                 g.getTeacher().getId(),
                 g.getTeacher().getName() + " " + g.getTeacher().getPaternalSurname(),
                 g.getCareer().getId(),
@@ -67,6 +70,8 @@ public class GroupService {
         target.setStartTime(LocalTime.parse(dto.startTime()));
         target.setEndTime(LocalTime.parse(dto.endTime()));
         target.setWeekDay(WeekDays.valueOf(dto.weekDay()));
+        target.setStartDate(LocalDate.parse(dto.startDate()));
+        target.setEndDate(LocalDate.parse(dto.endDate()));
         target.setTeacher(teacher);
         target.setCareer(careerEntity);
         target.setCurriculum(curriculum);
@@ -80,6 +85,64 @@ public class GroupService {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "La hora de fin debe ser posterior a la hora de inicio"
+            );
+        }
+    }
+
+    /**
+     * Valida que las fechas sean lógicas
+     */
+    private void validateDateRange(LocalDate startDate, LocalDate endDate) {
+        if (endDate.isBefore(startDate) || endDate.equals(startDate)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La fecha de fin debe ser posterior a la fecha de inicio"
+            );
+        }
+    }
+
+    /**
+     * Calcula la duración total en semanas de un curriculum
+     */
+    private int calculateCurriculumWeeks(CurriculumEntity curriculum) {
+        if (curriculum == null || curriculum.getModules() == null || curriculum.getModules().isEmpty()) {
+            return 0;
+        }
+
+        return curriculum.getModules().stream()
+                .filter(Objects::nonNull)
+                .mapToInt(module -> {
+                    if (module.getSubjects() == null || module.getSubjects().isEmpty()) {
+                        return 0;
+                    }
+                    return module.getSubjects().stream()
+                            .filter(Objects::nonNull)
+                            .mapToInt(SubjectEntity::getWeeks)
+                            .sum();
+                })
+                .sum();
+    }
+
+    /**
+     * Valida que la fecha de fin no sea menor a la duración mínima del curriculum
+     */
+    private void validateCurriculumDuration(LocalDate startDate, LocalDate endDate, CurriculumEntity curriculum) {
+        int totalWeeks = calculateCurriculumWeeks(curriculum);
+
+        if (totalWeeks == 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "El plan de estudios seleccionado no tiene materias definidas o la duración es cero"
+            );
+        }
+
+        LocalDate minimumEndDate = startDate.plusWeeks(totalWeeks);
+
+        if (endDate.isBefore(minimumEndDate)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    String.format("La fecha de fin debe ser al menos %s (duración del plan de estudios: %d semanas)",
+                            minimumEndDate.toString(), totalWeeks)
             );
         }
     }
@@ -192,10 +255,15 @@ public class GroupService {
         LocalTime endTime = LocalTime.parse(dto.endTime());
         WeekDays weekDay = WeekDays.valueOf(dto.weekDay());
 
+        // Parsear y validar fechas
+        LocalDate startDate = LocalDate.parse(dto.startDate());
+        LocalDate endDate = LocalDate.parse(dto.endDate());
+
         validateTimeRange(startTime, endTime);
+        validateDateRange(startDate, endDate);
+        validateCurriculumDuration(startDate, endDate, curriculum);
         validateTeacherScheduleConflict(dto.teacherId(), weekDay, startTime, endTime, null);
 
-        // Crear y guardar el grupo
         GroupEntity g = new GroupEntity();
         populateFromDto(g, dto, teacher, careerEntity, curriculum);
 
@@ -203,7 +271,7 @@ public class GroupService {
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponseDto(saved));
     }
 
-    // ACTUALIZAR GRUPO - CORREGIDO
+    // ACTUALIZAR GRUPO
     @Transactional
     public ResponseEntity<GroupResponseDto> update(long id, GroupRequestDto dto) {
         GroupEntity existing = repository.findById(id)
@@ -226,12 +294,16 @@ public class GroupService {
                         HttpStatus.BAD_REQUEST, "Plan de estudios no encontrado con id " + dto.curriculumId()
                 ));
 
-        // Parsear y validar horarios
         LocalTime startTime = LocalTime.parse(dto.startTime());
         LocalTime endTime = LocalTime.parse(dto.endTime());
         WeekDays weekDay = WeekDays.valueOf(dto.weekDay());
 
+        LocalDate startDate = LocalDate.parse(dto.startDate());
+        LocalDate endDate = LocalDate.parse(dto.endDate());
+
         validateTimeRange(startTime, endTime);
+        validateDateRange(startDate, endDate);
+        validateCurriculumDuration(startDate, endDate, curriculum);
         validateTeacherScheduleConflict(dto.teacherId(), weekDay, startTime, endTime, id);
 
         populateFromDto(existing, dto, teacher, careerEntity, curriculum);
