@@ -41,7 +41,7 @@ public class MediaEntity {
             columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
 
-    public enum Purpose { AVATAR, STOCK, CARD }
+    public enum Purpose { AVATAR, STOCK, CARD, CAREER_IMAGE }
 
     @PrePersist
     protected void onCreate() { createdAt = LocalDateTime.now(); }

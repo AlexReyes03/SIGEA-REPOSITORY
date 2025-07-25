@@ -6,14 +6,19 @@ import com.utez.edu.sigeabackend.modules.entities.UserCareerEnrollmentEntity;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.CareerDto;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.CreateCareerDto;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.UpdateCareerDto;
+import com.utez.edu.sigeabackend.modules.media.MediaEntity;
+import com.utez.edu.sigeabackend.modules.media.MediaService;
+import com.utez.edu.sigeabackend.modules.media.dto.MediaUploadResponseDto;
 import com.utez.edu.sigeabackend.modules.repositories.CampusRepository;
 import com.utez.edu.sigeabackend.modules.repositories.CareerRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.util.List;
 
 @Service
@@ -21,10 +26,12 @@ import java.util.List;
 public class CareerService {
     private final CareerRepository repository;
     private final CampusRepository campusRepository;
+    private final MediaService mediaService;
 
-    public CareerService(CareerRepository repository, CampusRepository campusRepository) {
+    public CareerService(CareerRepository repository, CampusRepository campusRepository, MediaService mediaService) {
         this.repository = repository;
         this.campusRepository = campusRepository;
+        this.mediaService = mediaService;
     }
 
     // Helper method to convert entity to DTO
@@ -43,6 +50,12 @@ public class CareerService {
                 .filter(enrollment -> "TEACHER".equals(enrollment.getUser().getRole().getRoleName()))
                 .count();
 
+        // Obtener URL de la imagen si existe
+        String imageUrl = null;
+        if (entity.getImage() != null) {
+            imageUrl = "/sigea/api/media/raw/" + entity.getImage().getCode();
+        }
+
         return new CareerDto(
                 entity.getId(),
                 entity.getName(),
@@ -51,13 +64,15 @@ public class CareerService {
                 entity.getCampus().getName(),
                 groupsCount,
                 studentsCount,
-                teachersCount
+                teachersCount,
+                imageUrl
         );
     }
 
     // Obtener todas las carreras
     public ResponseEntity<List<CareerDto>> findAll() {
-        List<CareerDto> dtos = repository.findAllWithCounts();
+        List<CareerEntity> entities = repository.findAll();
+        List<CareerDto> dtos = entities.stream().map(this::toDto).toList();
         return ResponseEntity.ok(dtos);
     }
 
@@ -71,8 +86,31 @@ public class CareerService {
 
     // Obtener carreras por plantel
     public ResponseEntity<List<CareerDto>> findByCampus(long campusId) {
-        List<CareerDto> dtos = repository.findAllWithCountsByCampus(campusId);
+        List<CareerEntity> entities = repository.findByCampusId(campusId);
+        List<CareerDto> dtos = entities.stream().map(this::toDto).toList();
         return ResponseEntity.ok(dtos);
+    }
+
+    // Subir imagen de carrera
+    @Transactional
+    public ResponseEntity<MediaUploadResponseDto> uploadCareerImage(Long careerId, MultipartFile file) throws IOException {
+        // Verificar que la carrera existe
+        CareerEntity career = repository.findById(careerId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Carrera no encontrada"));
+
+        // Subir la imagen
+        MediaUploadResponseDto dto = mediaService.storeAndReturnDto(file, MediaEntity.Purpose.CAREER_IMAGE);
+
+        // Obtener la entidad media por código
+        MediaEntity imageEntity = mediaService.getByCode(
+                dto.url().substring(dto.url().lastIndexOf('/') + 1));
+
+        // Asignar la imagen a la carrera
+        career.setImage(imageEntity);
+        repository.save(career);
+
+        return ResponseEntity.ok(dto);
     }
 
     // Crear nueva carrera
@@ -161,7 +199,7 @@ public class CareerService {
                     // Verificar si la carrera tiene estudiantes activos
                     boolean hasActiveStudents = career.getEnrollments().stream()
                             .anyMatch(enrollment -> enrollment.getStatus() ==
-                                    com.utez.edu.sigeabackend.modules.entities.UserCareerEnrollmentEntity.EnrollmentStatus.ACTIVE);
+                                    UserCareerEnrollmentEntity.EnrollmentStatus.ACTIVE);
 
                     if (hasActiveStudents) {
                         throw new ResponseStatusException(HttpStatus.CONFLICT,

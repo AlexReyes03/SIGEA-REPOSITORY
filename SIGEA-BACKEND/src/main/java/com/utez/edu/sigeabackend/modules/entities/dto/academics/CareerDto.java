@@ -8,5 +8,6 @@ public record CareerDto(
         String campusName,
         int groupsCount,
         int studentsCount,
-        int teachersCount
+        int teachersCount,
+        String imageUrl
 ) {}

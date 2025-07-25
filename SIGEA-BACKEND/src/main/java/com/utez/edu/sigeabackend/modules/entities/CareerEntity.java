@@ -1,5 +1,6 @@
 package com.utez.edu.sigeabackend.modules.entities;
 
+import com.utez.edu.sigeabackend.modules.media.MediaEntity;
 import jakarta.persistence.*;
 import java.util.HashSet;
 import java.util.Set;
@@ -30,6 +31,13 @@ public class CareerEntity {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "campus_id", nullable = false)
     private CampusEntity campus;
+
+    /**
+     * Relación uno-a-uno con MediaEntity para la imagen de la carrera
+     */
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "image_id", foreignKey = @ForeignKey(name = "fk_career_image"))
+    private MediaEntity image;
 
     /**
      * Relación uno-a-muchos con GroupEntity.
@@ -86,6 +94,10 @@ public class CareerEntity {
     public void setCampus(CampusEntity campus) {
         this.campus = campus;
     }
+
+    public MediaEntity getImage() { return image; }
+
+    public void setImage(MediaEntity image) { this.image = image; }
 
     public Set<GroupEntity> getGroups() {
         return groups;

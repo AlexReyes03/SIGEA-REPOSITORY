@@ -3,11 +3,14 @@ package com.utez.edu.sigeabackend.modules.controllers;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.CareerDto;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.CreateCareerDto;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.UpdateCareerDto;
+import com.utez.edu.sigeabackend.modules.media.dto.MediaUploadResponseDto;
 import com.utez.edu.sigeabackend.modules.services.CareerService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -31,10 +34,18 @@ public class CareerController {
         return service.findById(id);
     }
 
-    /** GET /sigea/api/careers/plantel/{campusId} - Obtener carreras por plantel */
+    /** GET /sigea/api/careers/campus/{campusId} - Obtener carreras por plantel */
     @GetMapping("/campus/{campusId}")
     public ResponseEntity<List<CareerDto>> findByCampus(@PathVariable long campusId) {
         return service.findByCampus(campusId);
+    }
+
+    /** POST /sigea/api/careers/{careerId}/image - Subir imagen de carrera */
+    @PostMapping("/{careerId}/image")
+    public ResponseEntity<MediaUploadResponseDto> uploadCareerImage(
+            @PathVariable Long careerId,
+            @RequestPart("file") MultipartFile file) throws IOException {
+        return service.uploadCareerImage(careerId, file);
     }
 
     /** POST /sigea/api/careers - Crear nueva carrera */
