@@ -163,7 +163,7 @@ export default function Dashboard() {
         ) : (
           <div className="col-12">
             <div className="alert alert-info" role="alert">
-              <h4 className="alert-heading">No tienes inscripciones activas</h4>
+              <h4 className="alert-heading">No hay inscripciones activas</h4>
               <p>Actualmente no tienes inscripciones activas en ninguna carrera.</p>
             </div>
           </div>

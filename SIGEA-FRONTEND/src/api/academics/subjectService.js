@@ -8,7 +8,7 @@ export const createSubject = async (subject) => {
   return await request(`/api/subjects`, {
     method: 'POST',
     body: subject,
-  });
+  })
 };
 
 export const updateSubject = async (id, subject) => {

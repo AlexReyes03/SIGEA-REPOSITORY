@@ -1,111 +1,178 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect, useRef, useEffect } from 'react';
 import { Card } from 'primereact/card';
 import { Rating } from 'primereact/rating';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { Button } from 'primereact/button';
 import { Message } from 'primereact/message';
 import { Toast } from 'primereact/toast';
-import { useRef } from 'react';
+import { ProgressSpinner } from 'primereact/progressspinner';
+import { motion } from 'framer-motion';
+import { useAuth } from '../../../contexts/AuthContext';
+import * as rankingService from '../../../api/academics/rankingService';
 
 export default function TeacherEvaluation() {
     const toast = useRef(null);
-    
-    // Datos de ejemplo - reemplaza con tus datos reales
-    const [modules, setModules] = useState([
-        {
-            id: 1,
-            name: "Módulo 1",
-            average: 9.7,
-            teacher: "Leandro Arturo Estrada Velazquez",
-            subjects: ["Matemáticas", "Español"],
-            isEvaluated: false,
-            rating: 0,
-            comment: "",
-            submittedRating: null
-        },
-        {
-            id: 2,
-            name: "Módulo 2", 
-            average: 8.5,
-            teacher: "Ana María González López",
-            subjects: ["Ciencias Naturales", "Historia"],
-            isEvaluated: true,
-            rating: 0,
-            comment: "",
-            submittedRating: 4
-        },
-        {
-            id: 3,
-            name: "Módulo 3",
-            average: 9.2,
-            teacher: "Carlos Eduardo Ramírez",
-            subjects: ["Educación Física"],
-            isEvaluated: false,
-            rating: 0,
-            comment: ""
-        }
-    ]);
+    const { user } = useAuth();
+    const [activeTab, setActiveTab] = useState('pending');
+    const [modules, setModules] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    // Referencias y estado para el slider animado
+    const containerRef = useRef(null);
+    const tabRefs = useRef({});
+    const [slider, setSlider] = useState({ left: 0, width: 0 });
+
+
+    useEffect(() => {
+        const loadEvaluationData = async () => {
+            if (!user?.id) {
+                setError('No se pudo obtener la información del usuario');
+                setLoading(false);
+                return;
+            }
+
+            try {
+                setLoading(true);
+                const evaluationData = await rankingService.getStudentEvaluationModules(user.id);
+                setModules(evaluationData);
+                setError(null);
+            } catch (error) {
+                console.error('Error loading evaluation data:', error);
+                setError('No se pudieron cargar los datos de evaluación');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadEvaluationData();
+    }, [user?.id]);
+
+    // Filtrar módulos por estado
+    const pendingModules = modules.filter(module => !module.isEvaluated);
+    const evaluatedModules = modules.filter(module => module.isEvaluated);
+
+    // Configuración de las pestañas
+    const tabs = [
+        { key: 'pending', label: `Pendientes (${pendingModules.length})` },
+        { key: 'evaluated', label: `Evaluados (${evaluatedModules.length})` }
+    ];
+
+    // Efecto para actualizar la posición del slider
+    useLayoutEffect(() => {
+        const btn = tabRefs.current[activeTab];
+        const cont = containerRef.current;
+        if (!btn || !cont) return;
+
+        const { left: cLeft } = cont.getBoundingClientRect();
+        const { left, width } = btn.getBoundingClientRect();
+        setSlider({ left: left - cLeft, width });
+    }, [activeTab, pendingModules.length, evaluatedModules.length]);
 
     const handleRatingChange = (moduleId, value) => {
-        setModules(modules.map(module => 
-            module.id === moduleId 
+        setModules(modules.map(module =>
+            module.id === moduleId
                 ? { ...module, rating: value }
                 : module
         ));
     };
 
     const handleCommentChange = (moduleId, value) => {
-        setModules(modules.map(module => 
-            module.id === moduleId 
+        setModules(modules.map(module =>
+            module.id === moduleId
                 ? { ...module, comment: value }
                 : module
         ));
     };
 
-    const handleSubmitEvaluation = (moduleId) => {
+    const handleSubmitEvaluation = async (moduleId) => {
+        
         const moduleToEvaluate = modules.find(m => m.id === moduleId);
         
-        if (moduleToEvaluate.rating === 0) {
+
+        if (!moduleToEvaluate) {
             toast.current.show({
-                severity: 'warn', 
-                summary: 'Calificación requerida', 
-                detail: 'Debes seleccionar al menos 1 estrella para evaluar',
+                severity: 'error',
+                summary: 'Error',
+                detail: 'No se encontró el módulo a evaluar',
                 life: 3000
             });
             return;
         }
 
-        setModules(modules.map(module => 
-            module.id === moduleId 
-                ? { 
-                    ...module, 
-                    isEvaluated: true, 
-                    submittedRating: module.rating,
-                    rating: 0,
-                    comment: ""
-                  }
-                : module
-        ));
+        // Parseo del moduleId
+        const parsedModuleId = moduleToEvaluate.id.split('-')[0];
 
-        toast.current.show({
-            severity: 'success', 
-            summary: 'Evaluación enviada', 
-            detail: 'Tu evaluación ha sido registrada exitosamente',
-            life: 4000
-        });
+        // Validate evaluation data
+        const evaluationData = {
+            studentId: user.id,
+            moduleId: parsedModuleId,
+            teacherId: moduleToEvaluate.teacherId,
+            star: moduleToEvaluate.rating,
+            comment: moduleToEvaluate.comment
+        };
+
+        const validation = rankingService.validateEvaluation(evaluationData);
+
+        console.log('Datos a enviar:', evaluationData);
+        console.log('Datos validados:', validation.sanitizedData); 
+
+        if (!validation.isValid) {
+            toast.current.show({
+                severity: 'warn',
+                summary: 'Datos incompletos',
+                detail: validation.errors[0],
+                life: 3000
+            });
+            return;
+        }
+
+        try {
+            // Submit evaluation
+            await rankingService.submitEvaluation(validation.sanitizedData);
+
+            // Update local state
+            setModules(modules.map(module =>
+                module.id === moduleId
+                    ? {
+                        ...module,
+                        isEvaluated: true,
+                        submittedRating: module.rating,
+                        submittedComment: module.comment,
+                        rating: 0,
+                        comment: ""
+                    }
+                    : module
+            ));
+
+            toast.current.show({
+                severity: 'success',
+                summary: 'Evaluación enviada',
+                detail: 'Tu evaluación ha sido registrada exitosamente',
+                life: 4000
+            });
+
+        } catch (error) {
+            console.error('Error submitting evaluation:', error);
+            toast.current.show({
+                severity: 'error',
+                summary: 'Error al enviar',
+                detail: error.message || 'No se pudo enviar la evaluación',
+                life: 5000
+            });
+        }
     };
 
     const renderModuleCard = (module) => {
         const cardHeader = (
-            <div className="d-flex justify-content-between align-items-center" style={{ padding: '1rem 1.5rem 0.5rem 1.5rem' }}>
+            <div className="d-flex justify-content-between align-items-center mt-3 p-3">
                 <div>
-                    <h5 className="mb-1 text-primary fw-semibold">{module.name}</h5>
-                    <small className="text-muted">Promedio: {module.average}</small>
+                    <h5 className="text-blue-500 fw-semibold">{module.moduleName}</h5>
                 </div>
                 {module.isEvaluated && (
                     <div className="d-flex align-items-center gap-2">
-                        <i className="pi pi-check-circle text-success fs-5"></i>
-                        <span className="text-success fw-medium">Evaluado</span>
+                        <i className="pi pi-check-circle text-success"></i>
+                        <small className="text-success fw-medium">Evaluado</small>
                     </div>
                 )}
             </div>
@@ -114,66 +181,87 @@ export default function TeacherEvaluation() {
         const cardContent = (
             <div>
                 {/* Información del docente */}
-                <div className="mb-4">
+                <div className="mb-3">
                     <div className="d-flex align-items-center gap-2 mb-2">
                         <i className="pi pi-user text-muted"></i>
-                        <span className="fw-medium">{module.teacher}</span>
+                        <small className="fw-medium">{module.teacherName}</small>
                     </div>
-                    <div className="d-flex align-items-center gap-2">
-                        <i className="pi pi-book text-muted"></i>
-                        <span className="text-muted">{module.subjects.join(", ")}</span>
+                    <div className="d-flex align-items-start gap-2 mb-2">
+                        <i className="pi pi-book text-muted mt-1"></i>
+                        <small className="text-muted">{module.subjects.join(", ")}</small>
                     </div>
+                    {module.schedule && (
+                        <div className="d-flex align-items-center gap-2">
+                            <i className="pi pi-clock text-muted"></i>
+                            <small className="text-muted">{module.schedule}</small>
+                        </div>
+                    )}
                 </div>
 
                 {/* Estado de evaluación */}
                 {module.isEvaluated ? (
-                    <div className="text-center py-3">
-                        <div className="mb-3">
-                            <Rating 
-                                value={module.submittedRating} 
-                                readOnly 
+                    <div className="text-center py-2">
+                        <div className="mb-2">
+                            <Rating
+                                value={module.submittedRating}
+                                readOnly
                                 cancel={false}
                                 className="custom-rating"
                             />
                         </div>
+                        {module.submittedComment && (
+                            <small className="text-muted fst-italic">
+                                "{module.submittedComment}"
+                            </small>
+                        )}
                     </div>
                 ) : (
                     <div>
                         {/* Rating */}
                         <div className="mb-3">
-                            <label className="form-label fw-medium">
-                                Califica el desempeño general del docente:
-                            </label>
-                            <div className="text-center">
-                                <Rating 
-                                    value={module.rating} 
+                            <div className="text-center mb-2">
+                                <Rating
+                                    value={module.rating}
                                     onChange={(e) => handleRatingChange(module.id, e.value)}
                                     cancel={false}
                                     className="custom-rating"
                                 />
                             </div>
+                            <small className="form-label fw-medium text-start d-block">
+                                Califica el desempeño del docente
+                            </small>
                         </div>
 
-                        {/* Comentario opcional */}
-                        <div className="mb-4">
-                            <InputTextarea 
+                        {/* Comentario obligatorio */}
+                        <div className="mb-3" >
+                            <label className="form-label fw-medium small text-muted mb-2">
+                                Comentario sobre el docente *
+                            </label>
+                            <div className='overflow-y-auto' style={{ maxHeight: '15rem' }}>
+                                <InputTextarea
                                 value={module.comment}
                                 onChange={(e) => handleCommentChange(module.id, e.target.value)}
-                                rows={3}
-                                placeholder="Comparte tu experiencia con este docente..."
+                                rows={2}
+                                placeholder="Comparte tu experiencia..."
                                 className="w-100"
-                                autoResize
                             />
+                            </div>
+                            <hr />
                         </div>
 
                         {/* Botón enviar */}
                         <div className="text-center">
-                            <Button 
-                                label="Enviar Evaluación"
+                            <Button
+                                label="Enviar"
                                 icon="pi pi-send"
                                 onClick={() => handleSubmitEvaluation(module.id)}
                                 className="p-button-primary"
-                                disabled={module.rating === 0}
+                                disabled={module.rating === 0 || !module.comment?.trim()}
+                                style={{
+                                    fontSize: '0.8rem',
+                                    padding: '0.4rem 0.8rem',
+                                    height: 'auto'
+                                }}
                             />
                         </div>
                     </div>
@@ -182,36 +270,138 @@ export default function TeacherEvaluation() {
         );
 
         return (
-            <div key={module.id} className="col-12 col-md-6 col-lg-4 mb-4">
-                <Card 
-                    header={cardHeader}
-                    className={`h-100 ${module.isEvaluated ? 'bg-light' : ''}`}
-                >
-                    {cardContent}
-                </Card>
+            <div key={module.id} className="col-12 col-sm-6 col-lg-4 col-xl-3 mb-3">
+                <div className={`card h-100 shadow-sm ${module.isEvaluated ? 'bg-light' : ''}`} style={{ fontSize: '0.9rem', maxHeight: '37.5rem' }}>
+                    <div>
+                        {cardHeader}
+                    </div>
+                    <div className="card-body pt-0">
+                        {cardContent}
+                    </div>
+                </div>
             </div>
         );
     };
+
+    const renderTabContent = () => {
+        if (loading) {
+            return (
+                <div className="col-12 text-center py-5">
+                    <ProgressSpinner style={{ width: '50px', height: '50px' }} />
+                    <p className="mt-3 text-muted">Cargando módulos...</p>
+                </div>
+            );
+        }
+
+        if (error) {
+            return (
+                <div className="col-12">
+                    <Message
+                        severity="error"
+                        text={error}
+                        className="w-100"
+                    />
+                </div>
+            );
+        }
+
+        if (activeTab === 'pending') {
+            return (
+                <div className="row">
+                    {pendingModules.length > 0 ? (
+                        pendingModules.map(module => renderModuleCard(module))
+                    ) : (
+                        <div className="col-12 text-center py-5">
+                            <i className="pi pi-check-circle text-success" style={{ fontSize: '3rem' }}></i>
+                            <h5 className="mt-3 text-muted">¡No tienes módulos pendientes por evaluar!</h5>
+                        </div>
+                    )}
+                </div>
+            );
+        } else {
+            return (
+                <div className="row">
+                    {evaluatedModules.length > 0 ? (
+                        evaluatedModules.map(module => renderModuleCard(module))
+                    ) : (
+                        <div className="col-12 text-center py-5">
+                            <i className="pi pi-info-circle text-muted" style={{ fontSize: '3rem' }}></i>
+                            <h5 className="mt-3 text-muted">Aún no has evaluado ningún módulo</h5>
+                            <p className="text-muted">Ve a la pestaña "Pendientes" para comenzar a evaluar.</p>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+    };
+
+    const baseBtn = 'bg-transparent border-0 px-3 py-2 h6 text-gray-600 fw-semibold position-relative';
+    const activeColor = '#276ba5';
+
+    //Validación de acceso
+    if (user && user.role?.name !== 'STUDENT') {
+        return (
+            <div className="container-fluid py-5">
+                <div className="row justify-content-center">
+                    <div className="col-md-6">
+                        <Message
+                            severity="warn"
+                            text="Solo los estudiantes pueden acceder a las evaluaciones docentes"
+                            className="w-100"
+                        />
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <>
             <div className="bg-white rounded-top p-2">
                 <h3 className="text-blue-500 fw-semibold mx-3 my-1">Evaluación Docente</h3>
             </div>
-            
-            <div className="bg-white p-4">
-                {/* Descripción */}
-                <div className="mb-4">
-                    <p className="text-muted mb-0">
-                        Evalúa el desempeño de tus docentes para ayudar a mejorar la calidad educativa
-                    </p>
-                </div>
 
-                <Toast ref={toast} />
+            <Toast ref={toast} />
 
-                {/* Grid de módulos */}
-                <div className="row">
-                    {modules.map(module => renderModuleCard(module))}
+            <div className="row my-2">
+                <div className="mt-0">
+                    {/* Pestañas personalizadas */}
+                    <div className="bg-white p-3 mb-0">
+                        <div ref={containerRef} className="d-inline-flex position-relative">
+                            {tabs.map((tab) => (
+                                <button
+                                    key={tab.key}
+                                    ref={(el) => (tabRefs.current[tab.key] = el)}
+                                    className={baseBtn}
+                                    style={{ color: activeTab === tab.key ? activeColor : '#707070' }}
+                                    role="tab"
+                                    aria-selected={activeTab === tab.key}
+                                    onClick={() => setActiveTab(tab.key)}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+
+                            {/* Slider animado */}
+                            <motion.div
+                                layout
+                                animate={{ left: slider.left, width: slider.width }}
+                                transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+                                style={{
+                                    position: 'absolute',
+                                    bottom: 0,
+                                    height: 3,
+                                    borderRadius: 9999,
+                                    background: 'linear-gradient(90deg, #276ba5 0%, #276ba5 100%)',
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* render de los Modulos */}
+                    <div className="mt-3">
+                        {renderTabContent()}
+                    </div>
                 </div>
             </div>
         </>

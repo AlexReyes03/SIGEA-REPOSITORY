@@ -14,7 +14,7 @@ import { motion } from 'framer-motion';
 import { useToast } from '../../../components/providers/ToastProvider';
 import { getCurriculumById } from '../../../api/academics/curriculumService';
 import { getQualificationsByGroupWithDetails } from '../../../api/academics/qualificationService';
-import { ReportCard } from './ReportCard'; 
+import { ReportCard } from './ReportCard';
 
 export default function ConsultSubjects({ group, studentId, studentData }) {
     const [loading, setLoading] = useState(true);
@@ -37,10 +37,10 @@ export default function ConsultSubjects({ group, studentId, studentData }) {
             setCurriculum(curriculumData);
             const qualificationsData = await getQualificationsByGroupWithDetails(group.groupId);
             const studentQualifications = qualificationsData.filter(q => q.studentId === studentId);
-            
+
             const gradeMap = {};
             const detailsMap = {};
-            const teacherMap = {}; 
+            const teacherMap = {};
 
             studentQualifications.forEach((q) => {
                 gradeMap[q.subjectId] = q.grade;
@@ -152,7 +152,7 @@ export default function ConsultSubjects({ group, studentId, studentData }) {
             );
         }
 
-        const severity = grade >= 8 ? 'success' : grade >= 7 ? 'warning' : 'danger';
+        const severity = grade >= 8 ? 'success' : 'warning';
         return (
             <Badge
                 value={grade}
@@ -195,11 +195,12 @@ export default function ConsultSubjects({ group, studentId, studentData }) {
         <>
             <Tooltip target="[data-pr-tooltip]" />
 
-            {sortedModules.map((module) => {
+            {sortedModules.map((module, index) => {
                 const isCollapsed = isModuleCollapsed[module.id];
                 const search = searchTerms[module.id] || '';
                 const filteredData = getFilteredData(module.id, search);
                 const headerGroup = headerGroups[module.id];
+                const isLastModule = index === sortedModules.length - 1;
 
                 // Calcular estadísticas del módulo
                 const moduleGrades = filteredData
@@ -218,7 +219,10 @@ export default function ConsultSubjects({ group, studentId, studentData }) {
                 };
 
                 return (
-                    <div className="card border-0 mt-3" key={module.id}>
+                    <div
+                        className={`card border-0 mt-3 ${isLastModule ? 'mb-3' : ''}`}
+                        key={module.id}
+                    >
                         {/* Header módulo */}
                         <div className="d-flex flex-wrap gap-2 align-items-center justify-content-between w-100">
                             <div className="d-flex align-items-center my-md-3 mt-3 mx-3">
@@ -277,6 +281,7 @@ export default function ConsultSubjects({ group, studentId, studentData }) {
                             )}
                         </div>
 
+
                         {/* DataTable */}
                         <motion.div
                             initial={false}
@@ -304,9 +309,6 @@ export default function ConsultSubjects({ group, studentId, studentData }) {
                                     headerColumnGroup={headerGroup}
                                     size="small"
                                     stripedRows
-                                    paginator
-                                    rows={10}
-                                    rowsPerPageOptions={[5, 10, 25]}
                                     emptyMessage={
                                         !search ? (
                                             <p className="text-center my-5">No hay materias en este módulo</p>
