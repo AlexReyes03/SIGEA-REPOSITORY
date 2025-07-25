@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface RankingRepository extends JpaRepository<RankingEntity, Long> {
@@ -38,4 +39,17 @@ public interface RankingRepository extends JpaRepository<RankingEntity, Long> {
             "JOIN FETCH s.campus " +
             "WHERE r.teacher.id = :teacherId")
     List<RankingEntity> findByTeacher_IdWithDetails(@Param("teacherId") long teacherId);
+
+    Optional<RankingEntity> findByStudent_IdAndTeacher_Id(Long studentId, Long teacherId);
+
+    /**
+     * Find all rankings by student with details
+     */
+    @Query("SELECT r FROM RankingEntity r " +
+            "JOIN FETCH r.student s " +
+            "JOIN FETCH r.teacher t " +
+            "JOIN FETCH s.campus " +
+            "LEFT JOIN FETCH s.avatar " +
+            "WHERE s.id = :studentId")
+    List<RankingEntity> findByStudent_IdWithDetails(@Param("studentId") Long studentId);
 }

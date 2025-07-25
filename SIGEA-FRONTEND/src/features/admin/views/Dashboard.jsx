@@ -87,9 +87,9 @@ export default function Dashboard() {
       </div>
 
       <div className="row mt-3">
-        <div className="col-12 col-md-6">
+        <div className="col-12 col-lg-6">
           <div className="row">
-            <div className="col-12 col-sm-6 mb-3 mb-md-0">
+            <div className="col-12 col-md-6 mb-3 mb-lg-0">
               <div className="card border-0">
                 <div className="card-body">
                   <div className="d-flex align-items-center">
@@ -105,7 +105,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="col-12 col-sm-6 mb-3 mb-md-0">
+            <div className="col-12 col-md-6 mb-3 mb-lg-0">
               <div className="card border-0">
                 <div className="card-body">
                   <div className="d-flex align-items-center">
@@ -122,8 +122,8 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="row mt-0 mt-md-3">
-            <div className="col-12 col-sm-6 mb-3 mb-md-0">
+          <div className="row mt-0 mt-lg-3">
+            <div className="col-12 col-md-6 mb-3 mb-lg-0">
               <div className="card border-0">
                 <div className="card-body">
                   <div className="d-flex align-items-center">
@@ -139,7 +139,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="col-12 col-sm-6 mb-3 mb-md-0">
+            <div className="col-12 col-md-6 mb-3 mb-lg-0">
               <div className="card border-0">
                 <div className="card-body">
                   <div className="d-flex align-items-center">
@@ -157,7 +157,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="col-12 col-md-6 mb-3 mb-md-0">
+        <div className="col-12 col-lg-6 mb-3 mb-lg-0">
           <div className="card h-100 border-0">
             <div className="card-body d-flex flex-column">
               <div className="d-flex align-items-center mb-3">
@@ -173,7 +173,9 @@ export default function Dashboard() {
 
                 <div className="d-flex flex-row align-items-center mt-3">
                   <p className="fs-1 fw-bold text-blue-500 me-3 mb-0">{ratingValue.toFixed(1)}</p>
-                  <div className={`${isUp ? 'icon-average-up' : 'icon-average-down'} rounded-circle`}>{isUp ? <MdArrowDropUp size={40} /> : <MdArrowDropDown size={40} />}</div>
+                  <div className={`${isUp ? 'icon-average-up' : 'icon-average-down'} rounded-circle`}>
+                    {isUp ? <MdArrowDropUp size={40} /> : <MdArrowDropDown size={40} />}
+                  </div>
                 </div>
                 <small className="text-muted mt-2 text-center">Evaluación promedio de todos los docentes.</small>
               </div>
