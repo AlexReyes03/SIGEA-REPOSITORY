@@ -157,8 +157,7 @@ export default function AuthLayout({ title, subtitle, children }) {
                   animate={{ opacity: 0.5, y: 0 }}
                   transition={{ delay: 0.6, duration: 0.5 }}
                 >
-                  Las imágenes de carreras aparecerán aquí<br />
-                  cuando sean agregadas por los administradores
+                  Aún no hay imágenes disponibles para mostrar.
                 </motion.p>
               </motion.div>
             )}
@@ -176,7 +175,8 @@ export default function AuthLayout({ title, subtitle, children }) {
                 <div className="spinner-border text-light mb-3" role="status" style={{ width: '3rem', height: '3rem' }}>
                   <span className="visually-hidden">Cargando...</span>
                 </div>
-                <p className="small opacity-75">Cargando carreras...</p>
+                <p className="small opacity-75">Cargando imágenes...</p>
+                <p className="small opacity-75">Esto puede tardar unos segundos.</p>
               </motion.div>
             )}
           </AnimatePresence>

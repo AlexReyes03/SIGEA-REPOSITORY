@@ -197,7 +197,7 @@ export default function Teachers() {
 
   const actionsTemplate = useCallback(
     (row) => {
-      return <Button icon="pi pi-chart-line" rounded outlined severity="info" disabled={loading} tooltip="Ver desempeño" tooltipOptions={{ position: 'top' }} onClick={() => handleViewTeacherScore(row)} />;
+      return <Button icon="pi pi-chart-line" text rounded outlined severity="info" disabled={loading} tooltip="Ver desempeño" tooltipOptions={{ position: 'top' }} onClick={() => handleViewTeacherScore(row)} />;
     },
     [loading, handleViewTeacherScore]
   );

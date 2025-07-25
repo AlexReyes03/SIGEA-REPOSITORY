@@ -172,7 +172,7 @@ export default function AssignStudentsPickList({ group }) {
         <div className="flex-grow-1 d-flex flex-column gap-1">
           <div className="d-flex align-items-center gap-2">
             <span className="fw-bold">{item.fullName}</span>
-            {showCurriculumBadge && <Tag value={validation.sameCurriculum ? 'Mismo plan' : 'Plan diferente'} severity={validation.sameCurriculum ? 'success' : 'danger'} icon={validation.sameCurriculum ? 'pi pi-check' : 'pi pi-times'} className="text-xs" />}
+            {showCurriculumBadge && <Tag value={validation?.sameCurriculum ? 'Mismo plan' : 'Plan diferente'} severity={validation?.sameCurriculum ? 'success' : 'danger'} icon={validation?.sameCurriculum ? 'pi pi-check' : 'pi pi-times'} className="text-xs" />}
           </div>
           {item.email && (
             <span className="text-secondary small">

@@ -4,13 +4,10 @@ import { Button } from 'primereact/button';
 import { BreadCrumb } from 'primereact/breadcrumb';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Rating } from 'primereact/rating';
-import { Avatar } from 'primereact/avatar';
-import { Card } from 'primereact/card';
 import { Badge } from 'primereact/badge';
 import { Paginator } from 'primereact/paginator';
 import { Dropdown } from 'primereact/dropdown';
 import { MdManageSearch, MdOutlineAssessment } from 'react-icons/md';
-import { PiEye, PiEyeSlash } from 'react-icons/pi';
 
 import { useToast } from '../../../components/providers/ToastProvider';
 import { getUserById } from '../../../api/userService';
@@ -396,7 +393,7 @@ export default function TeacherScore() {
                             <Rating value={ranking.star} readOnly cancel={false} className="ms-2" />
                           </div>
 
-                          <div className="text-muted text-nowrap">
+                          <div className="text-muted">
                             {expandedComments[ranking.id] || !ranking.comment || ranking.comment.length <= 100 ? <p className="mb-0">{ranking.comment || 'Sin comentarios'}</p> : <p className="mb-0">{truncateComment(ranking.comment)}</p>}
 
                             {ranking.comment && ranking.comment.length > 100 && <Button label={expandedComments[ranking.id] ? 'Ver menos' : 'Ver más'} link className="p-0 mt-1" style={{ fontSize: '0.875rem' }} onClick={() => toggleComment(ranking.id)} />}

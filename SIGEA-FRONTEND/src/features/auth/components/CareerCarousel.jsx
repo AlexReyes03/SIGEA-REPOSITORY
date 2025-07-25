@@ -54,55 +54,46 @@ export default function CareerCarousel() {
           className="career-card bg-white rounded-4 shadow-sm overflow-hidden h-100"
           whileHover={{ 
             scale: 1.02, 
-            y: -5,
-            transition: { duration: 0.2 }
+            y: -8,
+            transition: { 
+              duration: 0.4,
+              ease: "easeOut"
+            }
           }}
+          style={{ maxWidth: '350px', margin: '0 auto' }}
         >
           <div className="career-image-container position-relative">
             <img
               src={getImageUrl(career.imageUrl)}
               alt={career.name}
-              className="w-100"
+              className="w-100 rounded-3"
               style={{
-                height: '200px',
+                height: '450px',
                 objectFit: 'cover',
               }}
             />
-            <div className="career-overlay position-absolute bottom-0 start-0 end-0 p-3"
+            <div className="career-overlay position-absolute bottom-0 start-0 end-0 p-4 rounded-bottom-3"
               style={{
-                background: 'linear-gradient(transparent, rgba(0,0,0,0.8))'
+                background: 'linear-gradient(transparent, rgba(0,0,0,0.85))'
               }}>
-              <motion.h6 
-                className="text-white fw-bold mb-1"
+              <motion.h5 
+                className="text-white fw-bold mb-2"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
+                style={{ fontSize: '1.25rem' }}
               >
                 {career.name}
-              </motion.h6>
+              </motion.h5>
               <motion.small 
-                className="text-light"
+                className="text-light opacity-75"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
+                style={{ fontSize: '0.9rem' }}
               >
                 {career.campusName}
               </motion.small>
-            </div>
-          </div>
-          
-          <div className="career-info p-3">
-            <div className="d-flex justify-content-between align-items-center">
-              <motion.span 
-                className="badge bg-primary"
-                whileHover={{ scale: 1.1 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
-              >
-                {career.differentiator}
-              </motion.span>
-              <small className="text-muted">
-                {career.studentsCount} estudiante{career.studentsCount !== 1 ? 's' : ''}
-              </small>
             </div>
           </div>
         </motion.div>
@@ -140,8 +131,8 @@ export default function CareerCarousel() {
           numVisible={1}
           numScroll={1}
           orientation="vertical"
-          verticalViewPortHeight="400px"
-          autoplayInterval={5000}
+          verticalViewPortHeight="500px"
+          autoplayInterval={8000}
           circular
           showNavigators={careers.length > 1}
           showIndicators={careers.length > 1}
@@ -198,23 +189,39 @@ export default function CareerCarousel() {
         }
         
         .career-card {
-          transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+          transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
           will-change: transform;
         }
         
-        @media (max-height: 600px) {
+        .career-image-container img {
+          transition: transform 0.4s ease;
+        }
+        
+        .career-card:hover .career-image-container img {
+          transform: scale(1.02);
+        }
+        
+        @media (max-height: 700px) {
           .career-carousel {
-            verticalViewPortHeight: 300px !important;
+            verticalViewPortHeight: 400px !important;
           }
           
           .career-image-container img {
-            height: 150px !important;
+            height: 350px !important;
           }
         }
         
         @media (max-width: 768px) {
           .career-slide {
             padding: 0 0.5rem;
+          }
+          
+          .career-card {
+            max-width: 300px !important;
+          }
+          
+          .career-image-container img {
+            height: 300px !important;
           }
         }
       `}</style>

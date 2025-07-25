@@ -316,16 +316,16 @@ export default function CareerImageUpload({ onImagesUpdated }) {
         <div className="modal-dialog modal-xl modal-dialog-centered">
           <div className="modal-content p-0">
             <div className="modal-header">
-              <h5 className="modal-title">Imágenes de Carreras - {user?.campus?.name}</h5>
+              <h5 className="modal-title">Subir una imagen</h5>
               <button type="button" className="btn-close" data-bs-dismiss="modal" disabled={uploading} />
             </div>
             
             <div className="modal-body p-0">
-              <div className="row h-100">
+              <div className="row h-100 px-3">
                 {/* Panel izquierdo - Lista de carreras */}
-                <div className="col-12 col-lg-4 border-end bg-light">
+                <div className="col-12 col-lg-4 border-end bg-light px-0 mx-0">
                   <div className="p-3">
-                    <h6 className="fw-semibold mb-3">Carreras del plantel</h6>
+                    <h6 className="fw-semibold mb-3">Carreras en {user?.campus?.name}</h6>
                     
                     {loadingCareers ? (
                       <div className="text-center py-4">
@@ -356,15 +356,12 @@ export default function CareerImageUpload({ onImagesUpdated }) {
                                   style={{ objectFit: 'cover' }}
                                 />
                               </div>
-                              <div className="flex-grow-1">
-                                <div className="fw-semibold">{career.name}</div>
+                              <div className="flex-grow-1 text-truncate">
+                                <div className="fw-semibold ">{career.name}</div>
                                 <small className={selectedCareer?.id === career.id ? 'text-light' : 'text-muted'}>
                                   {career.differentiator} • {career.studentsCount} estudiantes
                                 </small>
                               </div>
-                              {career.imageUrl && (
-                                <i className={`pi pi-check-circle ${selectedCareer?.id === career.id ? 'text-light' : 'text-success'}`}></i>
-                              )}
                             </div>
                           </div>
                         ))}

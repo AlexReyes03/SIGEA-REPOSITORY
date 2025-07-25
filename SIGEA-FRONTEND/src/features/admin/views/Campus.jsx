@@ -349,7 +349,9 @@ export default function Campus() {
                           <MdOutlineBusiness className="text-secondary me-2" size={20} />
                           <strong className="text-secondary">Nombre</strong>
                         </div>
+                        <div className='py-3'>
                         <p className="mb-0 text-dark">{campus.name || 'Sin nombre'}</p>
+                        </div>
                       </div>
                     </div>
 
@@ -359,7 +361,9 @@ export default function Campus() {
                           <MdOutlinePerson className="text-secondary me-2" size={20} />
                           <strong className="text-secondary">Director</strong>
                         </div>
+                        <div className='py-3'>
                         <p className="mb-0 text-dark">{campus.directorIdentifier && campus.director ? `${campus.directorIdentifier} ${campus.director}` : campus.director || 'Sin asignar'}</p>
+                        </div>
                       </div>
                     </div>
 
@@ -369,7 +373,9 @@ export default function Campus() {
                           <MdOutlineLocationOn className="text-secondary me-2" size={20} />
                           <strong className="text-secondary">Dirección</strong>
                         </div>
+                        <div className='py-3'>
                         <p className="mb-0 text-dark">{campus.address || 'Sin dirección'}</p>
+                        </div>
                       </div>
                     </div>
 
@@ -379,7 +385,9 @@ export default function Campus() {
                           <MdOutlinePhone className="text-secondary me-2" size={20} />
                           <strong className="text-secondary">Teléfono</strong>
                         </div>
+                        <div className='py-3'>
                         <p className="mb-0 text-dark">{campus.phone || 'Sin teléfono'}</p>
+                        </div>
                       </div>
                     </div>
 
@@ -389,17 +397,18 @@ export default function Campus() {
                           <MdOutlineAssignment className="text-secondary me-2" size={20} />
                           <strong className="text-secondary">RFC</strong>
                         </div>
+                        <div className='py-3'>
                         <p className="mb-0 text-dark">{campus.rfc || 'Sin RFC'}</p>
+                        </div>
                       </div>
                     </div>
 
                     <div className="col-12 col-md-6 mb-4">
-                      <div className="info-item p-3 border rounded bg-light">
+                      <div className="info-item p-3 border rounded bg-light h-100">
                         <div className="d-flex align-items-center mb-2">
                           <MdOutlineImage className="text-secondary me-2" size={20} />
-                          <strong className="text-secondary">Imágenes de Carreras</strong>
+                          <strong className="text-secondary">Imágenes</strong>
                         </div>
-                        <p className="mb-2 text-muted small">Gestiona las imágenes que se mostrarán en el carrusel del login para cada carrera del plantel</p>
                         <div className="mt-3">
                           <CareerImageUpload onImagesUpdated={() => {/* Opcional: refrescar datos */}} />
                         </div>
@@ -492,7 +501,6 @@ export default function Campus() {
 
                             {validationErrors.directorGroup && <small className="p-error">{validationErrors.directorGroup}</small>}
                             {!loadingDirectors && directorOptions.length === 0 && <small className="text-muted">No hay administradores disponibles en este plantel</small>}
-                            <small className="text-muted d-block mt-1">Ambos campos son opcionales, pero si completa uno debe completar el otro</small>
                           </div>
                         </div>
                       </div>

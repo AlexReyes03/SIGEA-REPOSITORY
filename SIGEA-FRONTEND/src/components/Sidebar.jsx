@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MdHome, MdSchool, MdGroups, MdApartment, MdPerson, MdLeaderboard, MdLogout } from 'react-icons/md';
+import { MdHome, MdSchool, MdGroups, MdApartment, MdPerson, MdLeaderboard, MdLogout, MdNotifications } from 'react-icons/md';
 import { motion } from 'framer-motion';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -60,6 +60,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
           { label: 'Carreras', path: '/admin/careers', Icon: MdSchool },
           { label: 'Usuarios', path: '/admin/users', Icon: MdGroups },
           { label: 'Perfil', path: '/admin/profile', Icon: MdPerson },
+          { label: 'Notificaciones', path: '/admin/notifications', Icon: MdNotifications },
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },
         ];
       case 'DEV':
@@ -75,6 +76,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
           { label: 'Carreras', path: '/supervisor/campuses-careers', Icon: MdSchool },
           { label: 'Desempeño', path: '/supervisor/campuses-teachers', Icon: MdLeaderboard },
           { label: 'Perfil', path: '/supervisor/profile', Icon: MdPerson },
+          { label: 'Notificaciones', path: '/supervisor/notifications', Icon: MdNotifications },
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },
         ];
       case 'TEACHER':
@@ -82,6 +84,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
           { label: 'Inicio', path: '/teacher', Icon: MdHome },
           { label: 'Mis Cursos', path: '/teacher/groups', Icon: MdSchool },
           { label: 'Perfil', path: '/teacher/profile', Icon: MdPerson },
+          { label: 'Notificaciones', path: '/teacher/notifications', Icon: MdNotifications },
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },
         ];
       case 'STUDENT':
@@ -90,6 +93,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
           { label: 'Calificaciones', path: '/student/my-qualifications', Icon: MdSchool },
           { label: 'Evaluación Docente', path: '/student/teacher-evaluation', Icon: MdLeaderboard },
           { label: 'Perfil', path: '/student/profile', Icon: MdPerson },
+          { label: 'Notificaciones', path: '/student/notifications', Icon: MdNotifications },
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },
         ];
       default:

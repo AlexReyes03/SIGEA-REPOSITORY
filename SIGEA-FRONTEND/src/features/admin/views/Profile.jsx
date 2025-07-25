@@ -306,6 +306,7 @@ export default function Profile() {
         </div>
       </div>
 
+    {roleLabel !== 'Supervisor' && (
       <div className="row mt-0 mt-md-3">
         <div className="col-12 col-md-4 mb-3 mb-md-0">
           <div className="card border-0 h-100">
@@ -342,6 +343,7 @@ export default function Profile() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Modal de cambio de contraseña */}
       <div className="modal fade" ref={changePasswordModalRef} tabIndex={-1} data-bs-backdrop="static" data-bs-keyboard="false">

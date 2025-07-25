@@ -13,6 +13,7 @@ import ResetPasswordForm from '../features/auth/views/ResetPassword';
 import NotFound from '../components/404';
 
 import Profile from '../features/admin/views/Profile';
+import Notifications from '../components/UserNotifications';
 
 import DevDashboard from '../features/developer/views/Dashboard';
 import DevUsersManagement from '../features/developer/views/UsersManagment';
@@ -93,6 +94,7 @@ export default function AppRouter() {
           <Route path="admin/careers/groups" element={<AdminCareerGroups />} />
           <Route path="admin/careers/curriculums" element={<AdminCareerCurriculums />} />
           <Route path="admin/careers/groups/details" element={<AdminGroupDetail />} />
+          <Route path="admin/notifications" element={<Notifications />} />
         </Route>
       </Route>
 
@@ -112,6 +114,7 @@ export default function AppRouter() {
           <Route path="teacher/groups" element={<TeacherGroups />} />
           <Route path="teacher/groups/details" element={<TeacherGroupDetails />} />
           <Route path="teacher/profile" element={<Profile />} />
+          <Route path="teacher/notifications" element={<Notifications />} />
         </Route>
       </Route>
 
@@ -119,6 +122,8 @@ export default function AppRouter() {
         <Route element={<AppLayout />}>
           {/* SUPERVISOR */}
           <Route path="supervisor" element={<SupervisorDashboard />} />
+          <Route path="supervisor/profile" element={<Profile />} />
+          <Route path="supervisor/notifications" element={<Notifications />} />
 
           {/* Rutas para Carreras */}
           <Route path="supervisor/campuses-careers" element={<SupervisorCampuses />} />
@@ -130,7 +135,6 @@ export default function AppRouter() {
           <Route path="supervisor/campuses-teachers" element={<SupervisorCampuses />} />
           <Route path="supervisor/campuses-teachers/teachers" element={<SupervisorTeachers />} />
           <Route path="supervisor/campuses-teachers/teachers/teacher-score" element={<SupervisorTeacherScore />} />
-          <Route path="supervisor/profile" element={<Profile />} />
         </Route>
       </Route>
 
@@ -142,6 +146,7 @@ export default function AppRouter() {
           <Route path="student/profile" element={<Profile />} />
           <Route path="student/consult-subjects" element={<ConsultSubjects />} />
           <Route path="student/teacher-evaluation" element={<TeacherEvaluation />} />
+          <Route path="student/notifications" element={<Notifications />} />
         </Route>
       </Route>
 
