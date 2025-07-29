@@ -52,7 +52,6 @@ export default function Campus() {
       errors.name = 'El nombre del plantel es obligatorio';
     }
 
-    // Validar que identificador y director vayan juntos
     const hasIdentifier = formData.directorIdentifier && formData.directorIdentifier.trim();
     const hasDirector = formData.director;
 
@@ -89,7 +88,6 @@ export default function Campus() {
     return Object.keys(errors).length === 0;
   }, [formData]);
 
-  // Cargar datos del campus
   const loadCampusData = useCallback(async () => {
     if (!user?.campus?.id) {
       showError('Error', 'No se pudo identificar el plantel del usuario');
@@ -107,7 +105,6 @@ export default function Campus() {
     }
   }, [user?.campus?.id, showError]);
 
-  // Cargar directores disponibles (ADMINS del campus)
   const loadAvailableDirectors = useCallback(async () => {
     if (!user?.campus?.id) return;
 
@@ -144,7 +141,6 @@ export default function Campus() {
     validateForm();
   }, [validateForm]);
 
-  // Inicializar formulario cuando se carguen los directores y el modal esté abierto
   useEffect(() => {
     if (modalOpened && availableDirectors.length >= 0 && campus) {
       let currentDirector = null;
@@ -163,28 +159,22 @@ export default function Campus() {
     }
   }, [modalOpened, availableDirectors, campus]);
 
-  // Formatear opciones de directores para el dropdown
   const directorOptions = availableDirectors.map((director) => ({
     label: `${director.name} ${director.paternalSurname} ${director.maternalSurname || ''}`.trim(),
     value: director,
     ...director,
   }));
 
-  // Abrir modal de edición
   const openEditModal = useCallback(async () => {
     if (!campus) return;
 
-    // Primero cargar directores
     await loadAvailableDirectors();
 
-    // Marcar modal como abierto
     setModalOpened(true);
 
-    // Mostrar modal
     new Modal(editModalRef.current).show();
   }, [campus, loadAvailableDirectors]);
 
-  // Limpiar formulario al cerrar modal
   const handleModalClose = useCallback(() => {
     setModalOpened(false);
     setFormData({
@@ -198,7 +188,6 @@ export default function Campus() {
     setValidationErrors({});
   }, []);
 
-  // Manejar actualización
   const handleUpdate = useCallback(
     async (e) => {
       e.preventDefault();
@@ -210,7 +199,6 @@ export default function Campus() {
         return;
       }
 
-      // Construir payload - cada campo se evalúa independientemente
       const payload = {
         name: formData.name.trim(),
         director: formData.director ? `${formData.director.name} ${formData.director.paternalSurname} ${formData.director.maternalSurname || ''}`.trim() : null,
@@ -219,9 +207,6 @@ export default function Campus() {
         phone: formData.phone.trim() || null,
         rfc: formData.rfc.trim() || null,
       };
-
-      console.log('FormData antes del payload:', formData);
-      console.log('Payload que se enviará:', payload);
 
       try {
         setIsUpdating(true);
@@ -245,7 +230,6 @@ export default function Campus() {
     [isUpdating, validateForm, formData, campus?.id, showWarn, showSuccess, showError, loadCampusData, handleModalClose]
   );
 
-  // Manejar cambio de teléfono con formato automático
   const handlePhoneChange = useCallback((value) => {
     let numbers = value.replace(/\D/g, '');
 
@@ -260,7 +244,6 @@ export default function Campus() {
     }
   }, []);
 
-  // Manejar cambio de RFC con formato automático
   const handleRfcChange = useCallback((value) => {
     let clean = value.replace(/-/g, '').toUpperCase();
 
@@ -280,27 +263,21 @@ export default function Campus() {
     setFormData((prev) => ({ ...prev, rfc: formatted }));
   }, []);
 
-  // Limpiar director si se borra el identificador
   const handleIdentifierChange = useCallback((value) => {
     setFormData((prev) => ({
       ...prev,
       directorIdentifier: value,
-      // Si se borra el identificador, también borrar el director
       director: value.trim() ? prev.director : null,
     }));
   }, []);
 
-  // Limpiar identificador si se borra el director
   const handleDirectorChange = useCallback((value) => {
-    console.log('Director change:', value); // Debug log
     setFormData((prev) => {
       const newFormData = {
         ...prev,
         director: value,
-        // Si se borra el director, también borrar el identificador
         directorIdentifier: value ? prev.directorIdentifier : '',
       };
-      console.log('New form data after director change:', newFormData); // Debug log
       return newFormData;
     });
   }, []);
@@ -349,8 +326,8 @@ export default function Campus() {
                           <MdOutlineBusiness className="text-secondary me-2" size={20} />
                           <strong className="text-secondary">Nombre</strong>
                         </div>
-                        <div className='py-3'>
-                        <p className="mb-0 text-dark">{campus.name || 'Sin nombre'}</p>
+                        <div className="py-3">
+                          <p className="mb-0 text-dark">{campus.name || 'Sin nombre'}</p>
                         </div>
                       </div>
                     </div>
@@ -361,8 +338,8 @@ export default function Campus() {
                           <MdOutlinePerson className="text-secondary me-2" size={20} />
                           <strong className="text-secondary">Director</strong>
                         </div>
-                        <div className='py-3'>
-                        <p className="mb-0 text-dark">{campus.directorIdentifier && campus.director ? `${campus.directorIdentifier} ${campus.director}` : campus.director || 'Sin asignar'}</p>
+                        <div className="py-3">
+                          <p className="mb-0 text-dark">{campus.directorIdentifier && campus.director ? `${campus.directorIdentifier} ${campus.director}` : campus.director || 'Sin asignar'}</p>
                         </div>
                       </div>
                     </div>
@@ -373,8 +350,8 @@ export default function Campus() {
                           <MdOutlineLocationOn className="text-secondary me-2" size={20} />
                           <strong className="text-secondary">Dirección</strong>
                         </div>
-                        <div className='py-3'>
-                        <p className="mb-0 text-dark">{campus.address || 'Sin dirección'}</p>
+                        <div className="py-3">
+                          <p className="mb-0 text-dark">{campus.address || 'Sin dirección'}</p>
                         </div>
                       </div>
                     </div>
@@ -385,8 +362,8 @@ export default function Campus() {
                           <MdOutlinePhone className="text-secondary me-2" size={20} />
                           <strong className="text-secondary">Teléfono</strong>
                         </div>
-                        <div className='py-3'>
-                        <p className="mb-0 text-dark">{campus.phone || 'Sin teléfono'}</p>
+                        <div className="py-3">
+                          <p className="mb-0 text-dark">{campus.phone || 'Sin teléfono'}</p>
                         </div>
                       </div>
                     </div>
@@ -397,8 +374,8 @@ export default function Campus() {
                           <MdOutlineAssignment className="text-secondary me-2" size={20} />
                           <strong className="text-secondary">RFC</strong>
                         </div>
-                        <div className='py-3'>
-                        <p className="mb-0 text-dark">{campus.rfc || 'Sin RFC'}</p>
+                        <div className="py-3">
+                          <p className="mb-0 text-dark">{campus.rfc || 'Sin RFC'}</p>
                         </div>
                       </div>
                     </div>
@@ -410,7 +387,7 @@ export default function Campus() {
                           <strong className="text-secondary">Imágenes</strong>
                         </div>
                         <div className="mt-3">
-                          <CareerImageUpload onImagesUpdated={() => {/* Opcional: refrescar datos */}} />
+                          <CareerImageUpload />
                         </div>
                       </div>
                     </div>

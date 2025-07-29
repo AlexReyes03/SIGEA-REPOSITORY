@@ -155,7 +155,7 @@ export default function ProfileAvatarUpload() {
       </div>
       <div className="my-2 text-center w-100" style={{ maxWidth: 420 }}>
         <span className="d-block mb-1 fw-semibold" style={{ fontSize: '1.13em', color: '#5f6368' }}>
-          Arrastra una imagen aquí o haz clic en <span className="text-info">Seleccionar</span>
+          Arrastra una imagen aquí o haz clic en el botón <i className='pi pi-fw pi-images'></i> <span className='d-none d-lg-inline'>Seleccionar</span>
         </span>
         <p>
           <small className="text-muted">para cambiar tu foto de perfil</small>
@@ -179,7 +179,7 @@ export default function ProfileAvatarUpload() {
   };
   const cancelOptions = {
     icon: 'pi pi-fw pi-times',
-    label: 'Limpiar',
+    label: 'Eliminar',
     className: 'p-button-secondary p-button-outlined custom-cancel-btn',
     onClick: onTemplateClear,
   };

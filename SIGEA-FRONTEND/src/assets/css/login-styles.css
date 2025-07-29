@@ -23,3 +23,16 @@ input[type='password']::-ms-reveal,
 input[type='password']::-ms-clear {
   display: none;
 }
+
+.p-carousel-viewport {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.p-carousel-content {
+  position: relative !important;
+}
+
+.career-carousel .p-ripple-disabled {
+  position: relative !important;
+}

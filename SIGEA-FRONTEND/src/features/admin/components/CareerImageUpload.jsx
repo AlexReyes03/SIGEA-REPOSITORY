@@ -38,7 +38,7 @@ export default function CareerImageUpload({ onImagesUpdated }) {
       img.onload = () => {
         // Calcular nuevas dimensiones manteniendo la proporción
         let { width, height } = img;
-        
+
         if (width > height) {
           if (width > maxWidth) {
             height = (height * maxWidth) / width;
@@ -116,7 +116,6 @@ export default function CareerImageUpload({ onImagesUpdated }) {
     }
 
     try {
-      // Redimensionar imagen si es mayor a 800x600
       const resizedBlob = await resizeImage(_file);
       const resizedFile = new File([resizedBlob], _file.name, {
         type: 'image/jpeg',
@@ -135,20 +134,20 @@ export default function CareerImageUpload({ onImagesUpdated }) {
 
   const onTemplateUpload = async () => {
     if (!file || !selectedCareer) return;
-    
+
     setUploading(true);
     try {
       await uploadCareerImage(selectedCareer.id, file);
       showSuccess('Éxito', `Imagen actualizada para ${selectedCareer.name}`);
-      
+
       // Actualizar la lista de carreras
       await loadCareers();
-      
+
       // Notificar al componente padre
       if (onImagesUpdated) {
         onImagesUpdated();
       }
-      
+
       setFile(null);
       setTotalSize(0);
       setSelectedCareer(null);
@@ -171,7 +170,7 @@ export default function CareerImageUpload({ onImagesUpdated }) {
     setTotalSize(0);
     setSelectedCareer(null);
     if (fileUploadRef.current) fileUploadRef.current.clear();
-    
+
     await loadCareers();
     new Modal(modalRef.current).show();
   };
@@ -187,7 +186,7 @@ export default function CareerImageUpload({ onImagesUpdated }) {
     const { className, chooseButton, uploadButton, cancelButton } = options;
     const value = totalSize / 2000000;
     const formatedValue = fileUploadRef && fileUploadRef.current ? fileUploadRef.current.formatSize(totalSize) : '0 B';
-    
+
     return (
       <div className={className + ' justify-content-between align-items-center py-2'} style={{ backgroundColor: 'transparent', display: 'flex', flexWrap: 'wrap' }}>
         <div className="d-flex gap-2 align-items-center">
@@ -206,14 +205,7 @@ export default function CareerImageUpload({ onImagesUpdated }) {
   const itemTemplate = () =>
     file && (
       <div className="d-flex align-items-center justify-content-center text-center justify-content-lg-start text-lg-start flex-wrap my-3 w-100">
-        <img 
-          alt={file.name} 
-          src={file.objectURL || URL.createObjectURL(file)} 
-          className="rounded me-3 shadow-sm" 
-          width={80} 
-          height={60} 
-          style={{ objectFit: 'cover' }}
-        />
+        <img alt={file.name} src={file.objectURL || URL.createObjectURL(file)} className="rounded me-3 shadow-sm" width={80} height={60} style={{ objectFit: 'cover' }} />
         <div className="me-auto text-truncate">
           <div className="fw-semibold">{file.name}</div>
           <small className="text-muted">Redimensionada automáticamente</small>
@@ -228,12 +220,7 @@ export default function CareerImageUpload({ onImagesUpdated }) {
         <>
           {/* Imagen actual de la carrera */}
           <div className="position-relative mb-3" style={{ width: 200, height: 150 }}>
-            <img
-              src={getImageUrl(selectedCareer.imageUrl) || 'https://via.placeholder.com/200x150?text=Sin+Imagen'}
-              className="rounded shadow-sm w-100 h-100"
-              alt={selectedCareer.name}
-              style={{ objectFit: 'cover' }}
-            />
+            <img src={getImageUrl(selectedCareer.imageUrl) || `https://placehold.co/600x400?text=${selectedCareer.differentiator}`} className="rounded shadow-sm w-100 h-100" alt={selectedCareer.name} style={{ objectFit: 'cover' }} />
             {uploading && (
               <div
                 className="position-absolute d-flex align-items-center justify-content-center rounded"
@@ -252,12 +239,12 @@ export default function CareerImageUpload({ onImagesUpdated }) {
               </div>
             )}
           </div>
-          
+
           <h6 className="text-center mb-3">{selectedCareer.name}</h6>
-          
+
           <div className="my-2 text-center w-100" style={{ maxWidth: 420 }}>
             <span className="d-block mb-1 fw-semibold" style={{ fontSize: '1.13em', color: '#5f6368' }}>
-              Arrastra una imagen aquí o haz clic en <span className="text-info">Seleccionar</span>
+              Arrastra una imagen aquí o haz clic en el botón <i className='pi pi-fw pi-images'></i> <span className='d-none d-lg-inline'>Seleccionar</span>
             </span>
             <p>
               <small className="text-muted">para cambiar la imagen de esta carrera</small>
@@ -281,16 +268,16 @@ export default function CareerImageUpload({ onImagesUpdated }) {
     icon: 'pi pi-fw pi-images',
     label: 'Seleccionar',
     className: 'custom-choose-btn',
-    disabled: !selectedCareer
+    disabled: !selectedCareer,
   };
-  
+
   const uploadOptions = {
     icon: 'pi pi-fw pi-cloud-upload',
     label: 'Subir',
     className: 'p-button-success custom-upload-btn',
-    disabled: !selectedCareer
+    disabled: !selectedCareer,
   };
-  
+
   const cancelOptions = {
     icon: 'pi pi-fw pi-times',
     label: 'Limpiar',
@@ -301,13 +288,7 @@ export default function CareerImageUpload({ onImagesUpdated }) {
   return (
     <>
       {/* Botón para abrir modal */}
-      <Button
-        icon="pi pi-images"
-        className="p-button-info"
-        onClick={openModal}
-        disabled={uploading}
-        title="Gestionar imágenes de carreras"
-      >
+      <Button icon="pi pi-images" className="p-button-info" onClick={openModal} disabled={uploading} title="Gestionar imágenes de carreras">
         <span className="d-none d-sm-inline ms-2">Gestionar imágenes</span>
       </Button>
 
@@ -319,14 +300,14 @@ export default function CareerImageUpload({ onImagesUpdated }) {
               <h5 className="modal-title">Subir una imagen</h5>
               <button type="button" className="btn-close" data-bs-dismiss="modal" disabled={uploading} />
             </div>
-            
+
             <div className="modal-body p-0">
               <div className="row h-100 px-3">
                 {/* Panel izquierdo - Lista de carreras */}
                 <div className="col-12 col-lg-4 border-end bg-light px-0 mx-0">
                   <div className="p-3">
                     <h6 className="fw-semibold mb-3">Carreras en {user?.campus?.name}</h6>
-                    
+
                     {loadingCareers ? (
                       <div className="text-center py-4">
                         <ProgressSpinner style={{ width: '30px', height: '30px' }} strokeWidth="8" />
@@ -337,24 +318,10 @@ export default function CareerImageUpload({ onImagesUpdated }) {
                     ) : (
                       <div className="career-list" style={{ maxHeight: '400px', overflowY: 'auto' }}>
                         {careers.map((career) => (
-                          <div
-                            key={career.id}
-                            className={`career-item p-3 mb-2 rounded cursor-pointer border ${
-                              selectedCareer?.id === career.id ? 'bg-primary text-white' : 'bg-white'
-                            }`}
-                            onClick={() => selectCareer(career)}
-                            style={{ cursor: 'pointer' }}
-                          >
+                          <div key={career.id} className={`career-item p-3 mb-2 rounded cursor-pointer border ${selectedCareer?.id === career.id ? 'bg-primary text-white' : 'bg-white'}`} onClick={() => selectCareer(career)} style={{ cursor: 'pointer' }}>
                             <div className="d-flex align-items-center">
                               <div className="me-3">
-                                <img
-                                  src={getImageUrl(career.imageUrl) || 'https://via.placeholder.com/50x40?text=Sin+Imagen'}
-                                  className="rounded"
-                                  width={50}
-                                  height={40}
-                                  alt={career.name}
-                                  style={{ objectFit: 'cover' }}
-                                />
+                                <img src={getImageUrl(career?.imageUrl) || `https://placehold.co/600x400?text=${career?.differentiator}`} className="rounded" width={50} height={40} alt={career?.name} style={{ objectFit: 'cover' }} />
                               </div>
                               <div className="flex-grow-1 text-truncate">
                                 <div className="fw-semibold ">{career.name}</div>
