@@ -11,7 +11,10 @@ export const getRankingById = async (id) => {
 };
 
 export const getRankingsByTeacher = async (teacherId) => {
-  const res = await request(`/api/rankings/teacher/${teacherId}`);
+  const res = await request('/api/rankings/teacher', {
+    method: 'POST',
+    body: { teacherId },
+  });
   return res;
 };
 
@@ -24,7 +27,10 @@ export const createRanking = async (rankingData) => {
 };
 
 export const getStudentEvaluationModules = async (studentId) => {
-  const response = await request(`/api/rankings/student/${studentId}/modules`);
+  const response = await request('/api/rankings/student/modules', {
+    method: 'POST',
+    body: { studentId },
+  });
   return response.data || [];
 };
 
@@ -32,14 +38,30 @@ export const submitEvaluation = async (evaluationData) => {
   return await createRanking(evaluationData);
 };
 
-export const checkStudentTeacherEvaluation = async (studentId, teacherId) => {
-  const response = await request(`/api/rankings/student/${studentId}/teacher/${teacherId}`);
+export const checkStudentTeacherEvaluation = async (studentId, teacherId, moduleId) => {
+  const response = await request('/api/rankings/check-evaluation', {
+    method: 'POST',
+    body: { studentId, teacherId, moduleId },
+  });
   return response.data;
 };
 
 export const getStudentEvaluations = async (studentId) => {
-  const response = await request(`/api/rankings/student/${studentId}`);
+  const response = await request('/api/rankings/student', {
+    method: 'POST',
+    body: { studentId },
+  });
   return response.data || [];
+};
+
+// MÉTODO PARA ESTADÍSTICAS DE RANKINGS DEL CAMPUS
+
+export const getCampusRankingStats = async (campusId) => {
+  const response = await request('/api/rankings/campus/ranking-stats', {
+    method: 'POST',
+    body: { campusId },
+  });
+  return response.data || response;
 };
 
 export const validateEvaluation = (evaluationData) => {
@@ -73,7 +95,7 @@ export const validateEvaluation = (evaluationData) => {
       moduleId: evaluationData.moduleId,
       teacherId: evaluationData.teacherId,
       star: evaluationData.star,
-      comment: evaluationData.comment?.trim() || null
-    }
+      comment: evaluationData.comment?.trim() || null,
+    },
   };
 };

@@ -18,6 +18,10 @@ export const getGroupByCareer = async (careerId) => {
   return await request(`/api/groups/career/${careerId}`);
 };
 
+export const getGroupsByCampus = async (campusId) => {
+  return await request(`/api/groups/campus/${campusId}`);
+};
+
 export const createGroup = async (groupDto) => {
   return await request(`/api/groups`, {
     method: 'POST',
@@ -69,7 +73,7 @@ export const getStudentGroupHistory = async (studentId) => {
 export const isStudentActiveInGroup = async (studentId, groupId) => {
   try {
     const history = await getStudentGroupHistory(studentId);
-    return history.some(entry => entry.groupId === groupId && entry.status === 'ACTIVE');
+    return history.some((entry) => entry.groupId === groupId && entry.status === 'ACTIVE');
   } catch (error) {
     console.error('Error checking student group status:', error);
     return false;
@@ -87,8 +91,8 @@ export const transferStudents = async (studentIds, sourceGroupId, targetGroupId,
       studentIds,
       sourceGroupId,
       targetGroupId,
-      copyQualifications
-    }
+      copyQualifications,
+    },
   });
 };
 

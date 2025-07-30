@@ -1,4 +1,5 @@
 import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Dropdown } from 'primereact/dropdown';
@@ -104,6 +105,7 @@ const buildFullRegistrationNumberForEdit = (enrollment, newLast4) => {
 };
 
 export default function UsersManagement() {
+  const location = useLocation();
   const dt = useRef(null);
   const toast = useRef(null);
   const createModalRef = useRef(null);
@@ -489,14 +491,23 @@ export default function UsersManagement() {
 
   useEffect(() => {
     if (roles.length > 0 && isInitialLoad && user?.campus?.id) {
-      const studentRole = roles.find((role) => role.roleName === 'STUDENT' || role.id === 4);
-      if (studentRole) {
-        setSelectedTipoUsuario(studentRole.id);
-        loadUsersByRoleAndPlantel(studentRole.id, user.campus.id);
+      const preselectedRoleId = location.state?.preselectedRoleId;
+
+      let initialRoleId;
+      if (preselectedRoleId) {
+        initialRoleId = preselectedRoleId;
+      } else {
+        const studentRole = roles.find((role) => role.roleName === 'STUDENT' || role.id === 4);
+        initialRoleId = studentRole?.id;
+      }
+
+      if (initialRoleId) {
+        setSelectedTipoUsuario(initialRoleId);
+        loadUsersByRoleAndPlantel(initialRoleId, user.campus.id);
       }
       setIsInitialLoad(false);
     }
-  }, [roles, isInitialLoad, user?.campus?.id, loadUsersByRoleAndPlantel]);
+  }, [roles, isInitialLoad, user?.campus?.id, loadUsersByRoleAndPlantel, location.state?.preselectedRoleId]);
 
   useEffect(() => {
     if (!isInitialLoad && selectedTipoUsuario && user?.campus?.id) {
