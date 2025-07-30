@@ -231,6 +231,23 @@ public class GroupService {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
+    // LISTAR POR CAMPUS
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<GroupResponseDto>> findGroupsByCampus(long campusId) {
+        List<GroupEntity> groups = repository.findAll().stream()
+                .filter(group -> group.getCareer().getCampus().getId() == campusId)
+                .toList();
+
+        if (groups.isEmpty()) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        List<GroupResponseDto> dtos = groups.stream()
+                .map(this::toResponseDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
+    }
+
     // CREAR NUEVO GRUPO
     @Transactional
     public ResponseEntity<GroupResponseDto> create(GroupRequestDto dto) {
