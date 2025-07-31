@@ -225,11 +225,11 @@ public class RankingService {
 
                         for (ModuleDto module : modules) {
                             // Verificar si ya evaluó a este teacher en este módulo específico
-                            List<RankingEntity> teacherRankings = repository.findByTeacher_IdWithDetails(group.teacherId());
-                            Optional<RankingEntity> existingRanking = teacherRankings.stream()
-                                    .filter(r -> Objects.equals(r.getStudent().getId(), studentId))
-                                    .filter(r -> Objects.equals(r.getModuleId(), module.id()))
-                                    .findFirst();
+                            Optional<RankingEntity> existingRanking = repository.findByStudent_IdAndTeacher_IdAndModuleId(
+                                    studentId,
+                                    group.teacherId(),
+                                    module.id()
+                            );
 
                             boolean isEvaluated = existingRanking.isPresent();
 
@@ -240,18 +240,18 @@ public class RankingService {
 
                             // Crear DTO de evaluación POR MÓDULO
                             EvaluationModuleDto evaluationModule = new EvaluationModuleDto(
-                                    group.groupId() + "-" + group.teacherId() + "-" + module.id(), // String id
-                                    module.name(), // String moduleName
-                                    module.id(), // Long moduleId
-                                    group.teacherName(), // String teacherName
-                                    group.teacherId(), // Long teacherId
-                                    group.groupId(), // Long groupId
-                                    group.curriculumName(), // String curriculumName
-                                    group.weekDay() + " " + group.startTime() + "-" + group.endTime(), // String schedule
-                                    subjectNames, // List<String> subjects
-                                    isEvaluated, // boolean isEvaluated
-                                    existingRanking.isPresent() ? existingRanking.get().getStar() : null, // Integer submittedRating
-                                    existingRanking.isPresent() ? existingRanking.get().getComment() : null // String submittedComment
+                                    group.groupId() + "-" + group.teacherId() + "-" + module.id(),
+                                    module.name(),
+                                    module.id(),
+                                    group.teacherName(),
+                                    group.teacherId(),
+                                    group.groupId(),
+                                    group.curriculumName(),
+                                    group.weekDay() + " " + group.startTime() + "-" + group.endTime(),
+                                    subjectNames,
+                                    isEvaluated,
+                                    existingRanking.isPresent() ? existingRanking.get().getStar() : null,
+                                    existingRanking.isPresent() ? existingRanking.get().getComment() : null
                             );
 
                             evaluationModules.add(evaluationModule);

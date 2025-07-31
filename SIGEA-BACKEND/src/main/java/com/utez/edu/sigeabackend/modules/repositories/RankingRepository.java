@@ -41,8 +41,11 @@ public interface RankingRepository extends JpaRepository<RankingEntity, Long> {
     List<RankingEntity> findByTeacher_IdWithDetails(@Param("teacherId") long teacherId);
 
     //Find ranking by student, teacher and module
-    Optional<RankingEntity> findByStudent_IdAndTeacher_IdAndModuleId(Long studentId, Long teacherId, Long moduleId);
-
+    Optional<RankingEntity> findByStudent_IdAndTeacher_IdAndModuleId(
+            Long studentId,
+            Long teacherId,
+            Long moduleId
+    );
     /**
      * Find all rankings by student with details
      */
