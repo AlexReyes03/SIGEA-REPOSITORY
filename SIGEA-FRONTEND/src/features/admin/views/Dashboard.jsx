@@ -215,14 +215,14 @@ export default function Dashboard() {
 
         {/* Total de docentes */}
         <div className="col-12 col-sm-6 col-lg-3 mb-3">
-          <div className="card border-0 h-100 hovereable up" title="Ver docentes" onClick={navigateToTeachers} style={{ cursor: 'pointer' }}>
+          <div className="card border-0 h-100 hovereable up" title="Ver maestros" onClick={navigateToTeachers} style={{ cursor: 'pointer' }}>
             <div className="card-body d-flex flex-column justify-content-between" style={{ minHeight: '140px' }}>
               <div className="d-flex align-items-center justify-content-between mb-2">
                 <div className="d-flex text-truncate text-nowrap align-items-center">
                   <div className="title-icon p-1 rounded-circle">
                     <MdOutlineCoPresent size={32} className="p-1" />
                   </div>
-                  <h6 className="text-secondary ms-2 mb-0 text-truncate">Docentes</h6>
+                  <h6 className="text-secondary ms-2 mb-0 text-truncate">Maestros</h6>
                 </div>
               </div>
               <div className="text-center">
@@ -373,15 +373,15 @@ export default function Dashboard() {
                   <div className="title-icon p-1 rounded-circle">
                     <MdOutlineCoPresent size={40} className="p-1" />
                   </div>
-                  <h5 className="text-blue-500 text-truncate fw-semibold ms-3 mb-0" title="Mejores docentes">
-                    Mejores docentes
+                  <h5 className="text-blue-500 text-truncate fw-semibold ms-3 mb-0" title="Mejores maestros">
+                    Mejores maestros
                   </h5>
                 </div>
               </div>
 
               {topTeachers.length === 0 ? (
                 <div className="text-center py-5">
-                  <Message severity="info" text="Aún no hay evaluaciones de docentes." />
+                  <Message severity="info" text="Aún no hay evaluaciones de maestros." />
                 </div>
               ) : (
                 <div className="overflow-auto pb-3" style={{ maxHeight: '320px' }}>

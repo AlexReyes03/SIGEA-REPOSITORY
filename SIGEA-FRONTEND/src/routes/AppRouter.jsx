@@ -49,7 +49,7 @@ export default function AppRouter() {
       {/* PÚBLICAS */}
       <Route element={<PublicRoute />}>
         <Route
-          path="/"
+          path=""
           element={
             <AuthLayout title="Inicio de Sesión" subtitle="Ingresa tus credenciales">
               <LoginForm />

@@ -1288,6 +1288,8 @@ export default function UsersManagement() {
             dataKey="id"
             paginator
             rows={10}
+            scrollable
+            scrollHeight='55vh'
             rowsPerPageOptions={[5, 10, 25, 50]}
             filterDisplay="menu"
             globalFilter={globalFilter}

@@ -7,7 +7,7 @@ import AuthInterceptor from './components/AuthInterceptor';
 
 export default function App() {
   return (
-    <BrowserRouter basename="/sigea/">
+    <BrowserRouter basename="/sigea">
       <ToastProvider>
         <ConfirmDialogProvider>
           <AuthInterceptor>

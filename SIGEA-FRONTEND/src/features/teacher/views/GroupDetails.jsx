@@ -24,6 +24,36 @@ const weekDayOptions = [
 ];
 const weekLabel = (code) => weekDayOptions.find((o) => o.value === code)?.label || code;
 
+// Función helper para formatear fechas a "MES - AÑO"
+const formatDateToMonthYear = (dateString) => {
+  if (!dateString) return 'No definida';
+
+  const date = new Date(dateString);
+  const monthNames = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+
+  const month = monthNames[date.getMonth()];
+  const year = date.getFullYear();
+
+  return `${month} - ${year}`;
+};
+
+// Función helper para calcular el estado del grupo
+const getGroupStatus = (startDate, endDate) => {
+  if (!startDate || !endDate) return 'Sin fecha';
+
+  const now = new Date();
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (now < start) {
+    return 'Programado';
+  } else if (now >= start && now <= end) {
+    return 'Activo';
+  } else {
+    return 'Finalizado';
+  }
+};
+
 export default function GroupDetails() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -76,15 +106,15 @@ export default function GroupDetails() {
   }, [group, navigate]);
 
   const infoLeft = [
-    { label: 'Plan de estudios', value: group.curriculumName || 'No asignado' },
-    { label: 'Fecha de inicio', value: 'MAYO - 2025' },
-    { label: 'Estado', value: 'Activo' },
+    { label: 'Plan de estudios', value: group?.curriculumName || 'No asignado' },
+    { label: 'Horario', value: `${weekLabel(group?.weekDay)} ${group?.startTime} - ${group?.endTime}` },
+    { label: 'Estado', value: getGroupStatus(group?.startDate, group?.endDate) },
   ];
 
   const infoRight = [
-    { label: 'Horario', value: `${weekLabel(group.weekDay)} ${group.startTime} - ${group.endTime}` },
-    { label: 'Fecha de fin', value: 'MAYO - 2026' },
     { label: 'Total de alumnos', value: studentCount === 0 ? 'Sin alumnos' : studentCount },
+    { label: 'Fecha de inicio', value: formatDateToMonthYear(group?.startDate) },
+    { label: 'Fecha de fin', value: formatDateToMonthYear(group?.endDate) },
   ];
 
   return (
