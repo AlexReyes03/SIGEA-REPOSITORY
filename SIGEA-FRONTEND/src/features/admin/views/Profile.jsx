@@ -829,7 +829,7 @@ export default function Profile() {
                 ) : (
                   <div className="overflow-y-auto" style={{ maxHeight: '13rem' }}>
                     {card1Data.progressData.map((careerProgress, index) => (
-                      <div key={index} className={`mb-3 p-3 border rounded ${index > 0 ? 'mt-3' : ''}`}>
+                      <div key={index} className={`mb-3 p-3 border rounded ${careerProgress.progress === 100 && 'hovereable'} ${index > 0 ? 'mt-3' : ''}`} onClick={careerProgress.progress === 100 && (() => navigate('/student/teacher-evaluation'))}>
                         <div className="mb-2">
                           <small className="fw-semibold">{careerProgress.careerName}</small>
                           {careerProgress.hasGroup && (
