@@ -283,11 +283,11 @@ public class RankingService {
                         assert modules != null;
                         for (ModuleDto module : modules) {
                             // Verificar si ya evaluó a este teacher en este módulo específico
-                            List<RankingEntity> teacherRankings = repository.findByTeacher_IdWithDetails(group.teacherId());
-                            Optional<RankingEntity> existingRanking = teacherRankings.stream()
-                                    .filter(r -> Objects.equals(r.getStudent().getId(), studentId))
-                                    .filter(r -> Objects.equals(r.getModuleId(), module.id()))
-                                    .findFirst();
+                            Optional<RankingEntity> existingRanking = repository.findByStudent_IdAndTeacher_IdAndModuleId(
+                                    studentId,
+                                    group.teacherId(),
+                                    module.id()
+                            );
 
                             boolean isEvaluated = existingRanking.isPresent();
 

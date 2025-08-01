@@ -86,9 +86,9 @@ export default function TeacherEvaluation() {
     };
 
     const handleSubmitEvaluation = async (moduleId) => {
-        
+
         const moduleToEvaluate = modules.find(m => m.id === moduleId);
-        
+
 
         if (!moduleToEvaluate) {
             toast.current.show({
@@ -101,7 +101,7 @@ export default function TeacherEvaluation() {
         }
 
         // Parseo del moduleId
-        const parsedModuleId = moduleToEvaluate.id.split('-')[0];
+        const parsedModuleId = moduleToEvaluate.id.split('-')[2];
 
         // Validate evaluation data
         const evaluationData = {
@@ -115,7 +115,7 @@ export default function TeacherEvaluation() {
         const validation = rankingService.validateEvaluation(evaluationData);
 
         console.log('Datos a enviar:', evaluationData);
-        console.log('Datos validados:', validation.sanitizedData); 
+        console.log('Datos validados:', validation.sanitizedData);
 
         if (!validation.isValid) {
             toast.current.show({
@@ -169,12 +169,6 @@ export default function TeacherEvaluation() {
                 <div>
                     <h5 className="text-blue-500 fw-semibold">{module.moduleName}</h5>
                 </div>
-                {module.isEvaluated && (
-                    <div className="d-flex align-items-center gap-2">
-                        <i className="pi pi-check-circle text-success"></i>
-                        <small className="text-success fw-medium">Evaluado</small>
-                    </div>
-                )}
             </div>
         );
 
@@ -200,20 +194,12 @@ export default function TeacherEvaluation() {
 
                 {/* Estado de evaluación */}
                 {module.isEvaluated ? (
-                    <div className="text-center py-2">
-                        <div className="mb-2">
-                            <Rating
-                                value={module.submittedRating}
-                                readOnly
-                                cancel={false}
-                                className="custom-rating"
-                            />
+                    <div className="text-center py-3">
+                        <div className="d-flex flex-column align-items-center gap-2">
+                            <i className="pi pi-check-circle text-success" style={{ fontSize: '2rem' }}></i>
+                            <span className="text-success fw-medium">Evaluación completada</span>
+                            <small className="text-muted">Tu evaluación ha sido registrada exitosamente</small>
                         </div>
-                        {module.submittedComment && (
-                            <small className="text-muted fst-italic">
-                                "{module.submittedComment}"
-                            </small>
-                        )}
                     </div>
                 ) : (
                     <div>
@@ -239,12 +225,12 @@ export default function TeacherEvaluation() {
                             </label>
                             <div className='overflow-y-auto' style={{ maxHeight: '15rem' }}>
                                 <InputTextarea
-                                value={module.comment}
-                                onChange={(e) => handleCommentChange(module.id, e.target.value)}
-                                rows={2}
-                                placeholder="Comparte tu experiencia..."
-                                className="w-100"
-                            />
+                                    value={module.comment}
+                                    onChange={(e) => handleCommentChange(module.id, e.target.value)}
+                                    rows={2}
+                                    placeholder="Comparte tu experiencia..."
+                                    className="w-100"
+                                />
                             </div>
                             <hr />
                         </div>
