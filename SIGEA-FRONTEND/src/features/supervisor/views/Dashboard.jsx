@@ -45,7 +45,6 @@ export default function Dashboard() {
     }
   }, [showError]);
 
-  // Función para obtener ID de rol por nombre
   const getRoleIdByName = useCallback(
     (roleName) => {
       if (!roles || roles.length === 0) {

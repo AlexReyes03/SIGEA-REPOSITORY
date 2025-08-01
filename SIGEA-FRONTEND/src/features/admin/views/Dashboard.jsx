@@ -47,7 +47,6 @@ export default function Dashboard() {
     }
   }, [showError]);
 
-  // Función para obtener ID de rol por nombre
   const getRoleIdByName = useCallback(
     (roleName) => {
       if (!roles || roles.length === 0) {
@@ -87,29 +86,24 @@ export default function Dashboard() {
         getGroupsByCampus(user.campus.id),
       ]);
 
-      // Calcular conteos en el frontend
       const studentsCount = Array.isArray(studentsResponse) ? studentsResponse.length : 0;
       const teachersCount = Array.isArray(teachersResponse) ? teachersResponse.length : 0;
       const careersCount = Array.isArray(careersResponse) ? careersResponse.length : 0;
       const groups = Array.isArray(groupsResponse) ? groupsResponse : groupsResponse?.data || [];
 
-      // Actualizar estados
       setTotalStudents(studentsCount);
       setTotalTeachers(teachersCount);
       setTotalCareers(careersCount);
       setRankingStats(rankingStatsResponse);
 
-      // Tomar solo los primeros 5 grupos para mostrar
       setRecentGroups(groups.slice(0, 5));
 
-      // Obtener top 5 docentes de las estadísticas de ranking
       if (rankingStatsResponse?.topTeachers) {
         setTopTeachers(rankingStatsResponse.topTeachers.slice(0, 5));
       }
     } catch (err) {
       showError('Error', 'Error al cargar las estadísticas del plantel');
 
-      // Resetear estados en caso de error
       setTotalStudents(0);
       setTotalTeachers(0);
       setTotalCareers(0);
@@ -126,22 +120,23 @@ export default function Dashboard() {
     }
   }, [user?.campus?.id, rolesLoaded, loadCampusData]);
 
-  // Funciones de navegación
   const navigateToUsers = useCallback(() => {
     navigate('/admin/users');
   }, [navigate]);
 
   const navigateToStudents = useCallback(() => {
+    const studentRoleId = getRoleIdByName('STUDENT');
     navigate('/admin/users', {
-      state: { preselectedRoleId: 4 }, // 4 = STUDENT
+      state: { preselectedRoleId: studentRoleId },
     });
-  }, [navigate]);
+  }, [navigate, getRoleIdByName]);
 
   const navigateToTeachers = useCallback(() => {
+    const teacherRoleId = getRoleIdByName('TEACHER');
     navigate('/admin/users', {
-      state: { preselectedRoleId: 3 }, // 3 = TEACHER
+      state: { preselectedRoleId: teacherRoleId },
     });
-  }, [navigate]);
+  }, [navigate, getRoleIdByName]);
 
   const navigateToCareers = useCallback(() => {
     navigate('/admin/careers');
@@ -168,7 +163,6 @@ export default function Dashboard() {
     [navigate]
   );
 
-  // Función para obtener URL del avatar
   const getAvatarUrl = (avatarUrl) => {
     if (!avatarUrl) return avatarFallback;
     if (/^https?:\/\//.test(avatarUrl)) return avatarUrl;
@@ -198,7 +192,7 @@ export default function Dashboard() {
         <h3 className="text-blue-500 fw-semibold mx-3 my-1">Inicio</h3>
       </div>
 
-      {/* FILA 1 - INDICADORES CLAVE */}
+      {/* FILA 1 - INDICADORES */}
       <div className="row mt-3">
         {/* Total de estudiantes */}
         <div className="col-12 col-sm-6 col-lg-3 mb-3">
@@ -257,7 +251,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Acciones Rápidas - Diseño mejorado */}
+        {/* Acciones Rápidas */}
         <div className="col-12 col-sm-6 col-lg-3 mb-3">
           <div className="card border-0 h-100" style={{ minHeight: '140px' }}>
             <div className="card-body d-flex flex-column p-3">
@@ -268,7 +262,6 @@ export default function Dashboard() {
                 <h6 className="text-secondary ms-2 mb-0 text-truncate">Acciones Rápidas</h6>
               </div>
 
-              {/* Grid mejorado 2x3 con texto */}
               <div className="flex-grow-1 overflow-y-auto">
                 <div className="d-grid gap-1 h-100" style={{ gridTemplateColumns: 'repeat(2, 1fr)', maxHeight: '6.5rem' }}>
                   {/* Primera fila */}
@@ -319,9 +312,7 @@ export default function Dashboard() {
               </div>
 
               <div className="d-flex flex-column align-items-center justify-content-center flex-grow-1">
-                {/* Rating principal */}
                 <Rating value={Math.round(rankingStats?.averageRating || 0)} readOnly cancel={false} className="mb-3" />
-
                 <div className="text-center mb-3">
                   <p className="fs-1 fw-bold text-blue-500 mb-0">{rankingStats?.averageRating ? rankingStats.averageRating.toFixed(1) : 'N/A'}</p>
                 </div>

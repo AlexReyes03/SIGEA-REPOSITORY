@@ -31,19 +31,16 @@ export default function Dashboard() {
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [loadingPerformance, setLoadingPerformance] = useState(false);
 
-  // Estados para estadísticas
   const [totalStudents, setTotalStudents] = useState(0);
   const [activeGroups, setActiveGroups] = useState(0);
   const [pendingGrades, setPendingGrades] = useState(0);
 
-  // Estados para desempeño real
   const [teacherPerformance, setTeacherPerformance] = useState({
     averageRating: 0,
     totalEvaluations: 0,
     hasEvaluations: false,
   });
 
-  // Función para cargar estudiantes de un grupo
   const loadGroupStudents = useCallback(async (groupId) => {
     try {
       const students = await getGroupStudents(groupId);
@@ -54,7 +51,6 @@ export default function Dashboard() {
     }
   }, []);
 
-  // Función para cargar desempeño real del docente
   const loadTeacherPerformance = useCallback(async () => {
     if (!user?.id) return;
 
@@ -62,21 +58,17 @@ export default function Dashboard() {
       setLoadingPerformance(true);
       const response = await getRankingsByTeacherAnon(user.id);
 
-      // Extraer solo los datos necesarios (SIN datos del estudiante por privacidad)
       const rankings = response?.data || response;
 
       if (rankings && Array.isArray(rankings) && rankings.length > 0) {
-        // Filtrar datos sensibles del estudiante por seguridad
         const sanitizedRankings = rankings.map((ranking) => ({
           id: ranking.id,
           star: ranking.star,
           comment: ranking.comment,
           date: ranking.date,
           teacherId: ranking.teacherId,
-          // NO incluir datos del estudiante por privacidad
         }));
 
-        // Calcular promedio de ratings usando datos filtrados
         const totalRating = sanitizedRankings.reduce((sum, ranking) => sum + (ranking.star || 0), 0);
         const averageRating = totalRating / sanitizedRankings.length;
 
@@ -86,7 +78,6 @@ export default function Dashboard() {
           hasEvaluations: true,
         });
 
-        // Log de seguridad (opcional)
         console.log('Teacher performance loaded (student data filtered for privacy)');
       } else {
         setTeacherPerformance({
@@ -107,15 +98,13 @@ export default function Dashboard() {
     }
   }, [user?.id]);
 
-  // Función para obtener el día de la semana actual en formato de 3 letras
   const getCurrentWeekDay = useCallback(() => {
     const today = new Date();
-    const dayIndex = today.getDay(); // 0 = Domingo, 1 = Lunes, etc.
+    const dayIndex = today.getDay();
     const weekDays = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB'];
     return weekDays[dayIndex];
   }, []);
 
-  // Función para cargar grupos y estadísticas
   const loadTeacherData = useCallback(async () => {
     if (!user?.id) return;
 
@@ -127,15 +116,13 @@ export default function Dashboard() {
       setMyGroups(groupsArray);
       setActiveGroups(groupsArray.length);
 
-      // Cargar estudiantes para cada grupo
       if (groupsArray.length > 0) {
         setLoadingStudents(true);
         const studentCounts = await Promise.all(groupsArray.map((group) => loadGroupStudents(group.groupId)));
         const totalStudentsCount = studentCounts.reduce((sum, count) => sum + count, 0);
         setTotalStudents(totalStudentsCount);
 
-        // Simular calificaciones pendientes (puedes conectar con API real)
-        setPendingGrades(Math.floor(totalStudentsCount * 0.3)); // 30% pendientes
+        setPendingGrades(Math.floor(totalStudentsCount * 0.3));
         setLoadingStudents(false);
       } else {
         setTotalStudents(0);
@@ -159,7 +146,6 @@ export default function Dashboard() {
     }
   }, [loadTeacherData, loadTeacherPerformance]);
 
-  // Función para navegar a grupo específico
   const handleGroupClick = useCallback(
     (group) => {
       navigate('/teacher/groups/details', {
@@ -169,7 +155,6 @@ export default function Dashboard() {
     [navigate, user]
   );
 
-  // Función para navegar a la vista de grupos
   const navigateToGroups = useCallback(() => {
     navigate('/teacher/groups');
   }, [navigate]);
@@ -180,9 +165,8 @@ export default function Dashboard() {
         <h3 className="text-blue-500 fw-semibold mx-3 my-1">Inicio</h3>
       </div>
 
-      {/* FILA 1 - INDICADORES CLAVE: Altura uniforme */}
+      {/* FILA 1 - INDICADORES CLAVE */}
       <div className="row mt-3">
-        {/* Total de grupos a cargo - CLICKEABLE */}
         <div className="col-12 col-sm-6 col-lg-3 mb-3">
           <div className="card border-0 h-100 hovereable up" title="Ver grupos" onClick={navigateToGroups} style={{ cursor: 'pointer' }}>
             <div className="card-body d-flex flex-column justify-content-between" style={{ minHeight: '140px' }}>
@@ -233,7 +217,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Mi desempeño - DATOS REALES */}
+        {/* Mi desempeño */}
         <div className="col-12 col-sm-6 col-lg-3 mb-3">
           <div className="card border-0 h-100">
             <div className="card-body d-flex flex-column justify-content-between" style={{ minHeight: '140px' }}>
@@ -272,7 +256,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* FILA 2 - DETALLE: Mis grupos (izquierda) y Horarios (derecha) */}
+      {/* FILA 2 - DETALLE */}
       <div className="row">
         {/* Mis grupos - Columna izquierda */}
         <div className="col-12 col-lg-8 mb-3">
@@ -345,12 +329,10 @@ export default function Dashboard() {
                 </div>
               ) : (
                 (() => {
-                  // Filtrar grupos que coincidan con el día de hoy
                   const currentWeekDay = getCurrentWeekDay();
                   const todayGroups = myGroups
                     .filter((group) => group.weekDay === currentWeekDay)
                     .sort((a, b) => {
-                      // Ordenar por hora de inicio
                       const timeA = a.startTime.replace(':', '');
                       const timeB = b.startTime.replace(':', '');
                       return timeA.localeCompare(timeB);
