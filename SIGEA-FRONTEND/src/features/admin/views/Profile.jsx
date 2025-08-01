@@ -13,7 +13,7 @@ import {
   MdInsertChartOutlined, 
   MdOutlineSchool,
   MdManageHistory,
-  MdNotifications,
+  MdOutlineNotifications,
   MdSchedule,
   MdOutlineGroup,
   MdOutlineLocationOn,
@@ -187,18 +187,18 @@ export default function Profile() {
             { 
               label: 'Grupos sin docente', 
               count: groupsWithoutTeacher,
-              severity: groupsWithoutTeacher > 0 ? 'danger' : 'success'
+              severity: groupsWithoutTeacher > 0 ? 'warning' : 'primary'
             },
             { 
               label: 'Carreras sin plan', 
               count: careersWithoutCurriculum,
-              severity: careersWithoutCurriculum > 0 ? 'warning' : 'success'
+              severity: careersWithoutCurriculum > 0 ? 'warning' : 'primary'
             }
           ]
         },
         card2Data: {
           title: 'Notificaciones',
-          icon: MdNotifications,
+          icon: MdOutlineNotifications,
           pendingNotifications: pendingNotifications,
           hasNotifications: pendingNotifications > 0,
           clickAction: () => navigate('/admin/notifications')
@@ -283,10 +283,9 @@ export default function Profile() {
           currentWeekDay: currentWeekDay
         },
         card2Data: {
-          title: 'Mi desempeño',
+          title: 'Mi Desempeño',
           icon: MdOutlineEmojiEvents,
-          ...teacherPerformance,
-          clickAction: () => navigate('/teacher/feedback')
+          ...teacherPerformance
         }
       };
     } catch (error) {
@@ -418,7 +417,7 @@ export default function Profile() {
 
       return {
         card1Data: {
-          title: activeEnrollments.length > 1 ? 'Mi Progreso Académico' : 'Mi Progreso Académico',
+          title: 'Mi Progreso Académico',
           icon: MdInsertChartOutlined,
           progressData: progressData,
           totalCareers: activeEnrollments.length
@@ -828,7 +827,7 @@ export default function Profile() {
                 {card1Data.message ? (
                   <Message severity="info" text={card1Data.message} />
                 ) : (
-                  <div className="overflow-y-auto" style={{ maxHeight: '20rem' }}>
+                  <div className="overflow-y-auto" style={{ maxHeight: '13rem' }}>
                     {card1Data.progressData.map((careerProgress, index) => (
                       <div key={index} className={`mb-3 p-3 border rounded ${index > 0 ? 'mt-3' : ''}`}>
                         <div className="mb-2">
@@ -843,11 +842,8 @@ export default function Profile() {
                         {careerProgress.hasGroup ? (
                           <>
                             <div className="mb-2">
-                              <small>Progreso académico</small>
+                              <small className='text-muted'>Progreso académico: {careerProgress.completedSubjects} de {careerProgress.totalSubjects} materias</small>
                               <ProgressBar value={careerProgress.progress} className="mt-1" />
-                              <small className="text-muted">
-                                {careerProgress.completedSubjects} de {careerProgress.totalSubjects} materias ({careerProgress.progress}%)
-                              </small>
                             </div>
                           </>
                         ) : (
@@ -928,7 +924,6 @@ export default function Profile() {
                         value={card2Data.pendingNotifications} 
                         severity="warning" 
                         size="large"
-                        className="p-3"
                         style={{ fontSize: '1.2rem' }}
                       />
                     </div>
@@ -994,19 +989,22 @@ export default function Profile() {
                 <div className="overflow-y-auto" style={{ maxHeight: '18rem' }}>
                   {card2Data.enrollments && card2Data.enrollments.map((enrollment, index) => (
                     <div key={index} className="mb-2 p-2 border rounded">
-                      <div className="fw-semibold small">{enrollment.careerName}</div>
-                      <small className="text-muted d-block">
-                        Matrícula: {enrollment.registrationNumber}
-                      </small>
-                      <div className="d-flex justify-content-between align-items-center">
-                        <small className="text-muted">
-                          {formatDate(enrollment.enrolledAt)}
-                        </small>
+                      <div className='d-flex justify-content-between align-items-center'>
+                        <div className="fw-semibold small">{enrollment.careerName}</div>
                         <Badge 
                           value={enrollment.status === 'ACTIVE' ? 'Activo' : 'Inactivo'} 
                           severity={enrollment.status === 'ACTIVE' ? 'success' : 'danger'}
                           size="small"
                         />
+                      </div>
+                      <small className="text-muted d-block">
+                        Matrícula: {enrollment.registrationNumber}
+                      </small>
+                      <div className="d-flex justify-content-between align-items-center">
+                        <small className="text-muted">
+                          Inscripción: {formatDate(enrollment.enrolledAt)}
+                        </small>
+                        
                       </div>
                     </div>
                   ))}
@@ -1061,7 +1059,7 @@ export default function Profile() {
                 <div className="title-icon p-1 rounded-circle">
                   <MdOutlinePerson size={40} className="p-1" />
                 </div>
-                <h6 className="text-blue-500 fw-semibold ms-2 mb-0 text-truncate">Información personal</h6>
+                <h6 className="text-blue-500 fw-semibold ms-2 mb-0 text-truncate">Información Personal</h6>
               </div>
 
               <div className="mt-3">
