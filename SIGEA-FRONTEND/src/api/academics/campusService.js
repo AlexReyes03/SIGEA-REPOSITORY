@@ -11,6 +11,11 @@ export const getCampusById = async (id) => {
   return res.data;
 };
 
+export const getCampusByStudentId = async (studentId) => {
+    const res = await request(`/api/campus/student/${studentId}`);
+    return res;
+};
+
 export const updateCampus = async (id, campusData) => {
   const res = await request(`/api/campus/${id}`, {
     method: 'PUT',

@@ -13,8 +13,11 @@ import { motion } from 'framer-motion';
 
 import { useToast } from '../../../components/providers/ToastProvider';
 import { getCurriculumById } from '../../../api/academics/curriculumService';
+import { checkStudentGroupsInCareer } from '../../../api/academics/enrollmentService';
 import { getQualificationsByGroupWithDetails } from '../../../api/academics/qualificationService';
 import { ReportCard } from './ReportCard';
+import { getCampusByStudentId } from '../../../api/academics/campusService';
+import { getModulesByCurriculumId } from '../../../api/academics/moduleService';
 
 export default function ConsultSubjects({ group, studentId, studentData }) {
     const [loading, setLoading] = useState(true);
@@ -23,8 +26,86 @@ export default function ConsultSubjects({ group, studentId, studentData }) {
     const [searchTerms, setSearchTerms] = useState({});
     const [isModuleCollapsed, setIsModuleCollapsed] = useState({});
     const [curriculum, setCurriculum] = useState(null);
+    const [curriculumModules, setCurriculumModules] = useState([]);
+    const [studentEnrollmentData, setStudentEnrollmentData] = useState(null);
+    const [campusData, setCampusData] = useState(null);
     const [tableData, setTableData] = useState([]);
     const [qualificationDetails, setQualificationDetails] = useState({});
+
+    // Función para calcular duración del curriculum
+    const calculateCurriculumDuration = useCallback((modules) => {
+        if (!modules || modules.length === 0) {
+            return { weeks: 0, months: 0, years: 0, text: 'Sin módulos' };
+        }
+
+        const totalWeeks = modules.reduce((acc, module) => {
+            if (!module.subjects) return acc;
+            return acc + module.subjects.reduce((subAcc, subject) => subAcc + (subject.weeks || 0), 0);
+        }, 0);
+
+        const totalMonths = totalWeeks / 4;
+        const years = Math.floor(totalMonths / 12);
+        const remainingMonths = Math.floor(totalMonths % 12);
+
+        return {
+            weeks: totalWeeks,
+            months: totalMonths,
+            years: years,
+            remainingMonths: remainingMonths
+        };
+    }, []);
+
+    // Cargar módulos completos del curriculum (con semanas)
+    useEffect(() => {
+        const loadCurriculumModules = async () => {
+            try {
+                if (group?.curriculumId) {
+                    const modules = await getModulesByCurriculumId(group.curriculumId);
+                    setCurriculumModules(modules);
+                }
+            } catch (error) {
+                console.error('Error loading curriculum modules:', error);
+                setCurriculumModules([]);
+            }
+        };
+
+        loadCurriculumModules();
+    }, [group?.curriculumId]);
+
+    // Cargar datos de inscripción del estudiante
+    useEffect(() => {
+        const loadStudentEnrollmentData = async () => {
+            try {
+                if (studentId && group?.careerId) {
+                    const enrollmentData = await checkStudentGroupsInCareer(studentId, group.careerId);
+                    // Buscar el registro del estudiante actual
+                    const currentStudentData = enrollmentData.find(student => student.userId === studentId);
+                    setStudentEnrollmentData(currentStudentData);
+                }
+            } catch (error) {
+                console.error('Error loading student enrollment data:', error);
+                setStudentEnrollmentData(null);
+            }
+        };
+
+        loadStudentEnrollmentData();
+    }, [studentId, group?.careerId]);
+
+    // Calcular período académico usando fecha de inscripción
+    const academicPeriod = useMemo(() => {
+        if (!curriculumModules.length || !studentEnrollmentData?.enrolledAt) {
+            return { startDate: null, endDate: null };
+        }
+
+        const duration = calculateCurriculumDuration(curriculumModules);
+
+        // Usar fecha de inscripción como inicio
+        const startDate = new Date(studentEnrollmentData.enrolledAt);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + (duration.weeks * 7));
+
+        return { startDate, endDate };
+    }, [curriculumModules, studentEnrollmentData, calculateCurriculumDuration]);
 
     const loadData = useCallback(async () => {
         try {
@@ -35,8 +116,19 @@ export default function ConsultSubjects({ group, studentId, studentData }) {
 
             const curriculumData = await getCurriculumById(group.curriculumId);
             setCurriculum(curriculumData);
+
             const qualificationsData = await getQualificationsByGroupWithDetails(group.groupId);
             const studentQualifications = qualificationsData.filter(q => q.studentId === studentId);
+
+            try {
+                const campusResponse = await getCampusByStudentId(studentId);
+                if (campusResponse?.data?.campus) {
+                    setCampusData(campusResponse.data.campus);
+                }
+            } catch (campusError) {
+                console.error('Error cargando datos del campus:', campusError);
+                setCampusData(null);
+            }
 
             const gradeMap = {};
             const detailsMap = {};
@@ -52,8 +144,8 @@ export default function ConsultSubjects({ group, studentId, studentData }) {
             });
 
             setQualificationDetails(detailsMap);
-            const moduleData = {};
 
+            const moduleData = {};
             curriculumData.modules.forEach((module) => {
                 const subjects = module.subjects.map((subject) => ({
                     subjectId: subject.id,
@@ -63,11 +155,11 @@ export default function ConsultSubjects({ group, studentId, studentData }) {
                     moduleId: module.id,
                     moduleName: module.name
                 }));
-
                 moduleData[module.id] = subjects;
             });
 
             setTableData(moduleData);
+
         } catch (err) {
             showError('Error', 'Error al cargar los datos');
         } finally {
@@ -84,10 +176,22 @@ export default function ConsultSubjects({ group, studentId, studentData }) {
         }
     }, [group, studentId, loadData]);
 
+    // Módulos ordenados
     const sortedModules = useMemo(() => {
-        if (!curriculum?.modules) return [];
-        return [...curriculum.modules].sort((a, b) => a.id - b.id);
-    }, [curriculum?.modules]);
+        return curriculum?.modules || [];
+    }, [curriculum]);
+
+    // Datos del grupo para el PDF
+    const groupData = useMemo(() => {
+        return {
+            groupId: group?.groupId,
+            schedule: group?.schedule || 'N/A',
+            teacherName: group?.teacherName || 'Sin asignar',
+            ...group
+        };
+
+    }, [group]);
+    console.log('Group data:', groupData);
 
     // Crea los header groups para todos los módulos
     const headerGroups = useMemo(() => {
@@ -171,7 +275,6 @@ export default function ConsultSubjects({ group, studentId, studentData }) {
                     fill="var(--surface-ground)"
                     animationDuration=".5s"
                 />
-                <span className="ms-3">Cargando calificaciones...</span>
             </div>
         );
     }
@@ -211,7 +314,7 @@ export default function ConsultSubjects({ group, studentId, studentData }) {
                     ? (moduleGrades.reduce((a, b) => a + b, 0) / moduleGrades.length).toFixed(1)
                     : null;
 
-                // Preparar datos para la boleta PDF
+                // Datos del módulo para el PDF
                 const moduleDataForPDF = {
                     id: module.id,
                     name: module.name,
@@ -254,16 +357,19 @@ export default function ConsultSubjects({ group, studentId, studentData }) {
 
                             {!isCollapsed && (
                                 <div className="d-flex align-items-center justify-content-end mx-3 mb-3 mb-md-0 gap-2">
-                                    {/* Botón de descarga de boleta PDF */}
-                                    {studentData && (
-                                        <ReportCard
-                                            studentData={studentData}
-                                            groupData={group}
-                                            moduleData={moduleDataForPDF}
-                                            qualificationDetails={qualificationDetails}
-                                            moduleId={module.id}
-                                        />
-                                    )}
+                                    <div className="d-flex align-items-center gap-2">
+                                        {/* Botón de descarga de boleta PDF con período dinámico */}
+                                        {studentData && campusData && (
+                                            <ReportCard
+                                                studentData={studentData}
+                                                groupData={groupData}
+                                                moduleData={moduleDataForPDF}
+                                                campusData={campusData}
+                                                startDate={academicPeriod.startDate}
+                                                endDate={academicPeriod.endDate}
+                                            />
+                                        )}
+                                    </div>
 
                                     <div className="p-fluid">
                                         <InputText
@@ -280,7 +386,6 @@ export default function ConsultSubjects({ group, studentId, studentData }) {
                                 </div>
                             )}
                         </div>
-
 
                         {/* DataTable */}
                         <motion.div
@@ -363,7 +468,6 @@ export default function ConsultSubjects({ group, studentId, studentData }) {
                                         }}
                                         body={(rowData) => {
                                             const grade = rowData.grade;
-
                                             return (
                                                 <div className="d-flex justify-content-center">
                                                     {renderGradeBadge(grade)}
