@@ -1,4 +1,3 @@
-// Dashboard de ADMIN - Nueva versión mejorada
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MdOutlineEmojiEvents, MdOutlinePerson, MdOutlineCoPresent, MdOutlineGroup, MdOutlineSchool, MdOutlineSettings, MdOutlineGroupAdd, MdOutlineManageAccounts, MdOutlineBolt, MdOutlineNotifications, MdOutlineAssignment } from 'react-icons/md';
@@ -82,8 +81,8 @@ export default function Dashboard() {
 
       const [rankingStatsResponse, studentsResponse, teachersResponse, careersResponse, groupsResponse] = await Promise.all([
         getCampusRankingStats(user.campus.id),
-        getUserByRoleAndPlantel(studentRoleId, user.campus.id), // 4 = STUDENT
-        getUserByRoleAndPlantel(teacherRoleId, user.campus.id), // 3 = TEACHER
+        getUserByRoleAndPlantel(studentRoleId, user.campus.id),
+        getUserByRoleAndPlantel(teacherRoleId, user.campus.id),
         getCareerByPlantelId(user.campus.id),
         getGroupsByCampus(user.campus.id),
       ]);

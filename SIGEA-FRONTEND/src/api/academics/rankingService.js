@@ -18,6 +18,14 @@ export const getRankingsByTeacher = async (teacherId) => {
   return res;
 };
 
+export const getRankingsByTeacherAnon = async (teacherId) => {
+  const res = await request('/api/rankings/teacher/anonymous', {
+    method: 'POST',
+    body: { teacherId },
+  });
+  return res;
+};
+
 export const createRanking = async (rankingData) => {
   const res = await request('/api/rankings', {
     method: 'POST',

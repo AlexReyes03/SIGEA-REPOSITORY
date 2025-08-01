@@ -4,10 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { Rating } from 'primereact/rating';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Message } from 'primereact/message';
-import { Button } from 'primereact/button';
 import { Tag } from 'primereact/tag';
 
 import { getGroupByTeacher, getGroupStudents } from '../../../api/academics/groupService';
+import { getRankingsByTeacherAnon } from '../../../api/academics/rankingService';
 import { useAuth } from '../../../contexts/AuthContext';
 
 const weekDayOptions = [
@@ -26,42 +26,22 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [ratingValue, setRatingValue] = useState(4.6);
-  const [isUp, setIsUp] = useState(true);
   const [myGroups, setMyGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingStudents, setLoadingStudents] = useState(false);
+  const [loadingPerformance, setLoadingPerformance] = useState(false);
 
   // Estados para estadísticas
   const [totalStudents, setTotalStudents] = useState(0);
   const [activeGroups, setActiveGroups] = useState(0);
   const [pendingGrades, setPendingGrades] = useState(0);
 
-  // Animación del rating
-  useEffect(() => {
-    let mounted = true;
-
-    const adjustRating = () => {
-      setRatingValue((prev) => {
-        if (!mounted) return prev;
-
-        const deltas = [-0.3, -0.2, -0.1, 0.1, 0.2, 0.3];
-        const delta = deltas[Math.floor(Math.random() * deltas.length)];
-        let next = Math.round((prev + delta) * 10) / 10;
-        if (next > 5) next = 5.0;
-        if (next < 0) next = 0.0;
-
-        setIsUp(next >= prev);
-        return next;
-      });
-    };
-
-    const interval = setInterval(adjustRating, 5000);
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
-  }, []);
+  // Estados para desempeño real
+  const [teacherPerformance, setTeacherPerformance] = useState({
+    averageRating: 0,
+    totalEvaluations: 0,
+    hasEvaluations: false,
+  });
 
   // Función para cargar estudiantes de un grupo
   const loadGroupStudents = useCallback(async (groupId) => {
@@ -73,6 +53,59 @@ export default function Dashboard() {
       return 0;
     }
   }, []);
+
+  // Función para cargar desempeño real del docente
+  const loadTeacherPerformance = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      setLoadingPerformance(true);
+      const response = await getRankingsByTeacherAnon(user.id);
+
+      // Extraer solo los datos necesarios (SIN datos del estudiante por privacidad)
+      const rankings = response?.data || response;
+
+      if (rankings && Array.isArray(rankings) && rankings.length > 0) {
+        // Filtrar datos sensibles del estudiante por seguridad
+        const sanitizedRankings = rankings.map((ranking) => ({
+          id: ranking.id,
+          star: ranking.star,
+          comment: ranking.comment,
+          date: ranking.date,
+          teacherId: ranking.teacherId,
+          // NO incluir datos del estudiante por privacidad
+        }));
+
+        // Calcular promedio de ratings usando datos filtrados
+        const totalRating = sanitizedRankings.reduce((sum, ranking) => sum + (ranking.star || 0), 0);
+        const averageRating = totalRating / sanitizedRankings.length;
+
+        setTeacherPerformance({
+          averageRating: Math.round(averageRating * 10) / 10,
+          totalEvaluations: sanitizedRankings.length,
+          hasEvaluations: true,
+        });
+
+        // Log de seguridad (opcional)
+        console.log('Teacher performance loaded (student data filtered for privacy)');
+      } else {
+        setTeacherPerformance({
+          averageRating: 0,
+          totalEvaluations: 0,
+          hasEvaluations: false,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading teacher performance:', error);
+      setTeacherPerformance({
+        averageRating: 0,
+        totalEvaluations: 0,
+        hasEvaluations: false,
+      });
+    } finally {
+      setLoadingPerformance(false);
+    }
+  }, [user?.id]);
 
   // Función para obtener el día de la semana actual en formato de 3 letras
   const getCurrentWeekDay = useCallback(() => {
@@ -122,8 +155,9 @@ export default function Dashboard() {
   useEffect(() => {
     if (user?.id) {
       loadTeacherData();
+      loadTeacherPerformance();
     }
-  }, [loadTeacherData]);
+  }, [loadTeacherData, loadTeacherPerformance]);
 
   // Función para navegar a grupo específico
   const handleGroupClick = useCallback(
@@ -135,6 +169,11 @@ export default function Dashboard() {
     [navigate, user]
   );
 
+  // Función para navegar a la vista de grupos
+  const navigateToGroups = useCallback(() => {
+    navigate('/teacher/groups');
+  }, [navigate]);
+
   return (
     <>
       <div className="bg-white rounded-top p-2">
@@ -143,17 +182,19 @@ export default function Dashboard() {
 
       {/* FILA 1 - INDICADORES CLAVE: Altura uniforme */}
       <div className="row mt-3">
-        {/* Total de grupos a cargo */}
+        {/* Total de grupos a cargo - CLICKEABLE */}
         <div className="col-12 col-sm-6 col-lg-3 mb-3">
-          <div className="card border-0 h-100">
+          <div className="card border-0 h-100 hovereable up" title="Ver grupos" onClick={navigateToGroups} style={{ cursor: 'pointer' }}>
             <div className="card-body d-flex flex-column justify-content-between" style={{ minHeight: '140px' }}>
-              <div className="d-flex align-items-center mb-2">
-                <div className="title-icon p-1 rounded-circle">
-                  <MdOutlineGroup size={32} className="p-1" />
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <div className="d-flex text-truncate text-nowrap align-items-center">
+                  <div className="title-icon p-1 rounded-circle">
+                    <MdOutlineGroup size={32} className="p-1" />
+                  </div>
+                  <h6 className="text-secondary ms-2 mb-0 text-truncate">Grupos a cargo</h6>
                 </div>
-                <h6 className="text-secondary ms-2 mb-0 text-truncate">Grupos a cargo</h6>
               </div>
-              <div className="text-center">{loading ? <ProgressSpinner style={{ width: '32px', height: '32px' }} strokeWidth="4" /> : <p className="fs-1 fw-bold text-blue-500 mb-0">{activeGroups}</p>}</div>
+              <div className="text-center">{loading ? <ProgressSpinner style={{ width: '32px', height: '32px' }} strokeWidth="4" /> : <p className="fs-1 fw-bold text-blue-500 mb-3">{activeGroups}</p>}</div>
             </div>
           </div>
         </div>
@@ -162,13 +203,15 @@ export default function Dashboard() {
         <div className="col-12 col-sm-6 col-lg-3 mb-3">
           <div className="card border-0 h-100">
             <div className="card-body d-flex flex-column justify-content-between" style={{ minHeight: '140px' }}>
-              <div className="d-flex align-items-center mb-2">
-                <div className="title-icon p-1 rounded-circle">
-                  <MdOutlinePerson size={32} className="p-1" />
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <div className="d-flex text-truncate text-nowrap align-items-center">
+                  <div className="title-icon p-1 rounded-circle">
+                    <MdOutlinePerson size={32} className="p-1" />
+                  </div>
+                  <h6 className="text-secondary ms-2 mb-0 text-truncate">Total estudiantes</h6>
                 </div>
-                <h6 className="text-secondary ms-2 mb-0 text-truncate">Total estudiantes</h6>
               </div>
-              <div className="text-center">{loading || loadingStudents ? <ProgressSpinner style={{ width: '32px', height: '32px' }} strokeWidth="4" /> : <p className="fs-1 fw-bold text-blue-500 mb-0">{totalStudents}</p>}</div>
+              <div className="text-center">{loading || loadingStudents ? <ProgressSpinner style={{ width: '32px', height: '32px' }} strokeWidth="4" /> : <p className="fs-1 fw-bold text-blue-500 mb-3">{totalStudents}</p>}</div>
             </div>
           </div>
         </div>
@@ -177,33 +220,52 @@ export default function Dashboard() {
         <div className="col-12 col-sm-6 col-lg-3 mb-3">
           <div className="card border-0 h-100">
             <div className="card-body d-flex flex-column justify-content-between" style={{ minHeight: '140px' }}>
-              <div className="d-flex align-items-center mb-2">
-                <div className="title-icon p-1 rounded-circle">
-                  <MdOutlineAssignment size={32} className="p-1" />
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <div className="d-flex text-truncate text-nowrap align-items-center">
+                  <div className="title-icon p-1 rounded-circle">
+                    <MdOutlineAssignment size={32} className="p-1" />
+                  </div>
+                  <h6 className="text-secondary ms-2 mb-0 text-truncate">Pendientes</h6>
                 </div>
-                <h6 className="text-secondary ms-2 mb-0 text-truncate">Pendientes</h6>
               </div>
-              <div className="text-center">{loading || loadingStudents ? <ProgressSpinner style={{ width: '32px', height: '32px' }} strokeWidth="4" /> : <p className="fs-1 fw-bold text-blue-500 mb-0">{pendingGrades}</p>}</div>
+              <div className="text-center">{loading || loadingStudents ? <ProgressSpinner style={{ width: '32px', height: '32px' }} strokeWidth="4" /> : <p className="fs-1 fw-bold text-blue-500 mb-3">{pendingGrades}</p>}</div>
             </div>
           </div>
         </div>
 
-        {/* Mi desempeño */}
+        {/* Mi desempeño - DATOS REALES */}
         <div className="col-12 col-sm-6 col-lg-3 mb-3">
           <div className="card border-0 h-100">
             <div className="card-body d-flex flex-column justify-content-between" style={{ minHeight: '140px' }}>
-              <div className="d-flex align-items-center mb-2">
-                <div className="title-icon p-1 rounded-circle">
-                  <MdOutlineEmojiEvents size={32} className="p-1" />
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <div className="d-flex text-truncate text-nowrap align-items-center">
+                  <div className="title-icon p-1 rounded-circle">
+                    <MdOutlineEmojiEvents size={32} className="p-1" />
+                  </div>
+                  <h6 className="text-secondary ms-2 mb-0 text-truncate">Mi desempeño</h6>
                 </div>
-                <h6 className="text-secondary ms-2 mb-0 text-truncate">Mi desempeño</h6>
               </div>
+
               <div className="d-flex flex-column align-items-center justify-content-center flex-grow-1">
-                <Rating value={Math.round(ratingValue)} readOnly cancel={false} className="mb-3" />
-                <div className="d-flex align-items-center">
-                  <p className="fs-3 fw-bold text-blue-500 me-3 mb-0">{ratingValue.toFixed(1)}</p>
-                  <div className={`${isUp ? 'icon-average-up' : 'icon-average-down'} rounded-circle`}>{isUp ? <MdArrowDropUp size={30} /> : <MdArrowDropDown size={30} />}</div>
-                </div>
+                {loadingPerformance ? (
+                  <ProgressSpinner style={{ width: '32px', height: '32px' }} strokeWidth="4" />
+                ) : !teacherPerformance.hasEvaluations ? (
+                  <div className="text-center">
+                    <Rating value={0} readOnly cancel={false} className="mb-2" />
+                    <p className="fs-3 fw-bold text-muted mb-0">N/A</p>
+                    <small className="text-muted">Sin evaluaciones</small>
+                  </div>
+                ) : (
+                  <>
+                    <Rating value={Math.round(teacherPerformance.averageRating)} readOnly cancel={false} className="mb-2" />
+                    <div className="text-center">
+                      <p className="fs-3 fw-bold text-blue-500 mb-0">{teacherPerformance.averageRating.toFixed(1)}</p>
+                      <small className="text-muted">
+                        {teacherPerformance.totalEvaluations} evaluaci{teacherPerformance.totalEvaluations !== 1 ? 'ones' : 'ón'}
+                      </small>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -216,18 +278,11 @@ export default function Dashboard() {
         <div className="col-12 col-lg-8 mb-3">
           <div className="card border-0" style={{ minHeight: '400px' }}>
             <div className="card-body">
-              <div className="d-flex align-items-center justify-content-between mb-4">
-                <div className="d-flex align-items-center">
-                  <div className="title-icon p-1 rounded-circle">
-                    <MdOutlineGroup size={40} className="p-1" />
-                  </div>
-                  <h5 className="text-blue-500 fw-semibold ms-3 mb-0">Mis grupos</h5>
+              <div className="d-flex align-items-center mb-4">
+                <div className="title-icon p-1 rounded-circle">
+                  <MdOutlineGroup size={40} className="p-1" />
                 </div>
-                {myGroups.length > 0 && (
-                  <Button size="small" outlined icon="pi pi-arrow-up-right" onClick={() => navigate('/teacher/groups')}>
-                    <span className="d-none d-md-inline ms-2">Ver todos</span>
-                  </Button>
-                )}
+                <h5 className="text-blue-500 fw-semibold ms-3 mb-0">Mis grupos</h5>
               </div>
 
               {loading ? (
@@ -304,7 +359,7 @@ export default function Dashboard() {
                   return (
                     <div className="d-flex flex-column">
                       <div className="mb-3 ms-2">
-                        <small className="text-muted fw-semibold">
+                        <small className="text-muted">
                           {new Date().toLocaleDateString('es-MX', {
                             weekday: 'long',
                             year: 'numeric',
@@ -358,7 +413,10 @@ export default function Dashboard() {
                                         <h6 className="fw-semibold mb-0 text-truncate me-2">{group.careerName}</h6>
                                         <span className={`badge ${status === 'current' ? 'bg-success' : status === 'past' ? 'bg-secondary' : 'bg-primary'}`}>{statusText}</span>
                                       </div>
-                                      <small className="text-muted">Grupo {group.name} - <span className={`fw-bold ${statusColor}`}>{group.startTime}</span><small className="text-muted"> a {group.endTime}</small></small>
+                                      <small className="text-muted">
+                                        Grupo {group.name} -<span className={`fw-bold ${statusColor}`}> {group.startTime}</span>
+                                        <small className="text-muted"> a {group.endTime}</small>
+                                      </small>
                                     </div>
                                   </div>
                                 </div>
