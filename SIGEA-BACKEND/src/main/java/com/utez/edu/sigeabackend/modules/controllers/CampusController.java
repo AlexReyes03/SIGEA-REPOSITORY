@@ -34,6 +34,11 @@ public class CampusController {
             @RequestParam Long userCampusId) {
         return campusService.findAllSupervisedByUser(userId, userCampusId);
     }
+    //Trae los datos completos del campus asociado a un estudiante específico
+    @GetMapping("/student/{studentId}")
+    public ResponseEntity<?> getCampusByStudentId(@PathVariable Long studentId) {
+        return campusService.findCampusByStudentId(studentId);
+    }
 
     /*
      * ENDPOINTS DE MODIFICACIÓN COMENTADOS PARA SEGURIDAD

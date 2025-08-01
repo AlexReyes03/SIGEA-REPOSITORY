@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CampusRepository extends JpaRepository<CampusEntity, Long> {
@@ -20,4 +21,11 @@ public interface CampusRepository extends JpaRepository<CampusEntity, Long> {
             "LEFT JOIN UserCampusSupervisionEntity ucs ON c.id = ucs.campus.id " +
             "WHERE c.id = :userCampusId OR ucs.user.id = :userId")
     List<CampusEntity> findAllSupervisedByUser(@Param("userId") Long userId, @Param("userCampusId") Long userCampusId);
+
+    //Busca el campus asociado a un estudiante específico a través de su enrollment activo
+    @Query("SELECT c FROM CampusEntity c " +
+            "JOIN UserCareerEnrollmentEntity e ON e.campus.id = c.id " +
+            "WHERE e.user.id = :studentId " +
+            "AND e.status = 'ACTIVE'")
+    Optional<CampusEntity> findCampusByStudentId(@Param("studentId") Long studentId);
 }

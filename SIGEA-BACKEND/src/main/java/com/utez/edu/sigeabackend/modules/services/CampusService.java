@@ -135,6 +135,27 @@ public class CampusService {
         }
     }
 
+    //Obtiene los datos compeltos del campus asociado a un estudiante especifico.
+    public ResponseEntity<?> findCampusByStudentId(Long studentId) {
+        try {
+            Optional<CampusEntity> campus = repository.findCampusByStudentId(studentId);
+
+            if (campus.isPresent()) {
+                Map<String, Object> data = Map.of(
+                        "studentId", studentId,
+                        "campus", toDto(campus.get())
+                );
+                return responseService.getOkResponse("Campus del estudiante encontrado", data);
+            } else {
+                return responseService.get404Response();
+            }
+        } catch (Exception e) {
+            System.err.println("Error finding campus by student ID: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error interno al consultar el campus del estudiante"));
+        }
+    }
+
     /*
      * Estos endpoints pueden ser habilitados en el futuro si es necesario
      * Por ahora, la gestión de campus se hace directamente en la base de datos
