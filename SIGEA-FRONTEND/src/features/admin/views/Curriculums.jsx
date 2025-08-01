@@ -519,7 +519,7 @@ export default function Curriculums() {
                               <button
                                 className="dropdown-item"
                                 onClick={() => {
-                                  openEditCurriculumModal(curriculum);
+                                  openEditCurriculumModal(editingCurriculum);
                                   opCurrRef.current.hide();
                                 }}
                               >
