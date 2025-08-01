@@ -26,7 +26,6 @@ const weekDayOptions = [
 
 const weekLabel = (code) => weekDayOptions.find((o) => o.value === code)?.label || code;
 
-// Función helper para formatear fechas a "MES - AÑO"
 const formatDateToMonthYear = (dateString) => {
   if (!dateString) return 'No definida';
 
@@ -39,7 +38,6 @@ const formatDateToMonthYear = (dateString) => {
   return `${month} - ${year}`;
 };
 
-// Función helper para calcular el estado del grupo
 const getGroupStatus = (startDate, endDate) => {
   if (!startDate || !endDate) return 'Sin fecha';
 
