@@ -4,11 +4,7 @@ import com.utez.edu.sigeabackend.config.CustomResponseEntity;
 import com.utez.edu.sigeabackend.modules.entities.GroupStudentEntity;
 import com.utez.edu.sigeabackend.modules.entities.RankingEntity;
 import com.utez.edu.sigeabackend.modules.entities.UserEntity;
-import com.utez.edu.sigeabackend.modules.entities.dto.academics.EvaluationModuleDto;
-import com.utez.edu.sigeabackend.modules.entities.dto.academics.EvaluationStatusDto;
-import com.utez.edu.sigeabackend.modules.entities.dto.academics.ModuleDto;
-import com.utez.edu.sigeabackend.modules.entities.dto.academics.RankingDto;
-import com.utez.edu.sigeabackend.modules.entities.dto.academics.SubjectDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.*;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.CampusStatsDtos.*;
 import com.utez.edu.sigeabackend.modules.entities.dto.groupDtos.GroupResponseDto;
 import com.utez.edu.sigeabackend.modules.repositories.CampusRepository;
@@ -48,7 +44,6 @@ public class RankingService {
         this.moduleService = moduleService;
     }
 
-    // Helper method to convert entity to DTO
     private RankingDto toDto(RankingEntity ranking) {
         UserEntity student = ranking.getStudent();
 
@@ -75,6 +70,16 @@ public class RankingService {
                 ranking.getDate(),
                 ranking.getTeacher().getId(),
                 studentInfo
+        );
+    }
+
+    private RankingRequestDtos.AnonymousRankingDto toAnonymousDto(RankingEntity ranking) {
+        return new RankingRequestDtos.AnonymousRankingDto(
+                ranking.getId(),
+                ranking.getComment(),
+                ranking.getStar(),
+                ranking.getDate(),
+                ranking.getTeacher().getId()
         );
     }
 
@@ -132,6 +137,24 @@ public class RankingService {
         return responseService.getOkResponse("Rankings del docente", dtos);
     }
 
+    public ResponseEntity<?> findByTeacherAnonymous(long teacherId) {
+        if (!userRepository.existsById(teacherId)) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "El docente especificado no existe"));
+        }
+
+        List<RankingEntity> list = repository.findByTeacher_IdWithDetails(teacherId);
+        if (list.isEmpty()) {
+            return responseService.getOkResponse("Rankings del docente", null);
+        }
+
+        List<RankingRequestDtos.AnonymousRankingDto> anonymousDtos = list.stream()
+                .map(this::toAnonymousDto)
+                .collect(Collectors.toList());
+
+        return responseService.getOkResponse("Rankings del docente", anonymousDtos);
+    }
+
     public ResponseEntity<?> findByStudent(Long studentId) {
         try {
             if (!userRepository.existsById(studentId)) {
@@ -143,7 +166,7 @@ public class RankingService {
             List<RankingEntity> allRankings = repository.findAllWithDetails();
             List<RankingEntity> studentRankings = allRankings.stream()
                     .filter(r -> Objects.equals(r.getStudent().getId(), studentId))
-                    .collect(Collectors.toList());
+                    .toList();
 
             if (studentRankings.isEmpty()) {
                 return responseService.getOkResponse("Evaluaciones del estudiante", List.of());
@@ -275,18 +298,18 @@ public class RankingService {
 
                             // Crear DTO de evaluación POR MÓDULO
                             EvaluationModuleDto evaluationModule = new EvaluationModuleDto(
-                                    group.groupId() + "-" + group.teacherId() + "-" + module.id(), // String id
-                                    module.name(), // String moduleName
-                                    module.id(), // Long moduleId
-                                    group.teacherName(), // String teacherName
-                                    group.teacherId(), // Long teacherId
-                                    group.groupId(), // Long groupId
-                                    group.curriculumName(), // String curriculumName
-                                    group.weekDay() + " " + group.startTime() + "-" + group.endTime(), // String schedule
-                                    subjectNames, // List<String> subjects
-                                    isEvaluated, // boolean isEvaluated
-                                    existingRanking.isPresent() ? existingRanking.get().getStar() : null, // Integer submittedRating
-                                    existingRanking.isPresent() ? existingRanking.get().getComment() : null // String submittedComment
+                                    group.groupId() + "-" + group.teacherId() + "-" + module.id(),
+                                    module.name(),
+                                    module.id(),
+                                    group.teacherName(),
+                                    group.teacherId(),
+                                    group.groupId(),
+                                    group.curriculumName(),
+                                    group.weekDay() + " " + group.startTime() + "-" + group.endTime(),
+                                    subjectNames,
+                                    isEvaluated,
+                                    existingRanking.isPresent() ? existingRanking.get().getStar() : null,
+                                    existingRanking.map(RankingEntity::getComment).orElse(null)
                             );
 
                             evaluationModules.add(evaluationModule);
@@ -345,12 +368,11 @@ public class RankingService {
         }
     }
 
-    // MÉTODO PARA ESTADÍSTICAS DE RANKINGS DEL CAMPUS
+    // METODO PARA ESTADÍSTICAS DE RANKINGS DEL CAMPUS
 
     public ResponseEntity<CampusRankingStatsDto> getCampusRankingStats(Long campusId) {
         try {
-            // Verificar que el campus existe en la tabla campus
-            boolean campusExists = campusRepository.existsById(campusId); // ✅ Correcto
+            boolean campusExists = campusRepository.existsById(campusId);
 
             if (!campusExists) {
                 return ResponseEntity.badRequest().build();
@@ -365,7 +387,6 @@ public class RankingService {
     }
 
     private CampusRankingStatsDto getCampusRankingStatsInternal(Long campusId) {
-        // Obtener todos los rankings de docentes de este campus
         List<RankingEntity> campusRankings = repository.findAllWithDetails().stream()
                 .filter(ranking -> ranking.getTeacher().getCampus().getId() == campusId)
                 .toList();
@@ -382,7 +403,6 @@ public class RankingService {
 
         int totalEvaluations = campusRankings.size();
 
-        // Calcular distribución de estrellas
         Map<Integer, Long> starCounts = campusRankings.stream()
                 .collect(Collectors.groupingBy(RankingEntity::getStar, Collectors.counting()));
 
@@ -421,18 +441,16 @@ public class RankingService {
                             avatarUrl,
                             teacherAverage,
                             teacherRankingsList.size(),
-                            0 // position se establecerá después
+                            0
                     );
                 })
                 .sorted((a, b) -> {
-                    // Ordenar por promedio descendente, luego por número de evaluaciones descendente
                     int avgCompare = Double.compare(b.averageRating(), a.averageRating());
                     if (avgCompare != 0) return avgCompare;
                     return Integer.compare(b.totalEvaluations(), a.totalEvaluations());
                 })
                 .collect(Collectors.toList());
 
-        // Asignar posiciones
         for (int i = 0; i < teacherRankings.size(); i++) {
             TeacherRankingDto currentTeacher = teacherRankings.get(i);
             TeacherRankingDto updatedTeacher = new TeacherRankingDto(

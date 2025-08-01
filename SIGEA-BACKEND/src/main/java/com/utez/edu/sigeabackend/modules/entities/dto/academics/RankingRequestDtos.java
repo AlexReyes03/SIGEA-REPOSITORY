@@ -1,5 +1,7 @@
 package com.utez.edu.sigeabackend.modules.entities.dto.academics;
 
+import java.time.LocalDateTime;
+
 public class RankingRequestDtos {
 
     public record CheckEvaluationRequestDto(
@@ -22,5 +24,13 @@ public class RankingRequestDtos {
 
     public record CampusRankingStatsRequestDto(
             Long campusId
+    ) {}
+
+    public record AnonymousRankingDto(
+            Long id,
+            String comment,
+            Integer star,
+            LocalDateTime date,
+            Long teacherId
     ) {}
 }
