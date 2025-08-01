@@ -40,6 +40,7 @@ export default function Qualifications() {
               name: `Grupo ${groupDetails.name}`,
               careerName: groupDetails.careerName,
               schedule: `${groupDetails.weekDay} ${groupDetails.startTime} - ${groupDetails.endTime}`,
+              period: `${groupDetails.startDate} - ${groupDetails.endDate}`,
               teacherName: groupDetails.teacherName
             };
 

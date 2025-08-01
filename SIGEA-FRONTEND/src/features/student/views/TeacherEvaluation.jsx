@@ -387,7 +387,7 @@ export default function TeacherEvaluation() {
                     {/* render de los Modulos */}
                     <div className="mt-3">
                         {renderTabContent()}
-                    </div>
+                    </div>  
                 </div>
             </div>
         </>
