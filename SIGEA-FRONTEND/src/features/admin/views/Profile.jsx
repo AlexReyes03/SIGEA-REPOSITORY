@@ -46,24 +46,23 @@ export default function Profile() {
   useEffect(() => {
     if (location.state?.shouldChangePassword) {
       setIsOpening(true);
-      
-      setTimeout(() => {                   
+
+      setTimeout(() => {
         if (changePasswordButtonRef.current) {
-          changePasswordButtonRef.current.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
+          changePasswordButtonRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
           });
-          
+
           setTimeout(() => {
             changePasswordButtonRef.current.click();
             setIsOpening(false);
           }, 500);
         } else {
-
           setIsOpening(false);
         }
       }, 1000);
-      
+
       if (location.state) {
         window.history.replaceState({}, document.title);
       }
@@ -238,12 +237,6 @@ export default function Profile() {
 
   return (
     <>
-      <style jsx>{`
-        .btn-close {
-          --bs-btn-close-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23e31e24'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414'/%3e%3c/svg%3e");
-        }
-      `}</style>
-
       <div className="bg-white rounded-top p-2">
         <h3 className="text-blue-500 fw-semibold mx-3 my-1">Perfil</h3>
       </div>
@@ -262,12 +255,7 @@ export default function Profile() {
                 </h5>
                 <p className="text-secondary my-2">{roleLabel || 'Sin rol'}</p>
                 <div className="d-flex flex-row justify-content-center mt-4 gap-2">
-                  <Button 
-                    ref={changePasswordButtonRef} 
-                    label="Cambiar contraseña" 
-                    icon={isOpening ? <i className="pi pi-spin pi-spinner me-2"></i> : <MdOutlineLock className="me-2" size={20} />}
-                    onClick={() => new Modal(changePasswordModalRef.current).show()} 
-                  />
+                  <Button ref={changePasswordButtonRef} label="Cambiar contraseña" icon={isOpening ? <i className="pi pi-spin pi-spinner me-2"></i> : <MdOutlineLock className="me-2" size={20} />} onClick={() => new Modal(changePasswordModalRef.current).show()} />
                 </div>
               </div>
             </div>
@@ -306,43 +294,43 @@ export default function Profile() {
         </div>
       </div>
 
-    {roleLabel !== 'Supervisor' && (
-      <div className="row mt-0 mt-md-3">
-        <div className="col-12 col-md-4 mb-3 mb-md-0">
-          <div className="card border-0 h-100">
-            <div className="card-body">
-              <div className="d-flex align-items-center">
-                <div className="title-icon p-1 rounded-circle">
-                  <MdInsertChartOutlined size={40} className="p-1" />
+      {roleLabel !== 'Supervisor' && (
+        <div className="row mt-0 mt-md-3">
+          <div className="col-12 col-md-4 mb-3 mb-md-0">
+            <div className="card border-0 h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center">
+                  <div className="title-icon p-1 rounded-circle">
+                    <MdInsertChartOutlined size={40} className="p-1" />
+                  </div>
+                  <h6 className="text-blue-500 fw-semibold ms-2 mb-0">Progreso</h6>
                 </div>
-                <h6 className="text-blue-500 fw-semibold ms-2 mb-0">Progreso</h6>
-              </div>
 
-              <div className="row text-secondary m-3">
-                <p>Nombre de la carrera</p>
-                <ProgressBar className="p-0" value={value} />
-                <p>Nombre de la carrera</p>
-                <ProgressBar className="p-0" value={value} />
-                <p>Nombre de la carrera</p>
-                <ProgressBar className="p-0" value={value} />
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-12 col-md-8 mb-3 mb-md-0">
-          <div className="card border-0 h-100">
-            <div className="card-body">
-              <div className="d-flex align-items-center">
-                <div className="title-icon p-1 rounded-circle">
-                  <MdOutlineSchool size={40} className="p-1" />
+                <div className="row text-secondary m-3">
+                  <p>Nombre de la carrera</p>
+                  <ProgressBar className="p-0" value={value} />
+                  <p>Nombre de la carrera</p>
+                  <ProgressBar className="p-0" value={value} />
+                  <p>Nombre de la carrera</p>
+                  <ProgressBar className="p-0" value={value} />
                 </div>
-                <h6 className="text-blue-500 fw-semibold ms-2 mb-0">Información académica</h6>
               </div>
-              <div className="d-flex justify-content-center align-items-center text-muted h-75">Sin información</div>
+            </div>
+          </div>
+          <div className="col-12 col-md-8 mb-3 mb-md-0">
+            <div className="card border-0 h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center">
+                  <div className="title-icon p-1 rounded-circle">
+                    <MdOutlineSchool size={40} className="p-1" />
+                  </div>
+                  <h6 className="text-blue-500 fw-semibold ms-2 mb-0">Información académica</h6>
+                </div>
+                <div className="d-flex justify-content-center align-items-center text-muted h-75">Sin información</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
       )}
 
       {/* Modal de cambio de contraseña */}
