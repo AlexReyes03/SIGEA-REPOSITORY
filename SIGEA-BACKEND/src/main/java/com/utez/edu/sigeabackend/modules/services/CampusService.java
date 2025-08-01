@@ -62,7 +62,7 @@ public class CampusService {
     }
 
     public ResponseEntity<?> findById(long id) {
-        Optional<CampusEntity> campus = repository.findById(id);
+        Optional<CampusEntity> campus = Optional.ofNullable(repository.findById(id));
         if (campus.isPresent()) {
             return responseService.getOkResponse("Campus encontrado", toDto(campus.get()));
         } else {
@@ -90,7 +90,7 @@ public class CampusService {
     @Transactional
     public ResponseEntity<?> update(long id, CampusEntity campus) {
         try {
-            Optional<CampusEntity> optionalCampus = repository.findById(id);
+            Optional<CampusEntity> optionalCampus = Optional.ofNullable(repository.findById(id));
             if (optionalCampus.isPresent()) {
                 CampusEntity existing = optionalCampus.get();
 

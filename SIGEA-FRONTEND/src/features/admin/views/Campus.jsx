@@ -285,10 +285,12 @@ export default function Campus() {
   return (
     <>
       <div className="bg-white rounded-top p-2 d-flex align-items-center">
-        <h3 className="text-blue-500 fw-semibold mx-3 my-1">Plantel</h3>
+        <h3 className="text-blue-500 fw-semibold mx-3 my-1 text-truncate" title={`Plantel ${campus?.name}`}>
+          Plantel
+        </h3>
         {campus && (
           <div className="ms-auto">
-            <Button ref={editButtonRef} icon="pi pi-pencil" severity="primary" onClick={openEditModal} disabled={isUpdating}>
+            <Button ref={editButtonRef} icon="pi pi-pencil" title="Editar plantel" severity="primary" onClick={openEditModal} disabled={isUpdating}>
               <span className="d-none d-sm-inline ms-2">Editar plantel</span>
             </Button>
           </div>
@@ -316,12 +318,14 @@ export default function Campus() {
                     <div className="title-icon p-1 rounded-circle">
                       <MdApartment size={40} className="p-1" />
                     </div>
-                    <h5 className="text-blue-500 fw-semibold ms-2 mb-0">Información del Plantel</h5>
+                    <h5 className="text-blue-500 fw-semibold ms-2 mb-0 text-truncate" title="Información del Plantel">
+                      Información del Plantel
+                    </h5>
                   </div>
 
                   <div className="row">
                     <div className="col-12 col-md-6 mb-4">
-                      <div className="info-item p-3 border rounded bg-light">
+                      <div className="info-item p-3 border rounded bg-light text-nowrap overflow-x-auto">
                         <div className="d-flex align-items-center mb-2">
                           <MdOutlineBusiness className="text-secondary me-2" size={20} />
                           <strong className="text-secondary">Nombre</strong>
@@ -333,7 +337,7 @@ export default function Campus() {
                     </div>
 
                     <div className="col-12 col-md-6 mb-4">
-                      <div className="info-item p-3 border rounded bg-light">
+                      <div className="info-item p-3 border rounded bg-light text-nowrap overflow-x-auto">
                         <div className="d-flex align-items-center mb-2">
                           <MdOutlinePerson className="text-secondary me-2" size={20} />
                           <strong className="text-secondary">Director</strong>
@@ -345,7 +349,7 @@ export default function Campus() {
                     </div>
 
                     <div className="col-12 col-md-6 mb-4">
-                      <div className="info-item p-3 border rounded bg-light">
+                      <div className="info-item p-3 border rounded bg-light text-nowrap overflow-x-auto">
                         <div className="d-flex align-items-center mb-2">
                           <MdOutlineLocationOn className="text-secondary me-2" size={20} />
                           <strong className="text-secondary">Dirección</strong>
@@ -357,7 +361,7 @@ export default function Campus() {
                     </div>
 
                     <div className="col-12 col-md-6 mb-4">
-                      <div className="info-item p-3 border rounded bg-light">
+                      <div className="info-item p-3 border rounded bg-light text-nowrap overflow-x-auto">
                         <div className="d-flex align-items-center mb-2">
                           <MdOutlinePhone className="text-secondary me-2" size={20} />
                           <strong className="text-secondary">Teléfono</strong>
@@ -369,7 +373,7 @@ export default function Campus() {
                     </div>
 
                     <div className="col-12 col-md-6 mb-4">
-                      <div className="info-item p-3 border rounded bg-light">
+                      <div className="info-item p-3 border rounded bg-light text-nowrap overflow-x-auto">
                         <div className="d-flex align-items-center mb-2">
                           <MdOutlineAssignment className="text-secondary me-2" size={20} />
                           <strong className="text-secondary">RFC</strong>
@@ -381,7 +385,7 @@ export default function Campus() {
                     </div>
 
                     <div className="col-12 col-md-6 mb-4">
-                      <div className="info-item p-3 border rounded bg-light h-100">
+                      <div className="info-item p-3 border rounded bg-light h-100 text-nowrap overflow-x-auto">
                         <div className="d-flex align-items-center mb-2">
                           <MdOutlineImage className="text-secondary me-2" size={20} />
                           <strong className="text-secondary">Imágenes</strong>

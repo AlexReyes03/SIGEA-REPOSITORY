@@ -91,7 +91,7 @@ const Navbar = forwardRef(function Navbar({ toggleSidebar }, toggleRef) {
         </div>
 
         {/* card usuario */}
-        <div ref={containerRef} className="position-relative d-none d-sm-flex align-items-center">
+        <div ref={containerRef} className="position-relative d-none d-md-flex align-items-center">
           <motion.div
             className="d-flex align-items-center bg-gray-800 rounded border-0"
             initial={{ width: 80 }}

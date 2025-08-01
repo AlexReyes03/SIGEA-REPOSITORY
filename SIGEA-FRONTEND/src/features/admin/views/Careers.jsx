@@ -273,41 +273,25 @@ export default function Careers() {
     [navigate]
   );
 
-  if (loading) {
-    return (
-      <>
-        <div className="bg-white rounded-top p-2 d-flex align-items-center">
-          <h3 className="text-blue-500 fw-semibold mx-3 my-1">Carreras</h3>
-          <div className="ms-auto">
-            <Button icon="pi pi-plus" severity="primary" rounded disabled>
-              <span className="d-none d-sm-inline ms-2">Crear carrera</span>
-            </Button>
-          </div>
+  return (
+    <>
+      <div className="bg-white rounded-top p-2 d-flex align-items-center">
+        <h3 className="text-blue-500 fw-semibold mx-3 my-1 text-truncate">Carreras</h3>
+        <div className="ms-auto">
+          <Button ref={createButtonRef} icon="pi pi-plus" severity="primary" rounded disabled={loading || isCreating || isUpdating || isDeleting} onClick={() => !loading && openModal(createModalRef)}>
+            <span className="d-none d-sm-inline ms-2">Crear carrera</span>
+          </Button>
         </div>
+      </div>
 
+      {loading ? (
         <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 400 }}>
           <div className="text-center">
             <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" />
             <p className="mt-3 text-600">Cargando carreras...</p>
           </div>
         </div>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <div className="bg-white rounded-top p-2 d-flex align-items-center">
-        <h3 className="text-blue-500 fw-semibold mx-3 my-1">Carreras</h3>
-        <div className="ms-auto d-flex align-items-center gap-2">
-          <Button icon="pi pi-refresh" severity="secondary" text onClick={loadCareers} disabled={loading || isCreating || isUpdating || isDeleting} tooltip="Actualizar" tooltipOptions={{ position: 'bottom' }} />
-          <Button ref={createButtonRef} icon="pi pi-plus" severity="primary" rounded onClick={() => openModal(createModalRef)} disabled={isCreating || isUpdating || isDeleting}>
-            <span className="d-none d-sm-inline ms-2">Crear carrera</span>
-          </Button>
-        </div>
-      </div>
-
-      {careers.length === 0 ? (
+      ) : careers.length === 0 ? (
         <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 300 }}>
           <div className="text-center">
             <MdOutlineSchool className="text-secondary" size={70} />

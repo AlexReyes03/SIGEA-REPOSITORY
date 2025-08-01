@@ -14,6 +14,11 @@ public interface CampusRepository extends JpaRepository<CampusEntity, Long> {
     boolean existsByName(String name);
 
     /**
+     * Encuentra un campus por su id
+     */
+    CampusEntity findById(long id);
+
+    /**
      * Encuentra todos los campus que un supervisor puede supervisar
      * (su campus principal + campus asignados adicionales)
      */

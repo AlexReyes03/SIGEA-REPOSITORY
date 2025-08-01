@@ -6,12 +6,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
 public class MediaService {
 
-    private static final long MAX_SIZE = 2 * 1024 * 1024; // 2 MB
+    private static final long MAX_SIZE = 5 * 1024 * 1024; // 2 MB
     private final MediaRepository repo;
 
     public MediaService(MediaRepository repo) { this.repo = repo; }
@@ -47,8 +48,8 @@ public class MediaService {
 
     private void validate(MultipartFile file) {
         if (file.isEmpty())                              throw new IllegalArgumentException("Archivo vacío");
-        if (file.getSize() > MAX_SIZE)                   throw new IllegalArgumentException("Archivo > 2 MB");
-        if (!file.getContentType().startsWith("image/")) throw new IllegalArgumentException("Solo imágenes");
+        if (file.getSize() > MAX_SIZE)                   throw new IllegalArgumentException("Archivo > 5 MB");
+        if (!Objects.requireNonNull(file.getContentType()).startsWith("image/")) throw new IllegalArgumentException("Solo imágenes");
     }
 
     private MediaUploadResponseDto toDto(MediaEntity m) {

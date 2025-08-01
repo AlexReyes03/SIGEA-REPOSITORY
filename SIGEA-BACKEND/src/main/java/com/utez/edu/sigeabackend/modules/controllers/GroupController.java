@@ -37,6 +37,11 @@ public class GroupController {
     public ResponseEntity<List<GroupResponseDto>> findByCareer(@PathVariable long careerId) {
         return service.findGroupsByCareer(careerId);
     }
+    /** GET   /sigea/api/groups/campus/{campusId} */
+    @GetMapping("/campus/{campusId}")
+    public ResponseEntity<List<GroupResponseDto>> findByCampus(@PathVariable long campusId) {
+        return service.findGroupsByCampus(campusId);
+    }
 
     /** GET   /sigea/api/groups/{id} */
     @GetMapping("/{id}")

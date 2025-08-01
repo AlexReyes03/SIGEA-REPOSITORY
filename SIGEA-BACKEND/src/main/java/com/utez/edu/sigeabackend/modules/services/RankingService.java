@@ -4,12 +4,10 @@ import com.utez.edu.sigeabackend.config.CustomResponseEntity;
 import com.utez.edu.sigeabackend.modules.entities.GroupStudentEntity;
 import com.utez.edu.sigeabackend.modules.entities.RankingEntity;
 import com.utez.edu.sigeabackend.modules.entities.UserEntity;
-import com.utez.edu.sigeabackend.modules.entities.dto.academics.EvaluationModuleDto;
-import com.utez.edu.sigeabackend.modules.entities.dto.academics.EvaluationStatusDto;
-import com.utez.edu.sigeabackend.modules.entities.dto.academics.ModuleDto;
-import com.utez.edu.sigeabackend.modules.entities.dto.academics.RankingDto;
-import com.utez.edu.sigeabackend.modules.entities.dto.academics.SubjectDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.*;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.CampusStatsDtos.*;
 import com.utez.edu.sigeabackend.modules.entities.dto.groupDtos.GroupResponseDto;
+import com.utez.edu.sigeabackend.modules.repositories.CampusRepository;
 import com.utez.edu.sigeabackend.modules.repositories.RankingRepository;
 import com.utez.edu.sigeabackend.modules.repositories.UserRepository;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +21,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class RankingService {
     private final RankingRepository repository;
+    private final CampusRepository campusRepository;
     private final UserRepository userRepository;
     private final CustomResponseEntity responseService;
     private final GroupService groupService;
@@ -30,12 +29,14 @@ public class RankingService {
     private final ModuleService moduleService;
 
     public RankingService(RankingRepository repository,
+                          CampusRepository campusRepository,
                           UserRepository userRepository,
                           CustomResponseEntity responseService,
                           GroupService groupService,
                           GroupStudentService groupStudentService,
                           ModuleService moduleService) {
         this.repository = repository;
+        this.campusRepository = campusRepository;
         this.userRepository = userRepository;
         this.responseService = responseService;
         this.groupService = groupService;
@@ -43,7 +44,6 @@ public class RankingService {
         this.moduleService = moduleService;
     }
 
-    // Helper method to convert entity to DTO
     private RankingDto toDto(RankingEntity ranking) {
         UserEntity student = ranking.getStudent();
 
@@ -70,6 +70,16 @@ public class RankingService {
                 ranking.getDate(),
                 ranking.getTeacher().getId(),
                 studentInfo
+        );
+    }
+
+    private RankingRequestDtos.AnonymousRankingDto toAnonymousDto(RankingEntity ranking) {
+        return new RankingRequestDtos.AnonymousRankingDto(
+                ranking.getId(),
+                ranking.getComment(),
+                ranking.getStar(),
+                ranking.getDate(),
+                ranking.getTeacher().getId()
         );
     }
 
@@ -125,6 +135,53 @@ public class RankingService {
                 .collect(Collectors.toList());
 
         return responseService.getOkResponse("Rankings del docente", dtos);
+    }
+
+    public ResponseEntity<?> findByTeacherAnonymous(long teacherId) {
+        if (!userRepository.existsById(teacherId)) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "El docente especificado no existe"));
+        }
+
+        List<RankingEntity> list = repository.findByTeacher_IdWithDetails(teacherId);
+        if (list.isEmpty()) {
+            return responseService.getOkResponse("Rankings del docente", null);
+        }
+
+        List<RankingRequestDtos.AnonymousRankingDto> anonymousDtos = list.stream()
+                .map(this::toAnonymousDto)
+                .collect(Collectors.toList());
+
+        return responseService.getOkResponse("Rankings del docente", anonymousDtos);
+    }
+
+    public ResponseEntity<?> findByStudent(Long studentId) {
+        try {
+            if (!userRepository.existsById(studentId)) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "El estudiante especificado no existe"));
+            }
+
+            // Usar método existente y filtrar por student
+            List<RankingEntity> allRankings = repository.findAllWithDetails();
+            List<RankingEntity> studentRankings = allRankings.stream()
+                    .filter(r -> Objects.equals(r.getStudent().getId(), studentId))
+                    .toList();
+
+            if (studentRankings.isEmpty()) {
+                return responseService.getOkResponse("Evaluaciones del estudiante", List.of());
+            }
+
+            List<RankingDto> dtos = studentRankings.stream()
+                    .map(this::toDto)
+                    .collect(Collectors.toList());
+
+            return responseService.getOkResponse("Evaluaciones del estudiante", dtos);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(Map.of("error", "Error al obtener evaluaciones del estudiante"));
+        }
     }
 
     @Transactional
@@ -190,7 +247,6 @@ public class RankingService {
         }
     }
 
-
     public ResponseEntity<?> getStudentEvaluationModules(Long studentId) {
         try {
             // Validar que el estudiante existe
@@ -210,19 +266,21 @@ public class RankingService {
 
             for (GroupStudentEntity groupStudent : studentGroups) {
                 // Obtener detalles del grupo usando el groupId
-                Long groupId = groupStudent.getId().getGroupId();
+                long groupId = groupStudent.getId().getGroupId();
                 ResponseEntity<GroupResponseDto> groupResponse = groupService.findById(groupId);
 
                 if (groupResponse.getStatusCode().is2xxSuccessful()) {
                     GroupResponseDto group = groupResponse.getBody();
 
                     // Obtener módulos del curriculum
+                    assert group != null;
                     ResponseEntity<List<ModuleDto>> modulesResponse =
                             moduleService.findByCurriculumId(group.curriculumId());
 
                     if (modulesResponse.getStatusCode().is2xxSuccessful()) {
                         List<ModuleDto> modules = modulesResponse.getBody();
 
+                        assert modules != null;
                         for (ModuleDto module : modules) {
                             // Verificar si ya evaluó a este teacher en este módulo específico
                             Optional<RankingEntity> existingRanking = repository.findByStudent_IdAndTeacher_IdAndModuleId(
@@ -251,7 +309,7 @@ public class RankingService {
                                     subjectNames,
                                     isEvaluated,
                                     existingRanking.isPresent() ? existingRanking.get().getStar() : null,
-                                    existingRanking.isPresent() ? existingRanking.get().getComment() : null
+                                    existingRanking.map(RankingEntity::getComment).orElse(null)
                             );
 
                             evaluationModules.add(evaluationModule);
@@ -310,33 +368,103 @@ public class RankingService {
         }
     }
 
+    // METODO PARA ESTADÍSTICAS DE RANKINGS DEL CAMPUS
 
-    public ResponseEntity<?> findByStudent(Long studentId) {
+    public ResponseEntity<CampusRankingStatsDto> getCampusRankingStats(Long campusId) {
         try {
-            if (!userRepository.existsById(studentId)) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "El estudiante especificado no existe"));
+            boolean campusExists = campusRepository.existsById(campusId);
+
+            if (!campusExists) {
+                return ResponseEntity.badRequest().build();
             }
 
-            // Usar método existente y filtrar por student
-            List<RankingEntity> allRankings = repository.findAllWithDetails();
-            List<RankingEntity> studentRankings = allRankings.stream()
-                    .filter(r -> Objects.equals(r.getStudent().getId(), studentId))
-                    .collect(Collectors.toList());
-
-            if (studentRankings.isEmpty()) {
-                return responseService.getOkResponse("Evaluaciones del estudiante", List.of());
-            }
-
-            List<RankingDto> dtos = studentRankings.stream()
-                    .map(this::toDto)
-                    .collect(Collectors.toList());
-
-            return responseService.getOkResponse("Evaluaciones del estudiante", dtos);
+            CampusRankingStatsDto stats = getCampusRankingStatsInternal(campusId);
+            return ResponseEntity.ok(stats);
 
         } catch (Exception e) {
-            return ResponseEntity.status(500)
-                    .body(Map.of("error", "Error al obtener evaluaciones del estudiante"));
+            return ResponseEntity.status(500).build();
         }
+    }
+
+    private CampusRankingStatsDto getCampusRankingStatsInternal(Long campusId) {
+        List<RankingEntity> campusRankings = repository.findAllWithDetails().stream()
+                .filter(ranking -> ranking.getTeacher().getCampus().getId() == campusId)
+                .toList();
+
+        if (campusRankings.isEmpty()) {
+            return new CampusRankingStatsDto(0.0, 0, List.of(), List.of());
+        }
+
+        // Calcular promedio general
+        double averageRating = campusRankings.stream()
+                .mapToInt(RankingEntity::getStar)
+                .average()
+                .orElse(0.0);
+
+        int totalEvaluations = campusRankings.size();
+
+        Map<Integer, Long> starCounts = campusRankings.stream()
+                .collect(Collectors.groupingBy(RankingEntity::getStar, Collectors.counting()));
+
+        List<StarDistributionDto> starDistribution = new ArrayList<>();
+        for (int star = 1; star <= 5; star++) {
+            long count = starCounts.getOrDefault(star, 0L);
+            double percentage = count * 100.0 / totalEvaluations;
+            starDistribution.add(new StarDistributionDto(star, (int) count, percentage));
+        }
+
+        // Calcular ranking de docentes
+        Map<Long, List<RankingEntity>> rankingsByTeacher = campusRankings.stream()
+                .collect(Collectors.groupingBy(ranking -> ranking.getTeacher().getId()));
+
+        List<TeacherRankingDto> teacherRankings = rankingsByTeacher.entrySet().stream()
+                .map(entry -> {
+                    Long teacherId = entry.getKey();
+                    List<RankingEntity> teacherRankingsList = entry.getValue();
+                    UserEntity teacher = teacherRankingsList.get(0).getTeacher();
+
+                    double teacherAverage = teacherRankingsList.stream()
+                            .mapToInt(RankingEntity::getStar)
+                            .average()
+                            .orElse(0.0);
+
+                    String teacherName = buildFullName(teacher.getName(),
+                            teacher.getPaternalSurname(), teacher.getMaternalSurname());
+
+                    String avatarUrl = teacher.getAvatar() != null ?
+                            "/sigea/api/media/raw/" + teacher.getAvatar().getCode() : null;
+
+                    return new TeacherRankingDto(
+                            teacherId,
+                            teacherName,
+                            teacher.getEmail(),
+                            avatarUrl,
+                            teacherAverage,
+                            teacherRankingsList.size(),
+                            0
+                    );
+                })
+                .sorted((a, b) -> {
+                    int avgCompare = Double.compare(b.averageRating(), a.averageRating());
+                    if (avgCompare != 0) return avgCompare;
+                    return Integer.compare(b.totalEvaluations(), a.totalEvaluations());
+                })
+                .collect(Collectors.toList());
+
+        for (int i = 0; i < teacherRankings.size(); i++) {
+            TeacherRankingDto currentTeacher = teacherRankings.get(i);
+            TeacherRankingDto updatedTeacher = new TeacherRankingDto(
+                    currentTeacher.teacherId(),
+                    currentTeacher.teacherName(),
+                    currentTeacher.teacherEmail(),
+                    currentTeacher.avatarUrl(),
+                    currentTeacher.averageRating(),
+                    currentTeacher.totalEvaluations(),
+                    i + 1
+            );
+            teacherRankings.set(i, updatedTeacher);
+        }
+
+        return new CampusRankingStatsDto(averageRating, totalEvaluations, starDistribution, teacherRankings);
     }
 }
