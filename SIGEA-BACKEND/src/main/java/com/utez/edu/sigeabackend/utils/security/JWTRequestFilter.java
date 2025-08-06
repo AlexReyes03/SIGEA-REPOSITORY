@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,25 +19,40 @@ import java.io.IOException;
 @Component
 public class JWTRequestFilter extends OncePerRequestFilter {
 
+    private final CustomUserDetailsService userDetailsService;
+    private final JWTUtil jwtUtil;
+
     @Autowired
-    private CustomUserDetailsService userDetailsService;
-    @Autowired
-    private JWTUtil jwtUtil;
+    public JWTRequestFilter(CustomUserDetailsService userDetailsService, JWTUtil jwtUtil) {
+        this.userDetailsService = userDetailsService;
+        this.jwtUtil = jwtUtil;
+    }
 
     @Override
     protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain chain
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain chain
     ) throws ServletException, IOException {
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            System.out.println("=== OPTIONS REQUEST - SKIPPING JWT FILTER ===");
+            chain.doFilter(request, response);
+            return;
+        }
+
         final String authHeader = request.getHeader("Authorization");
         String username = null, jwt = null;
+
+        System.out.println("=== JWT FILTER DEBUG ===");
+        System.out.println("Method: " + request.getMethod());
+        System.out.println("Auth Header: " + (authHeader != null ? "PRESENT (" + authHeader.length() + " chars)" : "NULL"));
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             jwt = authHeader.substring(7);
             System.out.println("JWT Token: " + (!jwt.isEmpty() ? "EXTRACTED (" + jwt.length() + " chars)" : "EMPTY"));
             try {
                 username = jwtUtil.extractUsername(jwt);
+                System.out.println("Username extracted: " + username);
             } catch (ExpiredJwtException ex) {
                 System.out.println("JWT EXPIRED: " + ex.getMessage());
             } catch (io.jsonwebtoken.security.SignatureException ex) {
