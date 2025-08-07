@@ -15,12 +15,23 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 
 @Component
 public class JWTRequestFilter extends OncePerRequestFilter {
 
     private final CustomUserDetailsService userDetailsService;
     private final JWTUtil jwtUtil;
+
+    // Endpoints públicos que NO necesitan procesamiento JWT
+    private static final List<String> PUBLIC_ENDPOINTS = Arrays.asList(
+            "/sigea/auth/",
+            "/sigea/api/media/raw/",
+            "/sigea/api/careers",
+            "/sigea/api/create-dev-user",
+            "/sigea/api/dev-status"
+    );
 
     @Autowired
     public JWTRequestFilter(CustomUserDetailsService userDetailsService, JWTUtil jwtUtil) {
@@ -34,8 +45,18 @@ public class JWTRequestFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain chain
     ) throws ServletException, IOException {
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+
+        String requestPath = request.getRequestURI();
+        String method = request.getMethod();
+
+        if ("OPTIONS".equalsIgnoreCase(method)) {
             System.out.println("=== OPTIONS REQUEST - SKIPPING JWT FILTER ===");
+            chain.doFilter(request, response);
+            return;
+        }
+
+        if (isPublicEndpoint(requestPath, method)) {
+            System.out.println("=== PUBLIC ENDPOINT - SKIPPING JWT FILTER: " + method + " " + requestPath + " ===");
             chain.doFilter(request, response);
             return;
         }
@@ -44,7 +65,8 @@ public class JWTRequestFilter extends OncePerRequestFilter {
         String username = null, jwt = null;
 
         System.out.println("=== JWT FILTER DEBUG ===");
-        System.out.println("Method: " + request.getMethod());
+        System.out.println("Method: " + method);
+        System.out.println("Path: " + requestPath);
         System.out.println("Auth Header: " + (authHeader != null ? "PRESENT (" + authHeader.length() + " chars)" : "NULL"));
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -83,5 +105,14 @@ public class JWTRequestFilter extends OncePerRequestFilter {
         }
         System.out.println("========================");
         chain.doFilter(request, response);
+    }
+
+    private boolean isPublicEndpoint(String requestPath, String method) {
+        if ("GET".equalsIgnoreCase(method) && "/sigea/api/careers".equals(requestPath)) {
+            return true;
+        }
+
+        return PUBLIC_ENDPOINTS.stream()
+                .anyMatch(requestPath::startsWith);
     }
 }
