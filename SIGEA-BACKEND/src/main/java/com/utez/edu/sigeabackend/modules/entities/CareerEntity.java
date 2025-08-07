@@ -6,10 +6,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "career", uniqueConstraints = {
-        @UniqueConstraint(name = "uq_career_differentiator_campus",
-                columnNames = {"differentiator", "campus_id"})
-})
+@Table(name = "career")
+// *** CONSTRAINT ÚNICA REMOVIDA - Varios diferenciadores pueden ser iguales ***
 public class CareerEntity {
 
     @Id

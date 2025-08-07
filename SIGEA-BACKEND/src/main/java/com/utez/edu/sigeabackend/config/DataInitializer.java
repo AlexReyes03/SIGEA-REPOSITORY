@@ -73,7 +73,6 @@ public class DataInitializer implements CommandLineRunner {
     private void initializeCampus() {
         logger.info("Verificando e inicializando campus del sistema...");
 
-        createCampusIfNotExists("Cuernavaca");
         createCampusIfNotExists("Temixco");
         createCampusIfNotExists("Jiutepec");
 
