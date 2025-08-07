@@ -15,23 +15,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 
 @Component
 public class JWTRequestFilter extends OncePerRequestFilter {
 
     private final CustomUserDetailsService userDetailsService;
     private final JWTUtil jwtUtil;
-
-    // Endpoints públicos que NO necesitan procesamiento JWT
-    private static final List<String> PUBLIC_ENDPOINTS = Arrays.asList(
-            "/sigea/auth/",
-            "/sigea/api/media/raw/",
-            "/sigea/api/careers",
-            "/sigea/api/create-dev-user",
-            "/sigea/api/dev-status"
-    );
 
     @Autowired
     public JWTRequestFilter(CustomUserDetailsService userDetailsService, JWTUtil jwtUtil) {
@@ -108,11 +97,24 @@ public class JWTRequestFilter extends OncePerRequestFilter {
     }
 
     private boolean isPublicEndpoint(String requestPath, String method) {
-        if ("GET".equalsIgnoreCase(method) && "/sigea/api/careers".equals(requestPath)) {
-            return true;
+        if ("GET".equalsIgnoreCase(method)) {
+            if ("/sigea/api/careers".equals(requestPath)) {
+                return true;
+            }
+            if (requestPath.startsWith("/sigea/api/media/raw/")) {
+                return true;
+            }
+            if ("/sigea/api/dev-status".equals(requestPath)) {
+                return true;
+            }
         }
 
-        return PUBLIC_ENDPOINTS.stream()
-                .anyMatch(requestPath::startsWith);
+        if ("POST".equalsIgnoreCase(method)) {
+            if ("/sigea/api/create-dev-user".equals(requestPath)) {
+                return true;
+            }
+        }
+
+        return requestPath.startsWith("/sigea/auth/");
     }
 }
