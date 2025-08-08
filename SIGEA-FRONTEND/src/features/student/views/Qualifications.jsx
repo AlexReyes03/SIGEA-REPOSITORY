@@ -20,6 +20,11 @@ export default function Qualifications() {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [generalAverage, setGeneralAverage] = useState(null);
 
+  const STATUS_LABELS = {
+    'ACTIVE': 'Activo',
+    'INACTIVE': 'Inactivo',
+  };
+
   useEffect(() => {
     const loadStudentData = async () => {
       try {
@@ -72,6 +77,41 @@ export default function Qualifications() {
     loadStudentData();
   }, [user, selectedCareer]); // ← Agregar selectedCareer como dependencia
 
+  const academicInfo = [
+  {
+    label: 'Carrera',
+    value: selectedGroup?.careerName || 'Carrera no disponible',
+    isTitle: true, // Para mantener el estilo de título
+  },
+  {
+    label: 'Estudiante', 
+    value: studentData 
+      ? `${studentData.name} ${studentData.paternalSurname}${studentData.maternalSurname ? ` ${studentData.maternalSurname}` : ''}` 
+      : 'N/A',
+  },
+  {
+    label: 'Matrícula',
+    value: studentData?.primaryRegistrationNumber || 'N/A',
+  },
+  {
+    label: 'Estado',
+    value: STATUS_LABELS[studentData?.status] || 'N/A',
+  },
+  {
+    label: 'Grupo',
+    value: selectedGroup?.name || 'Grupo A',
+  },
+  {
+    label: 'Docente a cargo',
+    value: selectedGroup?.teacherName || 'No asignado',
+  },
+  {
+    label: 'Horario',
+    value: selectedGroup?.schedule || 'No disponible',
+  },
+];
+
+
   const calculateGeneralAverage = async (groupId, studentId) => {
     try {
       const qualifications = await getQualificationsByGroupWithDetails(groupId);
@@ -115,17 +155,11 @@ export default function Qualifications() {
     );
   }
 
-  //Manejo de estados 
-  const STATUS_LABELS = {
-    'ACTIVE': 'Activo',
-    'INACTIVE': 'Inactivo',
-  };
-
   return (
     <>
       <div className="bg-white rounded-top p-2">
         <h3 className="text-blue-500 fw-semibold mx-3 my-1">
-          Calificaciones{selectedCareer?.careerName ? ` - ${selectedCareer.careerName}` : ''}
+          Calificaciones
         </h3>
       </div>
 
@@ -158,29 +192,31 @@ export default function Qualifications() {
                 <div className="title-icon p-1 rounded-circle">
                   <MdOutlineSchool size={40} className="p-1" />
                 </div>
-                <h6 className="text-blue-500 fs-5 fw-semibold ms-2 mb-0">Información académica</h6>
+                <h6 className="text-blue-500 fs-5 fw-semibold ms-2 mb-0 text-truncate">Información académica</h6>
               </div>
-              <div className="row text-muted p-3">
-                <div className='col-6'>
-                  <p className='fw-semibold'>{selectedGroup?.careerName || 'Carrera no disponible'}</p>
-                  <p className="mb-0">Estudiante</p>
-                  <p className="fw-semibold">
-                    {studentData ?
-                      `${studentData.name} ${studentData.paternalSurname}${studentData.maternalSurname ? ` ${studentData.maternalSurname}` : ''}`
-                      : 'N/A'
-                    }
-                  </p>
-                  <p className="mb-0">Matrícula</p>
-                  <p className="fw-semibold">{studentData?.primaryRegistrationNumber || 'N/A'}</p>
-                  <p className='mb-0'>Estado</p>
-                  <p className='fw-semibold'>{STATUS_LABELS[studentData?.status] || 'N/A'}</p>
-                </div>
-                <div className='col-6'>
-                  <p className='fw-semibold'>{selectedGroup?.name || 'Grupo A'}</p>
-                  <p className="mb-0">Docente a cargo</p>
-                  <p className='fw-semibold'>{selectedGroup?.teacherName || 'No asignado'}</p>
-                  <p className='mb-0'>Horario</p>
-                  <p className='fw-semibold'>{selectedGroup?.schedule || 'No disponible'}</p>
+
+              <div className="mt-3">
+                <div className="table-responsive">
+                  <table className="table table-borderless">
+                    <tbody>
+                      {academicInfo.map((info, index) => (
+                        <tr key={index}>
+                          <td 
+                            className="text-secondary fw-medium text-nowrap ps-3" 
+                            style={{ width: '40%', verticalAlign: 'middle' }}
+                          >
+                            {info.label}
+                          </td>
+                          <td 
+                            className={`${info.isTitle ? 'fw-semibold' : 'fw-normal'} text-dark text-nowrap`}
+                            style={{ verticalAlign: 'middle' }}
+                          >
+                            {info.value}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>

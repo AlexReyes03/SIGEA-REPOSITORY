@@ -34,7 +34,7 @@ const formatDateToMonthYear = (dateString) => {
   const month = monthNames[date.getMonth()];
   const year = date.getFullYear();
 
-  return `${month} - ${year}`;
+  return `${month} ${year}`;
 };
 
 // Función helper para calcular el estado del grupo
@@ -105,17 +105,32 @@ export default function GroupDetails() {
     };
   }, [group, navigate]);
 
-  const infoLeft = [
-    { label: 'Plan de estudios', value: group?.curriculumName || 'No asignado' },
-    { label: 'Horario', value: `${weekLabel(group?.weekDay)} ${group?.startTime} - ${group?.endTime}` },
-    { label: 'Estado', value: getGroupStatus(group?.startDate, group?.endDate) },
-  ];
-
-  const infoRight = [
-    { label: 'Total de alumnos', value: studentCount === 0 ? 'Sin alumnos' : studentCount },
-    { label: 'Fecha de inicio', value: formatDateToMonthYear(group?.startDate) },
-    { label: 'Fecha de fin', value: formatDateToMonthYear(group?.endDate) },
-  ];
+  const groupInfo = [
+  {
+    label: 'Carrera',
+    value: career?.name || 'No asignada',
+  },
+  {
+    label: 'Grupo',
+    value: group?.name ? `Grupo ${group.name}` : 'Sin nombre',
+  },
+  {
+    label: 'Plan de estudios',
+    value: group?.curriculumName || 'No asignado',
+  },
+  {
+    label: 'Horario',
+    value: `${weekLabel(group?.weekDay)} ${group?.startTime} - ${group?.endTime}`,
+  },
+  {
+    label: 'Estado',
+    value: getGroupStatus(group?.startDate, group?.endDate),
+  },
+  {
+    label: 'Periodo',
+    value: `${formatDateToMonthYear(group?.startDate)} — ${formatDateToMonthYear(group?.endDate)}`,
+  },
+];
 
   return (
     <>
@@ -148,36 +163,37 @@ export default function GroupDetails() {
         </div>
 
         <div className="col-12 col-lg-8">
-          <div className="card border-0" style={{ minHeight: '20rem' }}>
+          <div className="card border-0" style={{ minHeight: '22rem' }}>
             <div className="card-body">
               <div className="d-flex align-items-center">
                 <div className="title-icon p-1 rounded-circle">
                   <MdOutlineGroup size={40} className="p-1" />
                 </div>
-                <h6 className="text-blue-500 fs-5 fw-semibold ms-2 mb-0">Información del grupo</h6>
+                <h6 className="text-blue-500 fs-5 fw-semibold ms-2 mb-0 text-truncate">Información del grupo</h6>
               </div>
-              <div className="d-flex align-items-center fw-medium">
-                <div className="row text-muted text-start text-uppercase ms-5 gx-4 gy-3">
-                  <div className="col-6">
-                    <span>{career?.name}</span>
-                  </div>
-                  <div className="col-6">
-                    <span>Grupo {group?.name} </span>
-                  </div>
 
-                  {infoLeft.map(({ label, value }) => (
-                    <div className="col-6 d-flex flex-column" key={label}>
-                      <span>{label}</span>
-                      <span>{value}</span>
-                    </div>
-                  ))}
-
-                  {infoRight.map(({ label, value }) => (
-                    <div className="col-6 d-flex flex-column" key={label}>
-                      <span>{label}</span>
-                      <span>{value}</span>
-                    </div>
-                  ))}
+              <div className="mt-3">
+                <div className="table-responsive">
+                  <table className="table table-borderless">
+                    <tbody>
+                      {groupInfo.map((info, index) => (
+                        <tr key={index}>
+                          <td 
+                            className="text-secondary fw-medium text-nowrap ps-3" 
+                            style={{ width: '40%', verticalAlign: 'middle' }}
+                          >
+                            {info.label}
+                          </td>
+                          <td 
+                            className="text-dark text-nowrap" 
+                            style={{ verticalAlign: 'middle' }}
+                          >
+                            {info.value}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>

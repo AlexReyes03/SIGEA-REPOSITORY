@@ -54,9 +54,20 @@ export default function TeacherEvaluation() {
 
     // Configuración de las pestañas
     const tabs = [
-        { key: 'pending', label: `Pendientes (${pendingModules.length})` },
-        { key: 'evaluated', label: `Evaluados (${evaluatedModules.length})` }
-    ];
+    { 
+        key: 'pending', 
+        label: `Pendientes (${pendingModules.length})`,
+        shortLabel: `(${pendingModules.length})`,
+        icon: 'pi pi-clock d-inline d-sm-none'
+    },
+    { 
+        key: 'evaluated', 
+        label: `Evaluados (${evaluatedModules.length})`,
+        shortLabel: `(${evaluatedModules.length})`,
+        icon: 'pi pi-check-circle d-inline d-sm-none'
+    }
+];
+
 
     // Efecto para actualizar la posición del slider
     useLayoutEffect(() => {
@@ -343,8 +354,8 @@ export default function TeacherEvaluation() {
 
     return (
         <>
-            <div className="bg-white rounded-top p-2">
-                <h3 className="text-blue-500 fw-semibold mx-3 my-1">Evaluación Docente</h3>
+            <div className="bg-white text-truncate rounded-top p-2">
+                <h3 className="text-blue-500 text-truncate fw-semibold mx-3 my-1">Evaluación Docente</h3>
             </div>
 
             <Toast ref={toast} />
@@ -358,13 +369,17 @@ export default function TeacherEvaluation() {
                                 <button
                                     key={tab.key}
                                     ref={(el) => (tabRefs.current[tab.key] = el)}
-                                    className={baseBtn}
+                                    className={`${baseBtn} d-flex align-items-center gap-1`}
                                     style={{ color: activeTab === tab.key ? activeColor : '#707070' }}
                                     role="tab"
                                     aria-selected={activeTab === tab.key}
                                     onClick={() => setActiveTab(tab.key)}
+                                    title={tab.label} // Tooltip con texto completo
                                 >
-                                    {tab.label}
+                                    <i className={tab.icon}></i>
+                                    {/* Texto completo en desktop, solo contador en móvil */}
+                                    <span className="d-none d-md-inline">{tab.label}</span>
+                                    <span className="d-md-none">{tab.shortLabel}</span>
                                 </button>
                             ))}
 

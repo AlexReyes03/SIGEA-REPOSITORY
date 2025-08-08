@@ -67,7 +67,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
         return [
           { label: 'Inicio', path: '/developer', Icon: MdHome },
           { label: 'Usuarios', path: '/developer/users', Icon: MdGroups },
-          { label: 'Usuarios', path: '/developer/campuses', Icon: MdApartment },
+          { label: 'Planteles', path: '/developer/campuses', Icon: MdApartment },
           { label: 'Perfil', path: '/developer/profile', Icon: MdPerson },
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },
         ];
