@@ -46,6 +46,7 @@ public class GroupService {
                 g.getEndTime().toString(),
                 g.getStartDate().toString(),
                 g.getEndDate().toString(),
+                g.getStatus().name(), // Nuevo campo
                 g.getTeacher().getId(),
                 g.getTeacher().getName() + " " + g.getTeacher().getPaternalSurname(),
                 g.getCareer().getId(),
@@ -53,6 +54,58 @@ public class GroupService {
                 g.getCurriculum().getId(),
                 g.getCurriculum().getName()
         );
+    }
+
+    /**
+     * Actualiza automáticamente el estado de los grupos basándose en la fecha actual
+     */
+    private void updateGroupStatusBasedOnDates(List<GroupEntity> groups) {
+        LocalDate today = LocalDate.now();
+        groups.forEach(group -> {
+            if (group.getStatus() == GroupStatus.ACTIVE && group.getEndDate().isBefore(today)) {
+                group.setStatus(GroupStatus.COMPLETED);
+                repository.save(group);
+            }
+        });
+    }
+
+    /**
+     * Busca y valida las entidades relacionadas necesarias para crear/actualizar un grupo
+     */
+    private record GroupEntities(UserEntity teacher, CareerEntity career, CurriculumEntity curriculum) {}
+
+    private GroupEntities findAndValidateEntities(GroupRequestDto dto) {
+        UserEntity teacher = userRepository.findById(dto.teacherId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Docente no encontrado con id " + dto.teacherId()
+                ));
+
+        CareerEntity careerEntity = careerRepository.findById(dto.careerId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Carrera no encontrada con id " + dto.careerId()
+                ));
+
+        CurriculumEntity curriculum = curriculumRepository.findById(dto.curriculumId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Plan de estudios no encontrado con id " + dto.curriculumId()
+                ));
+
+        return new GroupEntities(teacher, careerEntity, curriculum);
+    }
+
+    /**
+     * Valida todos los campos de tiempo y fecha del grupo
+     */
+    private void validateGroupTiming(GroupRequestDto dto, Long excludeGroupId) {
+        LocalTime startTime = LocalTime.parse(dto.startTime());
+        LocalTime endTime = LocalTime.parse(dto.endTime());
+        WeekDays weekDay = WeekDays.valueOf(dto.weekDay());
+        LocalDate startDate = LocalDate.parse(dto.startDate());
+        LocalDate endDate = LocalDate.parse(dto.endDate());
+
+        validateTimeRange(startTime, endTime);
+        validateDateRange(startDate, endDate);
+        validateTeacherScheduleConflict(dto.teacherId(), weekDay, startTime, endTime, excludeGroupId);
     }
 
     /**
@@ -75,6 +128,18 @@ public class GroupService {
         target.setTeacher(teacher);
         target.setCareer(careerEntity);
         target.setCurriculum(curriculum);
+
+        if (target.getId() != 0) {
+            LocalDate today = LocalDate.now();
+            LocalDate endDate = LocalDate.parse(dto.endDate());
+
+            if (target.getStatus() == GroupStatus.COMPLETED && !endDate.isBefore(today)) {
+                target.setStatus(GroupStatus.ACTIVE);
+            }
+            else if (target.getStatus() == GroupStatus.ACTIVE && endDate.isBefore(today)) {
+                target.setStatus(GroupStatus.COMPLETED);
+            }
+        }
     }
 
     /**
@@ -142,20 +207,21 @@ public class GroupService {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     String.format("La fecha de fin debe ser al menos %s (duración del plan de estudios: %d semanas)",
-                            minimumEndDate.toString(), totalWeeks)
+                            minimumEndDate, totalWeeks)
             );
         }
     }
 
     /**
      * Valida que el docente no tenga conflictos de horario
+     * Solo considera grupos ACTIVE para conflictos
      */
     private void validateTeacherScheduleConflict(Long teacherId, WeekDays weekDay,
                                                  LocalTime startTime, LocalTime endTime, Long excludeGroupId) {
 
-        List<GroupEntity> teacherGroups = repository.findByTeacherId(teacherId);
+        List<GroupEntity> teacherActiveGroups = repository.findByTeacherIdAndStatus(teacherId, GroupStatus.ACTIVE);
 
-        for (GroupEntity existingGroup : teacherGroups) {
+        for (GroupEntity existingGroup : teacherActiveGroups) {
             if (excludeGroupId != null && Objects.equals(existingGroup.getId(), excludeGroupId)) {
                 continue;
             }
@@ -172,7 +238,7 @@ public class GroupService {
                 if (hasConflict) {
                     throw new ResponseStatusException(
                             HttpStatus.CONFLICT,
-                            String.format("El docente ya tiene asignado el grupo '%s' el día %s de %s a %s",
+                            String.format("El docente ya tiene asignado el grupo activo '%s' el día %s de %s a %s",
                                     existingGroup.getName(),
                                     existingGroup.getWeekDay().name(),
                                     existingStart.toString(),
@@ -187,6 +253,8 @@ public class GroupService {
     @Transactional(readOnly = true)
     public ResponseEntity<List<GroupResponseDto>> findAllGroups() {
         List<GroupEntity> groups = repository.findAll();
+        updateGroupStatusBasedOnDates(groups);
+
         if (groups.isEmpty()) {
             return ResponseEntity.ok(List.of());
         }
@@ -200,6 +268,8 @@ public class GroupService {
     @Transactional(readOnly = true)
     public ResponseEntity<List<GroupResponseDto>> findGroupsByTeacher(long teacherId) {
         List<GroupEntity> groups = repository.findByTeacherId(teacherId);
+        updateGroupStatusBasedOnDates(groups);
+
         if (groups.isEmpty()) {
             return ResponseEntity.ok(List.of());
         }
@@ -213,6 +283,8 @@ public class GroupService {
     @Transactional(readOnly = true)
     public ResponseEntity<List<GroupResponseDto>> findGroupsByCareer(long careerId) {
         List<GroupEntity> groups = repository.findByCareerId(careerId);
+        updateGroupStatusBasedOnDates(groups);
+
         if (groups.isEmpty()) {
             return ResponseEntity.ok(List.of());
         }
@@ -226,17 +298,26 @@ public class GroupService {
     @Transactional(readOnly = true)
     public ResponseEntity<GroupResponseDto> findById(long id) {
         return repository.findById(id)
-                .map(this::toResponseDto)
+                .map(group -> {
+                    LocalDate today = LocalDate.now();
+                    if (group.getStatus() == GroupStatus.ACTIVE && group.getEndDate().isBefore(today)) {
+                        group.setStatus(GroupStatus.COMPLETED);
+                        repository.save(group);
+                    }
+                    return toResponseDto(group);
+                })
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
-    // LISTAR POR CAMPUS
+    // LISTAR POR CAMPUS - MÉTODO FALTANTE
     @Transactional(readOnly = true)
     public ResponseEntity<List<GroupResponseDto>> findGroupsByCampus(long campusId) {
         List<GroupEntity> groups = repository.findAll().stream()
                 .filter(group -> group.getCareer().getCampus().getId() == campusId)
                 .toList();
+
+        updateGroupStatusBasedOnDates(groups);
 
         if (groups.isEmpty()) {
             return ResponseEntity.ok(List.of());
@@ -251,40 +332,21 @@ public class GroupService {
     // CREAR NUEVO GRUPO
     @Transactional
     public ResponseEntity<GroupResponseDto> create(GroupRequestDto dto) {
-        // Buscar entidades relacionadas
-        UserEntity teacher = userRepository.findById(dto.teacherId())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "Docente no encontrado con id " + dto.teacherId()
-                ));
+        GroupEntities entities = findAndValidateEntities(dto);
 
-        CareerEntity careerEntity = careerRepository.findById(dto.careerId())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "Carrera no encontrada con id " + dto.careerId()
-                ));
+        validateGroupTiming(dto, null);
+        validateCurriculumDuration(LocalDate.parse(dto.startDate()), LocalDate.parse(dto.endDate()), entities.curriculum());
 
-        CurriculumEntity curriculum = curriculumRepository.findById(dto.curriculumId())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "Plan de estudios no encontrado con id " + dto.curriculumId()
-                ));
+        GroupEntity group = new GroupEntity();
+        populateFromDto(group, dto, entities.teacher(), entities.career(), entities.curriculum());
 
-        // Parsear y validar horarios
-        LocalTime startTime = LocalTime.parse(dto.startTime());
-        LocalTime endTime = LocalTime.parse(dto.endTime());
-        WeekDays weekDay = WeekDays.valueOf(dto.weekDay());
+        group.setStatus(GroupStatus.ACTIVE);
 
-        // Parsear y validar fechas
-        LocalDate startDate = LocalDate.parse(dto.startDate());
-        LocalDate endDate = LocalDate.parse(dto.endDate());
+        if (LocalDate.parse(dto.endDate()).isBefore(LocalDate.now())) {
+            group.setStatus(GroupStatus.COMPLETED);
+        }
 
-        validateTimeRange(startTime, endTime);
-        validateDateRange(startDate, endDate);
-        validateCurriculumDuration(startDate, endDate, curriculum);
-        validateTeacherScheduleConflict(dto.teacherId(), weekDay, startTime, endTime, null);
-
-        GroupEntity g = new GroupEntity();
-        populateFromDto(g, dto, teacher, careerEntity, curriculum);
-
-        GroupEntity saved = repository.save(g);
+        GroupEntity saved = repository.save(group);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponseDto(saved));
     }
 
@@ -296,36 +358,34 @@ public class GroupService {
                         HttpStatus.NOT_FOUND, "Grupo no encontrado con id " + id
                 ));
 
-        UserEntity teacher = userRepository.findById(dto.teacherId())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "Docente no encontrado con id " + dto.teacherId()
-                ));
+        GroupEntities entities = findAndValidateEntities(dto);
 
-        CareerEntity careerEntity = careerRepository.findById(dto.careerId())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "Carrera no encontrada con id " + dto.careerId()
-                ));
+        validateGroupTiming(dto, id);
+        validateCurriculumDuration(LocalDate.parse(dto.startDate()), LocalDate.parse(dto.endDate()), entities.curriculum());
 
-        CurriculumEntity curriculum = curriculumRepository.findById(dto.curriculumId())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "Plan de estudios no encontrado con id " + dto.curriculumId()
-                ));
-
-        LocalTime startTime = LocalTime.parse(dto.startTime());
-        LocalTime endTime = LocalTime.parse(dto.endTime());
-        WeekDays weekDay = WeekDays.valueOf(dto.weekDay());
-
-        LocalDate startDate = LocalDate.parse(dto.startDate());
-        LocalDate endDate = LocalDate.parse(dto.endDate());
-
-        validateTimeRange(startTime, endTime);
-        validateDateRange(startDate, endDate);
-        validateCurriculumDuration(startDate, endDate, curriculum);
-        validateTeacherScheduleConflict(dto.teacherId(), weekDay, startTime, endTime, id);
-
-        populateFromDto(existing, dto, teacher, careerEntity, curriculum);
+        populateFromDto(existing, dto, entities.teacher(), entities.career(), entities.curriculum());
 
         GroupEntity updated = repository.save(existing);
+        return ResponseEntity.ok(toResponseDto(updated));
+    }
+
+    // CAMBIAR ESTADO DEL GRUPO
+    @Transactional
+    public ResponseEntity<GroupResponseDto> changeStatus(long id, GroupStatus newStatus) {
+        GroupEntity group = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Grupo no encontrado con id " + id
+                ));
+
+        if (newStatus == GroupStatus.COMPLETED) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "El estado COMPLETED se asigna automáticamente basándose en las fechas"
+            );
+        }
+
+        group.setStatus(newStatus);
+        GroupEntity updated = repository.save(group);
         return ResponseEntity.ok(toResponseDto(updated));
     }
 

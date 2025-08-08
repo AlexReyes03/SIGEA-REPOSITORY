@@ -35,6 +35,10 @@ public class GroupEntity {
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, columnDefinition = "ENUM('ACTIVE', 'COMPLETED', 'INACTIVE') DEFAULT 'ACTIVE'")
+    private GroupStatus status = GroupStatus.ACTIVE;
+
     // Relación Many-To-One hacia UserEntity (rol=TEACHER)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id", nullable = false)
@@ -73,6 +77,7 @@ public class GroupEntity {
         this.career = career;
         this.curriculum = curriculum;
         this.students = students;
+        this.status = GroupStatus.ACTIVE;
     }
 
     // Getters y Setters existentes
@@ -116,7 +121,6 @@ public class GroupEntity {
         this.weekDay = weekDay;
     }
 
-    // NUEVOS GETTERS Y SETTERS PARA LAS FECHAS
     public LocalDate getStartDate() {
         return startDate;
     }
@@ -131,6 +135,14 @@ public class GroupEntity {
 
     public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
+    }
+
+    public GroupStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(GroupStatus status) {
+        this.status = status;
     }
 
     public UserEntity getTeacher() {

@@ -8,6 +8,7 @@ public record GroupResponseDto(
         String endTime,
         String startDate,
         String endDate,
+        String status,
         Long teacherId,
         String teacherName,
         Long careerId,

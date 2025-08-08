@@ -41,17 +41,13 @@ public class CampusController {
     }
 
     /*
-     * ENDPOINTS DE MODIFICACIÓN COMENTADOS PARA SEGURIDAD
-     * Estos endpoints pueden ser habilitados en el futuro si es necesario
-     * Por ahora, la gestión de campus se hace directamente en la base de datos
+     * Endpoint para crear un nuevo campus.
      */
 
-    /*
     @PostMapping
     public ResponseEntity<?> create(@RequestBody CampusEntity campus) {
         return campusService.create(campus);
     }
-    */
 
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable long id, @RequestBody CampusEntity campus) {
