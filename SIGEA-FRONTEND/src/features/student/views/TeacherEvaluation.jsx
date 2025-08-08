@@ -268,7 +268,7 @@ export default function TeacherEvaluation() {
 
         return (
             <div key={module.id} className="col-12 col-sm-6 col-lg-4 col-xl-3 mb-3">
-                <div className={`card h-100 shadow-sm ${module.isEvaluated ? 'bg-light' : ''}`} style={{ fontSize: '0.9rem', maxHeight: '37.5rem' }}>
+                <div className={`card h-100 border-0 shadow-sm ${module.isEvaluated ? 'bg-light' : ''}`} style={{ fontSize: '0.9rem', maxHeight: '37.5rem' }}>
                     <div>
                         {cardHeader}
                     </div>
