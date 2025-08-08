@@ -204,6 +204,7 @@ const BoletaPDF = ({ studentData, groupData, moduleData, campusData, startDate, 
 };
 
 export const ReportCard = ({ studentData, groupData, moduleData, campusData, startDate, endDate }) => {
+    //Genera el PDF
     const handleDownload = async () => {
         try {
             const blob = await pdf(
@@ -217,7 +218,8 @@ export const ReportCard = ({ studentData, groupData, moduleData, campusData, sta
                 />
             ).toBlob();
 
-            const fileName = `Boleta_Detallada_${(moduleData?.name || 'Modulo').replace(/\s+/g, '_')}_${studentData?.primaryRegistrationNumber || 'N-A'}_${new Date().getFullYear()}.pdf`;
+            const fileName = `Boleta_Detallada_${(moduleData?.name || 'Modulo')
+                .replace(/\s+/g, '_')}_${studentData?.primaryRegistrationNumber || 'N-A'}_${new Date().getFullYear()}.pdf`;
             saveAs(blob, fileName);
         } catch (error) {
             console.error('Error generating PDF:', error);
