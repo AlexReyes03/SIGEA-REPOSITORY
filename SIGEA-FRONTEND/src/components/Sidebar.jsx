@@ -90,7 +90,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
       case 'STUDENT':
         return [
           { label: 'Inicio', path: '/student', Icon: MdHome },
-          { label: 'Calificaciones', path: '/student/my-qualifications', Icon: MdSchool },
+          { label: 'Grupos', path: '/student/groups', Icon: MdSchool },
           { label: 'Evaluación Docente', path: '/student/teacher-evaluation', Icon: MdLeaderboard },
           { label: 'Perfil', path: '/student/profile', Icon: MdPerson },
           { label: 'Notificaciones', path: '/student/notifications', Icon: MdNotifications },
