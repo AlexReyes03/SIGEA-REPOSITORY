@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom'; // ← Agregar este import
 import { getUserById } from '../../../api/userService';
 import { getStudentsWithGroup, getGroupById } from '../../../api/academics/groupService';
 import { getQualificationsByGroupWithDetails } from '../../../api/academics/qualificationService';
@@ -11,6 +12,9 @@ import ConsultSubjects from './ConsultSubjects';
 
 export default function Qualifications() {
   const { user } = useAuth();
+  const location = useLocation(); // ← Agregar para obtener datos de navegación
+  const selectedCareer = location.state; // ← Datos de la carrera seleccionada
+
   const [loading, setLoading] = useState(true);
   const [studentData, setStudentData] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -22,20 +26,30 @@ export default function Qualifications() {
         if (user?.id) {
           const userData = await getUserById(user.id);
           setStudentData(userData);
+
           const studentsWithGroups = await getStudentsWithGroup();
           const studentGroups = studentsWithGroups.filter(
             item => item.studentId === user.id
           );
 
           if (studentGroups.length > 0) {
-            const primaryGroup = studentGroups.find(
-              group => group.additionalEnrollmentsCount === 0
-            ) || studentGroups[0];
+            let targetGroup;
+            if (selectedCareer?.careerId) {
+              targetGroup = studentGroups.find(group => {
+                return group.careerId === selectedCareer.careerId; 
+              });
+            }
 
-            const groupDetails = await getGroupById(primaryGroup.groupId);
+            if (!targetGroup) {
+              targetGroup = studentGroups.find(
+                group => group.additionalEnrollmentsCount === 0
+              ) || studentGroups[0];
+            }
+
+            const groupDetails = await getGroupById(targetGroup.groupId);
 
             const groupForComponent = {
-              groupId: primaryGroup.groupId,
+              groupId: targetGroup.groupId,
               curriculumId: groupDetails.curriculumId,
               name: `Grupo ${groupDetails.name}`,
               careerName: groupDetails.careerName,
@@ -45,8 +59,7 @@ export default function Qualifications() {
             };
 
             setSelectedGroup(groupForComponent);
-
-            await calculateGeneralAverage(primaryGroup.groupId, user.id);
+            await calculateGeneralAverage(targetGroup.groupId, user.id);
           }
         }
       } catch (error) {
@@ -57,7 +70,7 @@ export default function Qualifications() {
     };
 
     loadStudentData();
-  }, [user]);
+  }, [user, selectedCareer]); // ← Agregar selectedCareer como dependencia
 
   const calculateGeneralAverage = async (groupId, studentId) => {
     try {
@@ -96,7 +109,7 @@ export default function Qualifications() {
       <div className="container mt-4">
         <div className="alert alert-warning" role="alert">
           <h4 className="alert-heading">No se encontró información de grupo</h4>
-          <p>No se pudo cargar la información de tu grupo actual. Por favor contacta al administrador.</p>
+          <p>No se pudo cargar la información de tu grupo para la carrera seleccionada. Por favor contacta al administrador.</p>
         </div>
       </div>
     );
@@ -111,7 +124,9 @@ export default function Qualifications() {
   return (
     <>
       <div className="bg-white rounded-top p-2">
-        <h3 className="text-blue-500 fw-semibold mx-3 my-1">Calificaciones</h3>
+        <h3 className="text-blue-500 fw-semibold mx-3 my-1">
+          Calificaciones{selectedCareer?.careerName ? ` - ${selectedCareer.careerName}` : ''}
+        </h3>
       </div>
 
       {/* Información de la materia y promedio */}

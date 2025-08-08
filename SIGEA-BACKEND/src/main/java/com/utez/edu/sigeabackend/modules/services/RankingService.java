@@ -14,6 +14,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -249,13 +252,11 @@ public class RankingService {
 
     public ResponseEntity<?> getStudentEvaluationModules(Long studentId) {
         try {
-            // Validar que el estudiante existe
             if (!userRepository.existsById(studentId)) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "El estudiante especificado no existe"));
             }
 
-            // Obtener grupos del estudiante usando GroupStudentService
             List<GroupStudentEntity> studentGroups = groupStudentService.findByStudent(studentId);
 
             if (studentGroups.isEmpty()) {
@@ -265,6 +266,10 @@ public class RankingService {
             List<EvaluationModuleDto> evaluationModules = new ArrayList<>();
 
             for (GroupStudentEntity groupStudent : studentGroups) {
+                if (!groupStudent.isActive()) {
+                    continue;
+                }
+
                 // Obtener detalles del grupo usando el groupId
                 long groupId = groupStudent.getId().getGroupId();
                 ResponseEntity<GroupResponseDto> groupResponse = groupService.findById(groupId);
@@ -281,8 +286,15 @@ public class RankingService {
                         List<ModuleDto> modules = modulesResponse.getBody();
 
                         assert modules != null;
-                        for (ModuleDto module : modules) {
-                            // Verificar si ya evaluó a este teacher en este módulo específico
+
+                        // Calcula semanas transcurridas desde que el estudiante entró al grupo
+                        long semanasTranscurridas = calcularSemanasTranscurridas(groupStudent.getEntryDate());
+
+                        // Filtra módulos que ya deberían estar disponibles para evaluación
+                        List<ModuleDto> modulosDisponibles = filtrarModulosDisponibles(modules, semanasTranscurridas);
+
+                        for (ModuleDto module : modulosDisponibles) {
+                            // Verifica si ya evaluó a este teacher en este módulo específico
                             Optional<RankingEntity> existingRanking = repository.findByStudent_IdAndTeacher_IdAndModuleId(
                                     studentId,
                                     group.teacherId(),
@@ -291,12 +303,10 @@ public class RankingService {
 
                             boolean isEvaluated = existingRanking.isPresent();
 
-                            // Extraer nombres de materias SOLO de este módulo
                             List<String> subjectNames = module.subjects().stream()
                                     .map(SubjectDto::name)
                                     .collect(Collectors.toList());
 
-                            // Crear DTO de evaluación POR MÓDULO
                             EvaluationModuleDto evaluationModule = new EvaluationModuleDto(
                                     group.groupId() + "-" + group.teacherId() + "-" + module.id(),
                                     module.name(),
@@ -321,10 +331,53 @@ public class RankingService {
             return responseService.getOkResponse("Módulos de evaluación", evaluationModules);
 
         } catch (Exception e) {
-            return ResponseEntity.status(500)
-                    .body(Map.of("error", "Error al obtener módulos de evaluación: " + e.getMessage()));
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "Error interno del servidor: " + e.getMessage()));
         }
     }
+
+    // *** Calcula las semanas transcurridas desde la fecha de entrada del estudiante
+    private long calcularSemanasTranscurridas(LocalDateTime entryDate) {
+        LocalDate fechaEntrada = entryDate.toLocalDate();
+        LocalDate fechaActual = LocalDate.now();
+
+        // Calcular días transcurridos y convertir a semanas
+        long diasTranscurridos = ChronoUnit.DAYS.between(fechaEntrada, fechaActual);
+        return diasTranscurridos / 7;
+    }
+
+    // *** Filtra los módulos que deberían estar disponibles basándose en las semanas transcurridas
+    private List<ModuleDto> filtrarModulosDisponibles(List<ModuleDto> modules, long semanasTranscurridas) {
+        List<ModuleDto> disponibles = new ArrayList<>();
+        long semanasAcumuladas = 0;
+
+        // Procesamiento secuencial de los modulos
+        for (ModuleDto module : modules) {
+            long duracionModulo = calcularDuracionModulo(module);
+
+            if (semanasTranscurridas > semanasAcumuladas) {
+                disponibles.add(module);
+            } else {
+                break;
+            }
+
+            semanasAcumuladas += duracionModulo;
+        }
+
+        return disponibles;
+    }
+
+    // *** Calcula la duración total de un módulo sumando las semanas de todas sus materias
+    private long calcularDuracionModulo(ModuleDto module) {
+        if (module.subjects() == null || module.subjects().isEmpty()) {
+            return 0;
+        }
+
+        return module.subjects().stream()
+                .mapToLong(subject -> subject.weeks() != null ? subject.weeks() : 0)
+                .sum();
+    }
+
 
     public ResponseEntity<?> checkStudentTeacherEvaluation(Long studentId, Long teacherId, Long moduleId) {
         try {

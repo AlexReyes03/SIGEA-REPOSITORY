@@ -1293,13 +1293,15 @@ export default function UsersManagement() {
             rowsPerPageOptions={[5, 10, 25, 50]}
             filterDisplay="menu"
             globalFilter={globalFilter}
-            globalFilterFields={['name', 'paternalSurname', 'maternalSurname', 'fullName', 'email', 'displayRegistration', 'campusName', 'roleName', 'roleLabel', 'searchableRole', 'statusLabel', 'createdAt', 'searchableStatus', 'displayCreatedAt']}
+            globalFilterFields={['name', 'paternalSurname', 'maternalSurname', 'fullName', 'email', 'displayRegistration', 'campusName', 'roleName', 'roleLabel', 
+              'searchableRole', 'statusLabel', 'createdAt', 'searchableStatus', 'displayCreatedAt']}
             header={header}
             className="text-nowrap"
             emptyMessage={
               <div className="text-center my-5">
                 <i className="pi pi-users" style={{ fontSize: '2rem', color: '#ccc' }} />
-                <p className="mt-2">{!globalFilter ? (selectedTipoUsuario === null ? 'No hay usuarios registrados' : `No hay ${getCurrentFilterLabel().toLowerCase()}s registrados`) : `No se encontraron resultados para "${globalFilter}"`}</p>
+                <p className="mt-2">{!globalFilter ? (selectedTipoUsuario === null ? 'No hay usuarios registrados' : `No hay ${getCurrentFilterLabel().toLowerCase()}s 
+                registrados`) : `No se encontraron resultados para "${globalFilter}"`}</p>
               </div>
             }
           >
