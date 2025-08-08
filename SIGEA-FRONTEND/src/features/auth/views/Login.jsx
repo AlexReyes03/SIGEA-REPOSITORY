@@ -149,7 +149,7 @@ export default function LoginForm() {
 
           <Button type="submit" label="Iniciar Sesión" className="button-blue-800 w-100 rounded-3 fs-4" loading={loading} disabled={isDisabled} />
 
-          <div className='text-center'>
+          <div className="text-center">
             {authState === 'warn' && <Message className="mt-2" severity="warn" text="Cuidado. Cinco intentos fallidos bloquearán tu cuenta temporalmente." />}
 
             {authState === 'locked' && <Message className="mt-2" severity="error" text="Cuenta bloqueada temporalmente por demasiados intentos fallidos. Espera o restablece tu contraseña." />}

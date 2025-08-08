@@ -36,6 +36,14 @@ export const updateGroup = async (id, groupDto) => {
   });
 };
 
+// Nuevo método para cambiar estado del grupo
+export const changeGroupStatus = async (id, status) => {
+  return await request(`/api/groups/${id}/status`, {
+    method: 'PATCH',
+    body: { status },
+  });
+};
+
 export const deleteGroup = async (id) => {
   return await request(`/api/groups/${id}`, {
     method: 'DELETE',

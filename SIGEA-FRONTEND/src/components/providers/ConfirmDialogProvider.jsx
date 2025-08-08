@@ -31,12 +31,35 @@ export const ConfirmDialogProvider = ({ children }) => {
       closable,
       closeOnEscape,
       dismissableMask,
+      style: {
+        minWidth: '300px',
+        maxWidth: '500px',
+      },
+      contentStyle: {
+        textAlign: 'center',
+        wordWrap: 'break-word',
+        wordBreak: 'break-word',
+        whiteSpace: 'normal',
+        lineHeight: '1.5',
+      },
     });
   };
 
   return (
     <>
-      <ConfirmDialog />
+      <ConfirmDialog
+        style={{
+          minWidth: '300px',
+          maxWidth: '500px',
+        }}
+        contentStyle={{
+          textAlign: 'center',
+          wordWrap: 'break-word',
+          wordBreak: 'break-word',
+          whiteSpace: 'normal',
+          lineHeight: '1.5',
+        }}
+      />
       <ConfirmDialogContext.Provider value={{ confirmAction }}>{children}</ConfirmDialogContext.Provider>
     </>
   );

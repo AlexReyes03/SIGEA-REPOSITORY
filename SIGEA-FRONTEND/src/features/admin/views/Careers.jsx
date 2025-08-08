@@ -33,7 +33,6 @@ export default function Careers() {
   const [loading, setLoading] = useState(true);
   const [editingCareer, setEditing] = useState(null);
 
-  // ESTADOS PARA LOADING OPTIMIZADOS
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -44,7 +43,6 @@ export default function Careers() {
   });
   const [differentiatorPreview, setDifferentiatorPreview] = useState('');
 
-  // FUNCIÓN OPTIMIZADA PARA CARGAR CARRERAS
   const loadCareers = useCallback(async () => {
     if (!user?.campus?.id) {
       showError('Error', 'No se pudo identificar el campus del usuario');
@@ -91,17 +89,14 @@ export default function Careers() {
     return null;
   }, []);
 
-  // EFECTO OPTIMIZADO - Solo se ejecuta cuando user.campus.id cambia
   useEffect(() => {
     if (user?.campus?.id) {
       loadCareers();
     }
   }, [loadCareers]);
 
-  // CLEANUP EFFECT - Limpiar estados al desmontar
   useEffect(() => {
     return () => {
-      // Cleanup: cerrar modales si están abiertos al desmontar
       const createModal = Modal.getInstance(createModalRef.current);
       const editModal = Modal.getInstance(editModalRef.current);
       if (createModal) createModal.hide();
@@ -109,12 +104,10 @@ export default function Careers() {
     };
   }, []);
 
-  // CREAR CARRERA - CON LOADING STATE OPTIMIZADO
   const handleCreate = useCallback(
     async (e) => {
       e.preventDefault();
 
-      // Prevenir doble envío
       if (isCreating) return;
 
       const differentiatorError = validateDifferentiator(formData.differentiator);
@@ -139,17 +132,14 @@ export default function Careers() {
         await createCareer(payload);
         showSuccess('Éxito', 'Carrera creada correctamente');
 
-        // Cerrar modal correctamente
         const modalInstance = Modal.getInstance(createModalRef.current);
         if (modalInstance) {
           modalInstance.hide();
         }
 
-        // Limpiar formulario
         setFormData({ name: '', differentiator: '' });
         setDifferentiatorPreview('');
 
-        // Recargar datos
         await loadCareers();
       } catch (err) {
         console.error('Error creating career:', err);
@@ -162,7 +152,6 @@ export default function Careers() {
     [isCreating, validateDifferentiator, formData, user?.campus?.id, showWarn, showSuccess, showError, loadCareers]
   );
 
-  // ACTUALIZAR CARRERA - CON LOADING STATE OPTIMIZADO
   const handleUpdate = useCallback(
     async (e) => {
       e.preventDefault();
@@ -192,7 +181,6 @@ export default function Careers() {
         await updateCareer(editingCareer.id, payload);
         showSuccess('Éxito', 'Carrera actualizada correctamente');
 
-        // Cerrar modal correctamente
         const modalInstance = Modal.getInstance(editModalRef.current);
         if (modalInstance) {
           modalInstance.hide();
@@ -211,7 +199,6 @@ export default function Careers() {
     [isUpdating, validateDifferentiator, formData, editingCareer?.id, user?.campus?.id, showWarn, showSuccess, showError, loadCareers]
   );
 
-  // ELIMINAR CARRERA - CON LOADING STATE OPTIMIZADO
   const handleDelete = useCallback(
     (careerToDelete) => {
       if (isDeleting) return;
@@ -395,7 +382,7 @@ export default function Careers() {
         </button>
       </OverlayPanel>
 
-      {/* Modal CREAR - Igual que antes pero con callbacks optimizados */}
+      {/* Modal CREAR */}
       <div className="modal fade" ref={createModalRef} tabIndex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
@@ -436,7 +423,7 @@ export default function Careers() {
         </div>
       </div>
 
-      {/* Modal EDITAR - Igual que antes pero con callbacks optimizados */}
+      {/* Modal EDITAR */}
       <div className="modal fade" ref={editModalRef} tabIndex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">

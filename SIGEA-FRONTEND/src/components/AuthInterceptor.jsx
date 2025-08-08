@@ -17,8 +17,8 @@ export default function AuthInterceptor({ children }) {
 
       if (result && result.shouldShowError) {
         showError(
-          'Sesión Invalidada',
-          'Tu sesión ha sido invalidada. Los datos de tu cuenta fueron modificados por otro usuario.',
+          'Error',
+          'Tu sesión se ha cerrado automáticamente debido a un error inesperado.',
           5000 // 5 segundos
         );
       }

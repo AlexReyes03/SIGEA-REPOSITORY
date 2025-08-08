@@ -17,6 +17,7 @@ import Notifications from '../components/UserNotifications';
 
 import DevDashboard from '../features/developer/views/Dashboard';
 import DevUsersManagement from '../features/developer/views/UsersManagment';
+import DevCampusesManagement from '../features/developer/views/Campuses';
 
 import AdminDashboard from '../features/admin/views/Dashboard';
 import AdminUsersManagement from '../features/admin/views/UsersManagment';
@@ -104,6 +105,7 @@ export default function AppRouter() {
           {/* DEVELOPER */}
           <Route path="developer" element={<DevDashboard />} />
           <Route path="developer/users" element={<DevUsersManagement />} />
+          <Route path="developer/campuses" element={<DevCampusesManagement />} />
           <Route path="developer/profile" element={<Profile />} />
         </Route>
       </Route>
@@ -143,7 +145,7 @@ export default function AppRouter() {
         <Route element={<AppLayout />}>
           {/* ESTUDIANTE */}
           <Route path="student" element={<StudentDashboard />} />
-          <Route path='student/groups' element={<StudentGroups />} />
+          <Route path="student/groups" element={<StudentGroups />} />
           <Route path="/student/groups/my-qualifications" element={<StudentQualifications />} />
           <Route path="student/profile" element={<Profile />} />
           <Route path="student/consult-subjects" element={<ConsultSubjects />} />

@@ -7,20 +7,7 @@ import { ProgressSpinner } from 'primereact/progressspinner';
 import { Badge } from 'primereact/badge';
 import { Rating } from 'primereact/rating';
 import { Tag } from 'primereact/tag';
-import { 
-  MdOutlineLock, 
-  MdOutlinePerson, 
-  MdInsertChartOutlined, 
-  MdOutlineSchool,
-  MdManageHistory,
-  MdOutlineNotifications,
-  MdSchedule,
-  MdOutlineGroup,
-  MdOutlineLocationOn,
-  MdOutlineEmojiEvents,
-  MdOutlineCalendarMonth,
-  MdOutlineCoPresent
-} from 'react-icons/md';
+import { MdOutlineLock, MdOutlinePerson, MdInsertChartOutlined, MdOutlineSchool, MdManageHistory, MdOutlineNotifications, MdSchedule, MdOutlineGroup, MdOutlineLocationOn, MdOutlineEmojiEvents, MdOutlineCalendarMonth, MdOutlineCoPresent } from 'react-icons/md';
 import { Modal } from 'bootstrap';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -63,7 +50,7 @@ export default function Profile() {
     loading: true,
     card1Data: null,
     card2Data: null,
-    error: null
+    error: null,
   });
 
   const interval = useRef(null);
@@ -74,7 +61,7 @@ export default function Profile() {
 
   const ROLE_MAP = {
     ADMIN: 'Administrador',
-    TEACHER: 'Maestro', 
+    TEACHER: 'Maestro',
     STUDENT: 'Estudiante',
     SUPERVISOR: 'Supervisor',
     DEV: 'Desarrollador',
@@ -111,19 +98,19 @@ export default function Profile() {
   };
 
   const formatDateRange = (startDate, endDate) => {
-    if (!startDate || !endDate) return "Fechas no disponibles";
-    
+    if (!startDate || !endDate) return 'Fechas no disponibles';
+
     const start = new Date(startDate);
     const end = new Date(endDate);
-    
+
     const formatDate = (date) => {
       return date.toLocaleDateString('es-MX', {
         day: '2-digit',
         month: '2-digit',
-        year: 'numeric'
+        year: 'numeric',
       });
     };
-    
+
     return `${formatDate(start)} - ${formatDate(end)}`;
   };
 
@@ -136,13 +123,10 @@ export default function Profile() {
 
       // Obtener roles para filtrar correctamente
       const roles = await getAllRoles();
-      const teacherRole = roles.find(r => r.roleName === 'TEACHER');
+      const teacherRole = roles.find((r) => r.roleName === 'TEACHER');
 
       // Datos del plantel específico del admin
-      const [careers, teachers] = await Promise.all([
-        getCareerByPlantelId(user.campus.id),
-        getUserByRoleAndPlantel(teacherRole.id, user.campus.id)
-      ]);
+      const [careers, teachers] = await Promise.all([getCareerByPlantelId(user.campus.id), getUserByRoleAndPlantel(teacherRole.id, user.campus.id)]);
 
       const careersArray = Array.isArray(careers) ? careers : careers?.data || [];
       const teachersArray = Array.isArray(teachers) ? teachers : [];
@@ -167,7 +151,7 @@ export default function Profile() {
         try {
           const groups = await getGroupByCareer(career.id);
           const groupsArray = Array.isArray(groups) ? groups : groups?.data || [];
-          groupsWithoutTeacher += groupsArray.filter(group => !group.teacherId).length;
+          groupsWithoutTeacher += groupsArray.filter((group) => !group.teacherId).length;
         } catch (error) {
           console.warn(`Error procesando grupos de carrera ${career.id}:`, error);
         }
@@ -184,25 +168,25 @@ export default function Profile() {
           totalCareers: careersArray.length,
           totalTeachers: teachersArray.length,
           tasks: [
-            { 
-              label: 'Grupos sin docente', 
+            {
+              label: 'Grupos sin docente',
               count: groupsWithoutTeacher,
-              severity: groupsWithoutTeacher > 0 ? 'warning' : 'primary'
+              severity: groupsWithoutTeacher > 0 ? 'warning' : 'primary',
             },
-            { 
-              label: 'Carreras sin plan', 
+            {
+              label: 'Carreras sin plan',
               count: careersWithoutCurriculum,
-              severity: careersWithoutCurriculum > 0 ? 'warning' : 'primary'
-            }
-          ]
+              severity: careersWithoutCurriculum > 0 ? 'warning' : 'primary',
+            },
+          ],
         },
         card2Data: {
           title: 'Notificaciones',
           icon: MdOutlineNotifications,
           pendingNotifications: pendingNotifications,
           hasNotifications: pendingNotifications > 0,
-          clickAction: () => navigate('/admin/notifications')
-        }
+          clickAction: () => navigate('/admin/notifications'),
+        },
       };
     } catch (error) {
       throw new Error('Error al cargar datos de administrador: ' + error.message);
@@ -226,13 +210,13 @@ export default function Profile() {
           totalStudents += studentsCount;
           groupsWithStudents.push({
             ...group,
-            studentsCount
+            studentsCount,
           });
         } catch (error) {
           console.warn(`Error cargando estudiantes del grupo ${group.groupId}:`, error);
           groupsWithStudents.push({
             ...group,
-            studentsCount: 0
+            studentsCount: 0,
           });
         }
       }
@@ -241,7 +225,7 @@ export default function Profile() {
       let teacherPerformance = {
         averageRating: 0,
         totalEvaluations: 0,
-        hasEvaluations: false
+        hasEvaluations: false,
       };
 
       try {
@@ -255,7 +239,7 @@ export default function Profile() {
           teacherPerformance = {
             averageRating: Math.round(averageRating * 10) / 10,
             totalEvaluations: rankings.length,
-            hasEvaluations: true
+            hasEvaluations: true,
           };
         }
       } catch (error) {
@@ -268,9 +252,7 @@ export default function Profile() {
       const weekDays = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB'];
       const currentWeekDay = weekDays[dayIndex];
 
-      const todayGroups = groupsArray
-        .filter(group => group.weekDay === currentWeekDay)
-        .sort((a, b) => a.startTime.localeCompare(b.startTime));
+      const todayGroups = groupsArray.filter((group) => group.weekDay === currentWeekDay).sort((a, b) => a.startTime.localeCompare(b.startTime));
 
       return {
         card1Data: {
@@ -280,13 +262,13 @@ export default function Profile() {
           totalStudents: totalStudents,
           groups: groupsWithStudents.slice(0, 3), // Mostrar solo los primeros 3
           todayGroups: todayGroups,
-          currentWeekDay: currentWeekDay
+          currentWeekDay: currentWeekDay,
         },
         card2Data: {
           title: 'Mi Desempeño',
           icon: MdOutlineEmojiEvents,
-          ...teacherPerformance
-        }
+          ...teacherPerformance,
+        },
       };
     } catch (error) {
       throw new Error('Error al cargar datos de docente: ' + error.message);
@@ -295,57 +277,56 @@ export default function Profile() {
 
   const loadSupervisorData = async () => {
     try {
-      // Por ahora sin cards como solicitado
       return {
         card1Data: null,
-        card2Data: null
+        card2Data: null,
       };
     } catch (error) {
       throw new Error('Error al cargar datos de supervisor: ' + error.message);
     }
   };
 
+  const loadDeveloperData = async () => {
+    return {
+      card1Data: null,
+      card2Data: null,
+    };
+  };
+
   const loadStudentData = async () => {
     try {
-      // Obtener inscripciones activas del estudiante
       const enrollments = await getEnrollmentsByUser(user.id);
-      const activeEnrollments = Array.isArray(enrollments) 
-        ? enrollments.filter(enrollment => enrollment.status === 'ACTIVE')
-        : [];
+      const activeEnrollments = Array.isArray(enrollments) ? enrollments.filter((enrollment) => enrollment.status === 'ACTIVE') : [];
 
       if (activeEnrollments.length === 0) {
         return {
           card1Data: {
             title: 'Progreso Académico',
             icon: MdInsertChartOutlined,
-            message: 'No tienes inscripciones activas'
+            message: 'No tienes inscripciones activas',
           },
-          card2Data: null
+          card2Data: null,
         };
       }
 
-      // Procesar cada inscripción para obtener progreso académico real
       const progressData = [];
 
       for (const enrollment of activeEnrollments) {
         try {
-          // Obtener grupos de esta carrera
           const careerGroups = await getGroupByCareer(enrollment.careerId);
           const groupsArray = Array.isArray(careerGroups) ? careerGroups : careerGroups?.data || [];
 
           let foundActiveGroup = null;
           let groupDetails = null;
 
-          // Buscar en qué grupo está inscrito el estudiante
           for (const group of groupsArray) {
             try {
               const groupStudents = await getGroupStudents(group.groupId);
-              const isStudentInGroup = Array.isArray(groupStudents) && 
-                groupStudents.some(student => student.studentId === user.id);
+              const isStudentInGroup = Array.isArray(groupStudents) && groupStudents.some((student) => student.studentId === user.id);
 
               if (isStudentInGroup) {
                 foundActiveGroup = group;
-                groupDetails = group; // Ya tenemos la info del grupo
+                groupDetails = group;
                 break;
               }
             } catch (error) {
@@ -361,18 +342,18 @@ export default function Profile() {
               completedSubjects: 0,
               totalSubjects: 0,
               period: 'No asignado a grupo',
-              hasGroup: false
+              hasGroup: false,
             });
             continue;
           }
 
           // Obtener el curriculum del grupo
           const curriculum = await getCurriculumById(foundActiveGroup.curriculumId);
-          
+
           // Calcular total de materias en el curriculum
           let totalSubjects = 0;
           if (curriculum?.modules) {
-            curriculum.modules.forEach(module => {
+            curriculum.modules.forEach((module) => {
               if (module.subjects) {
                 totalSubjects += module.subjects.length;
               }
@@ -381,14 +362,14 @@ export default function Profile() {
 
           // Obtener calificaciones del estudiante en este grupo
           const qualifications = await getQualificationsByGroupWithDetails(foundActiveGroup.groupId);
-          
+
           // Contar materias calificadas por este estudiante
-          const studentQualifications = qualifications.filter(q => q.studentId === user.id);
+          const studentQualifications = qualifications.filter((q) => q.studentId === user.id);
           const completedSubjects = studentQualifications.length;
-          
+
           // Calcular progreso basado en materias completadas
           const progress = totalSubjects > 0 ? Math.round((completedSubjects / totalSubjects) * 100) : 0;
-          
+
           // Formatear período con fechas reales del grupo
           const period = formatDateRange(groupDetails.startDate, groupDetails.endDate);
 
@@ -399,9 +380,8 @@ export default function Profile() {
             totalSubjects: totalSubjects,
             period: period,
             groupName: foundActiveGroup.name || 'Grupo sin nombre',
-            hasGroup: true
+            hasGroup: true,
           });
-
         } catch (error) {
           console.warn(`Error procesando carrera ${enrollment.careerId}:`, error);
           progressData.push({
@@ -410,7 +390,7 @@ export default function Profile() {
             completedSubjects: 0,
             totalSubjects: 0,
             period: 'Error al cargar datos',
-            hasGroup: false
+            hasGroup: false,
           });
         }
       }
@@ -420,19 +400,19 @@ export default function Profile() {
           title: 'Mi Progreso Académico',
           icon: MdInsertChartOutlined,
           progressData: progressData,
-          totalCareers: activeEnrollments.length
+          totalCareers: activeEnrollments.length,
         },
         card2Data: {
           title: activeEnrollments.length > 1 ? 'Mis Carreras' : 'Mi Carrera',
           icon: MdOutlineSchool,
-          enrollments: activeEnrollments.map(enrollment => ({
+          enrollments: activeEnrollments.map((enrollment) => ({
             careerName: enrollment.careerName,
             registrationNumber: enrollment.registrationNumber,
             status: enrollment.status,
-            enrolledAt: enrollment.enrolledAt
+            enrolledAt: enrollment.enrolledAt,
           })),
-          totalCareers: activeEnrollments.length
-        }
+          totalCareers: activeEnrollments.length,
+        },
       };
     } catch (error) {
       throw new Error('Error al cargar datos de estudiante: ' + error.message);
@@ -441,7 +421,7 @@ export default function Profile() {
 
   // Cargar datos según el rol del usuario
   const loadRoleData = async () => {
-    setRoleData(prev => ({ ...prev, loading: true, error: null }));
+    setRoleData((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
       let data = { card1Data: null, card2Data: null };
@@ -459,17 +439,28 @@ export default function Profile() {
         case 'STUDENT':
           data = await loadStudentData();
           break;
+        case 'DEV':
+          data = await loadDeveloperData();
+          break;
         default:
           data = {
-            card1Data: { title: 'Sin información', message: 'Rol no reconocido' },
-            card2Data: { title: 'Sin información', message: 'Rol no reconocido' }
+            card1Data: {
+              title: 'Sin información',
+              message: 'Rol no reconocido',
+              icon: MdOutlinePerson,
+            },
+            card2Data: {
+              title: 'Sin información',
+              message: 'Rol no reconocido',
+              icon: MdOutlinePerson,
+            },
           };
       }
 
       setRoleData({
         loading: false,
         error: null,
-        ...data
+        ...data,
       });
     } catch (error) {
       console.error('Error loading role data:', error);
@@ -477,7 +468,7 @@ export default function Profile() {
         loading: false,
         error: error.message,
         card1Data: null,
-        card2Data: null
+        card2Data: null,
       });
     }
   };
@@ -726,9 +717,7 @@ export default function Profile() {
       return (
         <div className="card border-0 h-100">
           <div className="card-body">
-            <div className="d-flex justify-content-center align-items-center text-muted h-75">
-              Funcionalidad en desarrollo
-            </div>
+            <div className="d-flex justify-content-center align-items-center text-muted h-75">Funcionalidad en desarrollo</div>
           </div>
         </div>
       );
@@ -769,11 +758,7 @@ export default function Profile() {
                   {card1Data.tasks.map((task, index) => (
                     <div key={index} className="d-flex justify-content-between align-items-center">
                       <span className="text-secondary small">{task.label}</span>
-                      <Badge 
-                        value={task.count} 
-                        severity={task.severity}
-                        size="large"
-                      />
+                      <Badge value={task.count} severity={task.severity} size="large" />
                     </div>
                   ))}
                 </div>
@@ -793,14 +778,16 @@ export default function Profile() {
                     <small className="text-muted">Estudiantes</small>
                   </div>
                 </div>
-                
+
                 {card1Data.groups && card1Data.groups.length > 0 && (
                   <div className="mb-3">
                     <small className="fw-semibold text-muted">Mis grupos:</small>
                     <div className="overflow-y-auto" style={{ maxHeight: '7rem' }}>
                       {card1Data.groups.map((group, index) => (
                         <div key={index} className="small text-muted d-flex justify-content-between mb-1">
-                          <span>• {group.careerName} - Grupo {group.name}</span>
+                          <span>
+                            • {group.careerName} - Grupo {group.name}
+                          </span>
                           <Badge value={group.studentsCount} severity="info" size="small" />
                         </div>
                       ))}
@@ -832,9 +819,7 @@ export default function Profile() {
                       <div key={index} className={`mb-3 p-3 border rounded ${careerProgress.progress === 100 && 'hovereable'} ${index > 0 ? 'mt-3' : ''}`} onClick={careerProgress.progress === 100 && (() => navigate('/student/teacher-evaluation'))}>
                         <div className="mb-2">
                           <small className="fw-semibold">{careerProgress.careerName}</small>
-                          {careerProgress.hasGroup && (
-                            <small className="text-muted d-block">Grupo: {careerProgress.groupName}</small>
-                          )}
+                          {careerProgress.hasGroup && <small className="text-muted d-block">Grupo: {careerProgress.groupName}</small>}
                         </div>
                         <div className="mb-2">
                           <small className="text-muted">Período: {careerProgress.period}</small>
@@ -842,7 +827,9 @@ export default function Profile() {
                         {careerProgress.hasGroup ? (
                           <>
                             <div className="mb-2">
-                              <small className='text-muted'>Progreso académico: {careerProgress.completedSubjects} de {careerProgress.totalSubjects} materias</small>
+                              <small className="text-muted">
+                                Progreso académico: {careerProgress.completedSubjects} de {careerProgress.totalSubjects} materias
+                              </small>
                               <ProgressBar value={careerProgress.progress} className="mt-1" />
                             </div>
                           </>
@@ -856,11 +843,7 @@ export default function Profile() {
               </div>
             )}
 
-            {card1Data.message && !card1Data.progressData && !card1Data.campusName && !card1Data.activeGroups && (
-              <div className="d-flex justify-content-center align-items-center text-muted h-75">
-                {card1Data.message}
-              </div>
-            )}
+            {card1Data.message && !card1Data.progressData && !card1Data.campusName && !card1Data.activeGroups && <div className="d-flex justify-content-center align-items-center text-muted h-75">{card1Data.message}</div>}
           </div>
         </div>
       </div>
@@ -893,9 +876,7 @@ export default function Profile() {
       return (
         <div className="card border-0 h-100">
           <div className="card-body">
-            <div className="d-flex justify-content-center align-items-center text-muted h-75">
-              Sin información adicional
-            </div>
+            <div className="d-flex justify-content-center align-items-center text-muted h-75">Sin información adicional</div>
           </div>
         </div>
       );
@@ -920,23 +901,12 @@ export default function Profile() {
                 {card2Data.hasNotifications ? (
                   <>
                     <div className="mb-3">
-                      <Badge 
-                        value={card2Data.pendingNotifications} 
-                        severity="warning" 
-                        size="large"
-                        style={{ fontSize: '1.2rem' }}
-                      />
+                      <Badge value={card2Data.pendingNotifications} severity="warning" size="large" style={{ fontSize: '1.2rem' }} />
                     </div>
                     <p className="text-secondary mb-3">
                       {card2Data.pendingNotifications} notificación{card2Data.pendingNotifications > 1 ? 'es' : ''} pendiente{card2Data.pendingNotifications > 1 ? 's' : ''}
                     </p>
-                    <Button 
-                      icon="pi pi-bell" 
-                      label="Ver notificaciones"
-                      size="small"
-                      className="p-button-warning"
-                      onClick={card2Data.clickAction}
-                    />
+                    <Button icon="pi pi-bell" label="Ver notificaciones" size="small" className="p-button-warning" onClick={card2Data.clickAction} />
                   </>
                 ) : (
                   <>
@@ -944,7 +914,8 @@ export default function Profile() {
                       <i className="pi pi-check-circle text-success" style={{ fontSize: '3rem' }}></i>
                     </div>
                     <p className="text-muted">
-                      Todo está en orden.<br/>
+                      Todo está en orden.
+                      <br />
                       No hay notificaciones pendientes.
                     </p>
                   </>
@@ -957,21 +928,15 @@ export default function Profile() {
               <div className="text-center">
                 {card2Data.hasEvaluations ? (
                   <>
-                    <div className='d-flex justify-content-center'>
-                      <Rating 
-                        value={Math.round(card2Data.averageRating)} 
-                        readOnly 
-                        cancel={false} 
-                        className="mb-3" 
-                      />
+                    <div className="d-flex justify-content-center">
+                      <Rating value={Math.round(card2Data.averageRating)} readOnly cancel={false} className="mb-3" />
                     </div>
                     <div className="text-center mb-3">
-                      <p className="fs-1 fw-bold text-blue-500 mb-0">
-                        {card2Data.averageRating.toFixed(1)}
-                      </p>
+                      <p className="fs-1 fw-bold text-blue-500 mb-0">{card2Data.averageRating.toFixed(1)}</p>
                     </div>
                     <small className="text-muted">
-                      Mi promedio de todos los grupos<br/>                      
+                      Mi promedio de todos los grupos
+                      <br />
                     </small>
                   </>
                 ) : (
@@ -987,27 +952,19 @@ export default function Profile() {
             {user.role?.name === 'STUDENT' && (
               <div>
                 <div className="overflow-y-auto" style={{ maxHeight: '18rem' }}>
-                  {card2Data.enrollments && card2Data.enrollments.map((enrollment, index) => (
-                    <div key={index} className="mb-2 p-2 border rounded">
-                      <div className='d-flex justify-content-between align-items-center'>
-                        <div className="fw-semibold small">{enrollment.careerName}</div>
-                        <Badge 
-                          value={enrollment.status === 'ACTIVE' ? 'Activo' : 'Inactivo'} 
-                          severity={enrollment.status === 'ACTIVE' ? 'success' : 'danger'}
-                          size="small"
-                        />
+                  {card2Data.enrollments &&
+                    card2Data.enrollments.map((enrollment, index) => (
+                      <div key={index} className="mb-2 p-2 border rounded">
+                        <div className="d-flex justify-content-between align-items-center">
+                          <div className="fw-semibold small">{enrollment.careerName}</div>
+                          <Badge value={enrollment.status === 'ACTIVE' ? 'Activo' : 'Inactivo'} severity={enrollment.status === 'ACTIVE' ? 'success' : 'danger'} size="small" />
+                        </div>
+                        <small className="text-muted d-block">Matrícula: {enrollment.registrationNumber}</small>
+                        <div className="d-flex justify-content-between align-items-center">
+                          <small className="text-muted">Inscripción: {formatDate(enrollment.enrolledAt)}</small>
+                        </div>
                       </div>
-                      <small className="text-muted d-block">
-                        Matrícula: {enrollment.registrationNumber}
-                      </small>
-                      <div className="d-flex justify-content-between align-items-center">
-                        <small className="text-muted">
-                          Inscripción: {formatDate(enrollment.enrolledAt)}
-                        </small>
-                        
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </div>
             )}
@@ -1038,15 +995,7 @@ export default function Profile() {
                 </h5>
                 <p className="text-secondary my-2">{roleLabel || 'Sin rol'}</p>
                 <div className="d-flex flex-row justify-content-center mt-4 gap-2">
-                  <Button 
-                    ref={changePasswordButtonRef} 
-                    label="Cambiar contraseña" 
-                    icon={isOpening ? 
-                      <i className="pi pi-spin pi-spinner me-2"></i> : 
-                      <MdOutlineLock className="me-2" size={20} />
-                    } 
-                    onClick={() => new Modal(changePasswordModalRef.current).show()} 
-                  />
+                  <Button ref={changePasswordButtonRef} label="Cambiar contraseña" icon={isOpening ? <i className="pi pi-spin pi-spinner me-2"></i> : <MdOutlineLock className="me-2" size={20} />} onClick={() => new Modal(changePasswordModalRef.current).show()} />
                 </div>
               </div>
             </div>
@@ -1086,14 +1035,10 @@ export default function Profile() {
       </div>
 
       {/* SEGUNDA FILA - CARDS DINÁMICOS POR ROL */}
-      {roleLabel !== 'Supervisor' && (
+      {roleLabel !== 'Supervisor' && roleLabel !== 'Desarrollador' && (
         <div className="row mt-0 mt-md-3">
-          <div className="col-12 col-md-4 mb-3 mb-md-0">
-            {renderCard1()}
-          </div>
-          <div className="col-12 col-md-8 mb-3 mb-md-0">
-            {renderCard2()}
-          </div>
+          <div className="col-12 col-md-4 mb-3 mb-md-0">{renderCard1()}</div>
+          <div className="col-12 col-md-8 mb-3 mb-md-0">{renderCard2()}</div>
         </div>
       )}
 

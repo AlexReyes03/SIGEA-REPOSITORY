@@ -107,7 +107,7 @@ export function AuthProvider({ children }) {
 
       return {
         status,
-        message: message || 'Tu sesión ha sido invalidada. Los datos de tu cuenta fueron modificados.',
+        message: 'Tu sesión se ha cerrado automáticamente debido a un error inesperado.',
         shouldShowError: true,
       };
     },

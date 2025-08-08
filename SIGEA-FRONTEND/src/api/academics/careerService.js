@@ -34,8 +34,3 @@ export const deleteCareer = async (id) => {
     method: 'DELETE',
   });
 };
-
-export const checkDifferentiatorAvailability = async (differentiator, campusId) => {
-  const res = await request(`/api/careers/check-differentiator?differentiator=${differentiator}&campusId=${campusId}`);
-  return res;
-};

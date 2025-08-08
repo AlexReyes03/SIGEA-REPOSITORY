@@ -12,10 +12,11 @@ import { Button } from 'primereact/button';
 import { Message } from 'primereact/message';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Divider } from 'primereact/divider';
+import { Tag } from 'primereact/tag';
 import { Modal } from 'bootstrap';
 
 import { getTeachersByCareer } from '../../../api/academics/enrollmentService';
-import { getGroupByCareer, createGroup, updateGroup, deleteGroup } from '../../../api/academics/groupService';
+import { getGroupByCareer, createGroup, updateGroup, changeGroupStatus } from '../../../api/academics/groupService';
 import { getCurriculumByCareerId } from '../../../api/academics/curriculumService';
 import { useToast } from '../../../components/providers/ToastProvider';
 import { useConfirmDialog } from '../../../components/providers/ConfirmDialogProvider';
@@ -35,14 +36,35 @@ const weekDayOptions = [
 const weekLabel = (code) => weekDayOptions.find((o) => o.value === code)?.label || code;
 
 const weekDayAbbreviations = {
-  'LUN': 'Lun',
-  'MAR': 'Mar', 
-  'MIE': 'Mié',
-  'JUE': 'Jue',
-  'VIE': 'Vie',
-  'SAB': 'Sáb',
-  'DOM': 'Dom'
+  LUN: 'Lun',
+  MAR: 'Mar',
+  MIE: 'Mié',
+  JUE: 'Jue',
+  VIE: 'Vie',
+  SAB: 'Sáb',
+  DOM: 'Dom',
 };
+
+// Función para generar nombre automáticamente
+const generateGroupName = (weekDay, startTime, endTime) => {
+  if (!weekDay || !startTime || !endTime) return '';
+
+  const dayAbbr = weekDayAbbreviations[weekDay] || weekDay;
+  const start = new Date(startTime);
+  const end = new Date(endTime);
+
+  const formatTime = (date) => {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
+  const startFormatted = formatTime(start);
+  const endFormatted = formatTime(end);
+
+  return `${dayAbbr.toUpperCase()} ${startFormatted}-${endFormatted}`;
+};
+
 const fmtTime = (d) => d?.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 const midnight = new Date();
 midnight.setHours(12, 0, 0, 0);
@@ -74,10 +96,12 @@ const validateDateRange = (startDate, endDate) => {
 const validateTeacherConflict = (teachers, selectedTeacher, weekDay, startTime, endTime, groups, excludeGroupId = null) => {
   if (!selectedTeacher || !weekDay || !startTime || !endTime) return null;
 
+  // Solo considerar grupos ACTIVE para conflictos
   const conflictingGroup = groups.find((group) => {
     if (excludeGroupId && group.groupId === excludeGroupId) return false;
     if (group.teacherId !== selectedTeacher.id) return false;
     if (group.weekDay !== weekDay) return false;
+    if (group.status !== 'ACTIVE') return false; // Solo grupos activos
 
     const groupStart = new Date(`1970-01-01T${group.startTime}`);
     const groupEnd = new Date(`1970-01-01T${group.endTime}`);
@@ -88,7 +112,7 @@ const validateTeacherConflict = (teachers, selectedTeacher, weekDay, startTime, 
   });
 
   if (conflictingGroup) {
-    return `El docente ya tiene asignado el grupo "${conflictingGroup.name}" el día ${weekLabel(conflictingGroup.weekDay)} de ${conflictingGroup.startTime} a ${conflictingGroup.endTime}`;
+    return `El docente ya tiene asignado el grupo activo "${conflictingGroup.name}" el día ${weekLabel(conflictingGroup.weekDay)} de ${conflictingGroup.startTime} a ${conflictingGroup.endTime}`;
   }
 
   return null;
@@ -150,7 +174,7 @@ export default function Groups() {
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({
     name: '',
-    weekDay: null,
+    weekDay: 'LUN', // Día por defecto
     startTime: midnight,
     endTime: midnight,
     teacher: null,
@@ -159,8 +183,8 @@ export default function Groups() {
     endDate: null,
   });
   const [validationErrors, setValidationErrors] = useState({});
-  
   const [touchedFields, setTouchedFields] = useState({});
+  const [nameWasManuallyEdited, setNameWasManuallyEdited] = useState(false); // Para controlar el bug
 
   const processedData = useMemo(() => {
     return data.map((group) => ({
@@ -178,12 +202,20 @@ export default function Groups() {
   }, [careerTeachers]);
 
   const markFieldAsTouched = (fieldName) => {
-    setTouchedFields(prev => ({ ...prev, [fieldName]: true }));
+    setTouchedFields((prev) => ({ ...prev, [fieldName]: true }));
   };
 
   const shouldShowError = (fieldName) => {
     return touchedFields[fieldName] && validationErrors[fieldName];
   };
+
+  // Efecto para actualizar nombre automáticamente
+  useEffect(() => {
+    if (!nameWasManuallyEdited && form.weekDay && form.startTime && form.endTime) {
+      const autoName = generateGroupName(form.weekDay, form.startTime, form.endTime);
+      setForm((prev) => ({ ...prev, name: autoName }));
+    }
+  }, [form.weekDay, form.startTime, form.endTime, nameWasManuallyEdited]);
 
   useEffect(() => {
     if (form.startDate && form.curriculum) {
@@ -281,7 +313,7 @@ export default function Groups() {
   const resetForm = () => {
     setForm({
       name: '',
-      weekDay: null,
+      weekDay: 'LUN',
       startTime: midnight,
       endTime: midnight,
       teacher: null,
@@ -291,6 +323,7 @@ export default function Groups() {
     });
     setValidationErrors({});
     setTouchedFields({});
+    setNameWasManuallyEdited(false);
   };
 
   const openCreateModal = () => {
@@ -314,6 +347,7 @@ export default function Groups() {
     setEditingGroupId(group.groupId);
     setTouchedFields({});
     setValidationErrors({});
+    setNameWasManuallyEdited(true); // Considerar que el nombre ya está editado
     new Modal(updateModalRef.current).show();
   };
 
@@ -322,7 +356,7 @@ export default function Groups() {
 
     const allFields = ['name', 'weekDay', 'teacher', 'curriculum', 'startDate', 'startTime', 'endTime'];
     const touchedState = {};
-    allFields.forEach(field => touchedState[field] = true);
+    allFields.forEach((field) => (touchedState[field] = true));
     setTouchedFields(touchedState);
 
     if (!validateForm()) {
@@ -359,7 +393,7 @@ export default function Groups() {
 
     const allFields = ['name', 'weekDay', 'teacher', 'curriculum', 'startDate', 'startTime', 'endTime'];
     const touchedState = {};
-    allFields.forEach(field => touchedState[field] = true);
+    allFields.forEach((field) => (touchedState[field] = true));
     setTouchedFields(touchedState);
 
     if (!validateForm()) {
@@ -391,39 +425,46 @@ export default function Groups() {
     }
   };
 
-  const removeGroup = (row) =>
-    confirmAction({
-      message: `¿Eliminar el grupo "${row.name}"?`,
-      header: 'Eliminar grupo',
-      icon: 'pi pi-exclamation-triangle',
-      acceptClassName: 'p-button-danger',
-      acceptLabel: 'Sí',
-      rejectLabel: 'No',
-      onAccept: () =>
-        deleteGroup(row.groupId)
-          .then(() => {
-            setData((g) => g.filter((x) => x.groupId !== row.groupId));
-            showSuccess('Éxito', 'El grupo ha sido eliminado');
-          })
-          .catch((e) => showError('Error', 'No se puede eliminar este grupo')),
-    });
+  // Función para cambiar estado del grupo
+  const toggleGroupStatus = (row) => {
+    const newStatus = row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    const actionText = newStatus === 'ACTIVE' ? 'activar' : 'desactivar';
 
-  const removeSelected = () =>
     confirmAction({
-      message: `¿Eliminar ${selected.length} grupos seleccionados?`,
-      header: 'Eliminar grupos',
+      message: `¿Está seguro de ${actionText} el grupo "${row.name}"?`,
+      header: `${actionText === 'activar' ? 'Activar' : 'Desactivar'} grupo`,
       icon: 'pi pi-exclamation-triangle',
-      acceptClassName: 'p-button-danger',
+      acceptClassName: newStatus === 'ACTIVE' ? 'p-button-success' : 'p-button-warning',
       acceptLabel: 'Sí',
       rejectLabel: 'No',
       onAccept: async () => {
         try {
-          await Promise.all(selected.map((g) => deleteGroup(g.groupId)));
+          await changeGroupStatus(row.groupId, newStatus);
+          await loadGroups();
+          showSuccess('Éxito', `El grupo ha sido ${newStatus === 'ACTIVE' ? 'activado' : 'desactivado'} correctamente`);
+        } catch (e) {
+          showError('Error', `No se pudo ${actionText} el grupo`);
+        }
+      },
+    });
+  };
+
+  const removeSelected = () =>
+    confirmAction({
+      message: `¿Desactivar ${selected.length} grupos seleccionados?`,
+      header: 'Desactivar grupos',
+      icon: 'pi pi-exclamation-triangle',
+      acceptClassName: 'p-button-warning',
+      acceptLabel: 'Sí',
+      rejectLabel: 'No',
+      onAccept: async () => {
+        try {
+          await Promise.all(selected.map((g) => changeGroupStatus(g.groupId, 'INACTIVE')));
           await loadGroups();
           setSelected(null);
-          showSuccess('Éxito', 'Grupos eliminados correctamente');
+          showSuccess('Éxito', 'Grupos desactivados correctamente');
         } catch (e) {
-          showError('Error', 'No se pudieron eliminar algunos grupos');
+          showError('Error', 'No se pudieron desactivar algunos grupos');
         }
       },
     });
@@ -453,8 +494,8 @@ export default function Groups() {
 
   const toolbarRight = () => (
     <div className="flex flex-wrap align-items-center">
-      <Button icon="pi pi-trash" severity="danger" size='small' hidden={!selected?.length} onClick={removeSelected}>
-        <span className="d-none d-sm-inline ms-1">Eliminar</span>
+      <Button icon="pi pi-ban" severity="warning" size="small" hidden={!selected?.length} onClick={removeSelected}>
+        <span className="d-none d-sm-inline ms-1">Desactivar</span>
       </Button>
       <Button ref={createButtonRef} icon="pi pi-plus" disabled={curriculums.length === 0 || careerTeachers.length === 0} className="ms-2 cetec-btn-blue" onClick={openCreateModal}>
         <span className="d-none d-sm-inline ms-1">Crear grupo</span>
@@ -462,41 +503,78 @@ export default function Groups() {
     </div>
   );
 
+  // Template para mostrar el estado como Tag
+  const statusBodyTemplate = (rowData) => {
+    const getSeverity = (status) => {
+      switch (status) {
+        case 'ACTIVE':
+          return 'success';
+        case 'COMPLETED':
+          return 'info';
+        case 'INACTIVE':
+          return 'warning';
+        default:
+          return 'secondary';
+      }
+    };
+
+    const getLabel = (status) => {
+      switch (status) {
+        case 'ACTIVE':
+          return 'Activo';
+        case 'COMPLETED':
+          return 'Completado';
+        case 'INACTIVE':
+          return 'Inactivo';
+        default:
+          return status;
+      }
+    };
+
+    return <Tag value={getLabel(rowData.status)} severity={getSeverity(rowData.status)} />;
+  };
+
   const actions = (row) => (
     <div className="d-flex align-items-center justify-content-center">
       <Button icon="pi pi-pencil" text rounded outlined tooltip="Editar" onClick={() => openUpdateModal(row)} />
-      <Button icon="pi pi-trash" text rounded outlined severity="danger" className="mx-2" tooltip="Eliminar este grupo" tooltipOptions={{ position: 'left' }} onClick={() => removeGroup(row)} />
+      <Button
+        icon={row.status === 'ACTIVE' ? 'pi pi-ban' : 'pi pi-check'}
+        text
+        rounded
+        outlined
+        severity={row.status === 'ACTIVE' ? 'warning' : 'success'}
+        className="mx-2"
+        tooltip={row.status === 'ACTIVE' ? 'Desactivar grupo' : 'Activar grupo'}
+        tooltipOptions={{ position: 'left' }}
+        onClick={() => toggleGroupStatus(row)}
+        disabled={row.status === 'COMPLETED'} // No permitir cambiar estado de grupos completados
+      />
       <Button icon="pi pi-arrow-up-right" text rounded outlined tooltip="Ver detalles" tooltipOptions={{ position: 'left' }} onClick={() => navigate('/admin/careers/groups/details', { state: { group: row, career } })} />
     </div>
   );
 
-
-
   const periodBodyTemplate = (rowData) => {
     if (!rowData.startDate) return <span className="text-muted">-</span>;
-    
+
     const startDate = new Date(rowData.startDate);
     const endDate = rowData.endDate ? new Date(rowData.endDate) : null;
-    
+
     if (!endDate) {
       return startDate.getFullYear().toString();
     }
-    
+
     const startYear = startDate.getFullYear();
     const endYear = endDate.getFullYear();
-    
-    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 
-                       'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    
+
+    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
     if (startYear !== endYear) {
-      // Años diferentes: "2025 - 2026"
       return `${startYear} - ${endYear}`;
     } else {
-      // Mismo año: "May 25 - Dic 25"
       const startMonth = monthNames[startDate.getMonth()];
       const endMonth = monthNames[endDate.getMonth()];
       const yearShort = startYear.toString().slice(-2);
-      
+
       return `${startMonth} ${yearShort} - ${endMonth} ${yearShort}`;
     }
   };
@@ -505,7 +583,7 @@ export default function Groups() {
     if (!rowData.weekDay || !rowData.startTime || !rowData.endTime) {
       return <span className="text-muted">-</span>;
     }
-    
+
     const dayAbbr = weekDayAbbreviations[rowData.weekDay] || rowData.weekDay;
     return `${dayAbbr} ${rowData.startTime} - ${rowData.endTime}`;
   };
@@ -554,7 +632,7 @@ export default function Groups() {
           home={{ icon: 'pi pi-home', command: () => navigate('/') }}
           className="mt-2 pb-0 ps-0 text-nowrap"
         />
-        <div className="d-flex justify-content-center my-2">
+        <div className="d-flush justify-content-center my-2">
           <Message severity="warn" text="No hay docentes asignados a esta carrera. Para asignar docentes, ve a la sección de Usuarios y asígnalos a esta carrera." className="py-4" />
         </div>
       </>
@@ -594,6 +672,7 @@ export default function Groups() {
           <Column field="name" header="Nombre" sortable />
           <Column field="weekDay" header="Horario" body={scheduleBodyTemplate} sortable />
           <Column field="startDate" header="Periodo" body={periodBodyTemplate} sortable />
+          <Column field="status" header="Estado" body={statusBodyTemplate} sortable />
           <Column field="teacherName" header="Docente" sortable />
           <Column field="curriculumName" header="Plan de estudios" sortable />
           <Column body={actions} header="Acciones" exportable={false} />
@@ -622,17 +701,20 @@ export default function Groups() {
                   <div className="px-3 rounded">
                     <div className="row">
                       <div className="col-12">
-                        <label className="form-label fw-semibold">Nombre del grupo *</label>
-                        <InputText 
-                          className={`w-100 ${shouldShowError('name') ? 'p-invalid' : ''}`} 
-                          value={form.name} 
+                        <label className="form-label fw-semibold">
+                          Nombre del grupo *<small className="text-muted ms-1">(se genera automáticamente, puedes editarlo)</small>
+                        </label>
+                        <InputText
+                          className={`w-100 ${shouldShowError('name') ? 'p-invalid' : ''}`}
+                          value={form.name}
                           onChange={(e) => {
                             setForm({ ...form, name: e.target.value });
+                            setNameWasManuallyEdited(true); // Marcar como editado manualmente
                             markFieldAsTouched('name');
-                          }} 
-                          placeholder="Ingrese el nombre del grupo" 
-                          required 
-                          autoFocus 
+                          }}
+                          placeholder="Ingrese el nombre del grupo"
+                          required
+                          autoFocus
                         />
                         {shouldShowError('name') && <small className="p-error">{validationErrors.name}</small>}
                       </div>
@@ -717,16 +799,16 @@ export default function Groups() {
                     <div className="row">
                       <div className="col-12 mb-3">
                         <label className="form-label fw-semibold">Día de la semana *</label>
-                        <Dropdown 
-                          value={form.weekDay} 
-                          options={weekDayOptions} 
-                          placeholder="Seleccione un día" 
+                        <Dropdown
+                          value={form.weekDay}
+                          options={weekDayOptions}
+                          placeholder="Seleccione un día"
                           onChange={(e) => {
                             setForm({ ...form, weekDay: e.value });
                             markFieldAsTouched('weekDay');
-                          }} 
-                          className={`w-100 ${shouldShowError('weekDay') ? 'p-invalid' : ''}`} 
-                          required 
+                          }}
+                          className={`w-100 ${shouldShowError('weekDay') ? 'p-invalid' : ''}`}
+                          required
                         />
                         {shouldShowError('weekDay') && <small className="p-error">{validationErrors.weekDay}</small>}
                       </div>
@@ -748,18 +830,18 @@ export default function Groups() {
                       </div>
                       <div className="col-md-6 mb-3">
                         <label className="form-label fw-semibold">Hora de fin *</label>
-                        <Calendar 
-                          className={`w-100 ${shouldShowError('timeRange') ? 'p-invalid' : ''}`} 
-                          value={form.endTime} 
+                        <Calendar
+                          className={`w-100 ${shouldShowError('timeRange') ? 'p-invalid' : ''}`}
+                          value={form.endTime}
                           onChange={(e) => {
                             setForm({ ...form, endTime: e.value });
-                            markFieldAsTouched('endTime'); 
-                          }} 
-                          timeOnly 
-                          hourFormat="24" 
-                          showIcon 
-                          icon={() => <i className="pi pi-clock" />} 
-                          required 
+                            markFieldAsTouched('endTime');
+                          }}
+                          timeOnly
+                          hourFormat="24"
+                          showIcon
+                          icon={() => <i className="pi pi-clock" />}
+                          required
                         />
                       </div>
                     </div>
@@ -795,15 +877,7 @@ export default function Groups() {
                       </div>
                       <div className="col-md-6 mb-3">
                         <label className="form-label fw-semibold">Fecha de finalización</label>
-                        <Calendar 
-                          className="w-100" 
-                          value={form.endDate} 
-                          onChange={(e) => setForm({ ...form, endDate: e.value })} 
-                          showIcon 
-                          dateFormat="dd/mm/yy" 
-                          placeholder="Se calcula automáticamente" 
-                          disabled={!form.curriculum} 
-                        />
+                        <Calendar className="w-100" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.value })} showIcon dateFormat="dd/mm/yy" placeholder="Se calcula automáticamente" disabled={!form.curriculum} />
                         <small className="text-muted">{form.curriculum ? 'Se calcula automáticamente basándose en el plan de estudios' : 'Seleccione primero un plan de estudios'}</small>
                       </div>
                     </div>
@@ -854,16 +928,16 @@ export default function Groups() {
                     <div className="row">
                       <div className="col-12">
                         <label className="form-label fw-semibold">Nombre del grupo *</label>
-                        <InputText 
-                          className={`w-100 ${shouldShowError('name') ? 'p-invalid' : ''}`} 
-                          value={form.name} 
+                        <InputText
+                          className={`w-100 ${shouldShowError('name') ? 'p-invalid' : ''}`}
+                          value={form.name}
                           onChange={(e) => {
                             setForm({ ...form, name: e.target.value });
                             markFieldAsTouched('name');
-                          }} 
-                          placeholder="Ingrese el nombre del grupo" 
-                          required 
-                          autoFocus 
+                          }}
+                          placeholder="Ingrese el nombre del grupo"
+                          required
+                          autoFocus
                         />
                         {shouldShowError('name') && <small className="p-error">{validationErrors.name}</small>}
                       </div>
@@ -925,7 +999,7 @@ export default function Groups() {
                           filter
                           onChange={(e) => {
                             setForm({ ...form, curriculum: e.value });
-                            markFieldAsTouched('curriculum'); 
+                            markFieldAsTouched('curriculum');
                           }}
                           required
                         />
@@ -948,16 +1022,16 @@ export default function Groups() {
                     <div className="row">
                       <div className="col-12 mb-3">
                         <label className="form-label fw-semibold">Día de la semana *</label>
-                        <Dropdown 
-                          value={form.weekDay} 
-                          options={weekDayOptions} 
-                          placeholder="Seleccione un día" 
+                        <Dropdown
+                          value={form.weekDay}
+                          options={weekDayOptions}
+                          placeholder="Seleccione un día"
                           onChange={(e) => {
                             setForm({ ...form, weekDay: e.value });
                             markFieldAsTouched('weekDay');
-                          }} 
-                          className={`w-100 ${shouldShowError('weekDay') ? 'p-invalid' : ''}`} 
-                          required 
+                          }}
+                          className={`w-100 ${shouldShowError('weekDay') ? 'p-invalid' : ''}`}
+                          required
                         />
                         {shouldShowError('weekDay') && <small className="p-error">{validationErrors.weekDay}</small>}
                       </div>
@@ -979,18 +1053,18 @@ export default function Groups() {
                       </div>
                       <div className="col-md-6 mb-3">
                         <label className="form-label fw-semibold">Hora de fin *</label>
-                        <Calendar 
-                          className={`w-100 ${shouldShowError('timeRange') ? 'p-invalid' : ''}`} 
-                          value={form.endTime} 
+                        <Calendar
+                          className={`w-100 ${shouldShowError('timeRange') ? 'p-invalid' : ''}`}
+                          value={form.endTime}
                           onChange={(e) => {
                             setForm({ ...form, endTime: e.value });
                             markFieldAsTouched('endTime');
-                          }} 
-                          timeOnly 
-                          hourFormat="24" 
-                          showIcon 
-                          icon={() => <i className="pi pi-clock" />} 
-                          required 
+                          }}
+                          timeOnly
+                          hourFormat="24"
+                          showIcon
+                          icon={() => <i className="pi pi-clock" />}
+                          required
                         />
                       </div>
                     </div>
@@ -1026,15 +1100,7 @@ export default function Groups() {
                       </div>
                       <div className="col-md-6 mb-3">
                         <label className="form-label fw-semibold">Fecha de finalización</label>
-                        <Calendar 
-                          className="w-100" 
-                          value={form.endDate} 
-                          onChange={(e) => setForm({ ...form, endDate: e.value })} 
-                          showIcon 
-                          dateFormat="dd/mm/yy" 
-                          placeholder="Se calcula automáticamente" 
-                          disabled={!form.curriculum} 
-                        />
+                        <Calendar className="w-100" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.value })} showIcon dateFormat="dd/mm/yy" placeholder="Se calcula automáticamente" disabled={!form.curriculum} />
                         <small className="text-muted">{form.curriculum ? 'Se calcula automáticamente basándose en el plan de estudios' : 'Seleccione primero un plan de estudios'}</small>
                       </div>
                     </div>

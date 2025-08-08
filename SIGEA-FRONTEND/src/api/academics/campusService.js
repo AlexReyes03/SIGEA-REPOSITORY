@@ -1,4 +1,3 @@
-
 import request from '../fetchWrapper';
 
 export const getAllCampus = async () => {
@@ -12,8 +11,16 @@ export const getCampusById = async (id) => {
 };
 
 export const getCampusByStudentId = async (studentId) => {
-    const res = await request(`/api/campus/student/${studentId}`);
-    return res;
+  const res = await request(`/api/campus/student/${studentId}`);
+  return res;
+};
+
+export const createCampus = async (campusData) => {
+  const res = await request('/api/campus', {
+    method: 'POST',
+    body: campusData,
+  });
+  return res.data;
 };
 
 export const updateCampus = async (id, campusData) => {
