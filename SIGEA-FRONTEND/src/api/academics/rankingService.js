@@ -10,6 +10,11 @@ export const getRankingById = async (id) => {
   return res;
 };
 
+export const getStudentEvaluationModules = async (studentId) => {
+  const response = await request(`/api/rankings/student/${studentId}/modules`);
+  return response.data || [];
+};
+
 export const getRankingsByTeacher = async (teacherId) => {
   const res = await request('/api/rankings/teacher', {
     method: 'POST',
@@ -34,13 +39,6 @@ export const createRanking = async (rankingData) => {
   return res;
 };
 
-export const getStudentEvaluationModules = async (studentId) => {
-  const response = await request('/api/rankings/student/modules', {
-    method: 'POST',
-    body: { studentId },
-  });
-  return response.data || [];
-};
 
 export const submitEvaluation = async (evaluationData) => {
   return await createRanking(evaluationData);

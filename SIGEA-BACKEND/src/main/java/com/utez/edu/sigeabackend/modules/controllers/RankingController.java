@@ -51,13 +51,11 @@ public class RankingController {
                 request.moduleId()
         );
     }
-
-    /** POST /sigea/api/rankings/student/modules */
-    @PostMapping("/student/modules")
-    public ResponseEntity<?> getStudentEvaluationModules(@Valid @RequestBody StudentEvaluationModulesRequestDto request) {
-        return service.getStudentEvaluationModules(request.studentId());
+    /**  /sigea/api/rankings/student/{studentId}/modules */
+    @GetMapping("/student/{studentId}/modules")
+    public ResponseEntity<?> getStudentEvaluationModules(@PathVariable Long studentId) {
+        return service.getStudentEvaluationModules(studentId);
     }
-
     /** POST /sigea/api/rankings/student */
     @PostMapping("/student")
     public ResponseEntity<?> getStudentEvaluations(@Valid @RequestBody StudentRankingsRequestDto request) {
