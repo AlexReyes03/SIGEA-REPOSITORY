@@ -12,7 +12,11 @@ dist
 dist-ssr
 *.local
 package-lock.json
-src/api/common-url.js
+
+# Environment variables
+.env.local
+.env.development.local
+.env.production.local
 
 # Editor directories and files
 .vscode/*

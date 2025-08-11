@@ -68,7 +68,7 @@ export default function AuthLayout({ title, subtitle, children }) {
         </div>
 
         {/* Panel derecho: color sólido + inner shadow + carrusel condicional */}
-        <motion.div className="col-md-6 d-none d-md-block auth-panel-right bg-blue-500 dots-bg position-relative" variants={backgroundVariants} initial="hidden" animate="visible" style={{ overflow: 'hidden', height: '100%' }}>
+        <motion.div className="col-md-6 d-none d-md-block auth-panel-right bg-blue-500 dvh-100 dots-bg position-relative" variants={backgroundVariants} initial="hidden" animate="visible" style={{ overflow: 'hidden' }}>
           <AnimatePresence mode="wait">
             {!isLoading && showCarousel && (
               <motion.div

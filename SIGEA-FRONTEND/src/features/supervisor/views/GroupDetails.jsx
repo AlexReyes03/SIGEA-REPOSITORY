@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MdOutlinePerson, MdOutlineGroup } from 'react-icons/md';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MdOutlinePerson, MdOutlineGroup, MdArrowForwardIos, MdArrowBackIosNew } from 'react-icons/md';
 import { BreadCrumb } from 'primereact/breadcrumb';
 import { Rating } from 'primereact/rating';
+import { Button } from 'primereact/button';
 import { ProgressSpinner } from 'primereact/progressspinner';
 
 import { useToast } from '../../../components/providers/ToastProvider';
@@ -11,6 +13,7 @@ import { getUserById } from '../../../api/userService';
 import { getGroupStudents } from '../../../api/academics/groupService';
 import { BACKEND_BASE_URL } from '../../../api/common-url';
 import GroupModulesTable from '../../admin/components/GroupModulesTable';
+import GroupStudents from '../components/GroupStudents';
 
 const weekDayOptions = [
   { label: 'Lunes', value: 'LUN' },
@@ -54,6 +57,41 @@ const getGroupStatus = (startDate, endDate) => {
   }
 };
 
+// Variantes de animación para las transiciones (igual que en Admin)
+const slideVariants = {
+  modulesEnter: {
+    x: '100%',
+    opacity: 0,
+  },
+  modulesCenter: {
+    x: 0,
+    opacity: 1,
+  },
+  modulesExit: {
+    x: '100%',
+    opacity: 0,
+  },
+
+  studentsEnter: {
+    x: '-100%',
+    opacity: 0,
+  },
+  studentsCenter: {
+    x: 0,
+    opacity: 1,
+  },
+  studentsExit: {
+    x: '-100%',
+    opacity: 0,
+  },
+};
+
+const transition = {
+  type: 'tween',
+  ease: 'anticipate',
+  duration: 0.4,
+};
+
 export default function GroupDetails() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -61,6 +99,10 @@ export default function GroupDetails() {
   const [loading, setLoading] = useState(true);
 
   const { group, career, campusId, campusName, isPrimary } = location.state || {};
+
+  // Estados para el cambio de vista (igual que en Admin)
+  const [currentView, setCurrentView] = useState(true); // true = módulos, false = estudiantes
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   const [teacher, setTeacher] = useState(null);
   const [studentCount, setStudentCount] = useState(0);
@@ -70,6 +112,18 @@ export default function GroupDetails() {
     if (/^https?:\/\//.test(url)) return url;
     return `${BACKEND_BASE_URL}${url}`;
   }
+
+  // Función para manejar el cambio de vista con animaciones (igual que en Admin)
+  const handleViewChange = useCallback(() => {
+    if (isTransitioning) return;
+
+    setIsTransitioning(true);
+    setCurrentView((prev) => !prev);
+
+    setTimeout(() => {
+      setIsTransitioning(false);
+    }, 400);
+  }, [isTransitioning]);
 
   useEffect(() => {
     if (!group) {
@@ -108,31 +162,52 @@ export default function GroupDetails() {
 
   // Información del grupo
   const groupInfo = [
-  {
-    label: 'Carrera',
-    value: career?.name || 'No asignada',
-  },
-  {
-    label: 'Grupo',
-    value: group?.name ? `Grupo ${group.name}` : 'Sin nombre',
-  },
-  {
-    label: 'Plan de estudios',
-    value: group?.curriculumName || 'No asignado',
-  },
-  {
-    label: 'Horario',
-    value: `${weekLabel(group?.weekDay)} ${group?.startTime} - ${group?.endTime}`,
-  },
-  {
-    label: 'Estado',
-    value: getGroupStatus(group?.startDate, group?.endDate),
-  },
-  {
-    label: 'Periodo',
-    value: `${formatDateToMonthYear(group?.startDate)} — ${formatDateToMonthYear(group?.endDate)}`,
-  },
-];
+    {
+      label: 'Carrera',
+      value: career?.name || 'No asignada',
+    },
+    {
+      label: 'Grupo',
+      value: group?.name ? `Grupo ${group.name}` : 'Sin nombre',
+    },
+    {
+      label: 'Plan de estudios',
+      value: group?.curriculumName || 'No asignado',
+    },
+    {
+      label: 'Horario',
+      value: `${weekLabel(group?.weekDay)} ${group?.startTime} - ${group?.endTime}`,
+    },
+    {
+      label: 'Estado',
+      value: getGroupStatus(group?.startDate, group?.endDate),
+    },
+    {
+      label: 'Periodo',
+      value: `${formatDateToMonthYear(group?.startDate)} — ${formatDateToMonthYear(group?.endDate)}`,
+    },
+  ];
+
+  // Configuración de la vista actual (actualizada para supervisor)
+  const getViewConfig = () => {
+    if (currentView) {
+      return {
+        headerText: 'Detalles del grupo',
+        buttonIcon: 'pi pi-angle-left',
+        buttonContent: 'pi pi-users',
+        buttonTooltip: 'Ver estudiantes y evaluaciones',
+      };
+    } else {
+      return {
+        headerText: 'Estudiantes y evaluaciones',
+        buttonIcon: 'pi pi-clipboard',
+        buttonContent: 'pi pi-angle-right',
+        buttonTooltip: 'Volver a detalles del grupo',
+      };
+    }
+  };
+
+  const viewConfig = getViewConfig();
 
   // Breadcrumb para supervisor
   const breadcrumbItems = [
@@ -166,9 +241,21 @@ export default function GroupDetails() {
 
   return (
     <>
-      {/* Header */}
-      <div className="bg-white rounded-top p-2">
-        <h3 className="text-blue-500 fw-semibold mx-3 my-1">Detalles del grupo</h3>
+      {/* Header con botón de cambio de vista (igual que en Admin) */}
+      <div className="d-flex flex-row justify-content-between align-items-center bg-white rounded-top p-2">
+        <h3 className="text-blue-500 fw-semibold text-truncate mx-3 my-1">{viewConfig.headerText}</h3>
+        <Button 
+          icon={viewConfig.buttonIcon} 
+          severity="primary" 
+          size="small" 
+          onClick={handleViewChange} 
+          disabled={isTransitioning} 
+          tooltip={viewConfig.buttonTooltip} 
+          tooltipOptions={{ position: 'left' }} 
+          className="d-flex align-items-center gap-1"
+        >
+          <i className={viewConfig.buttonContent}></i>
+        </Button>
       </div>
 
       {/* Breadcrumb */}
@@ -215,8 +302,17 @@ export default function GroupDetails() {
                   </div>
                   <div className="d-flex align-items-center justify-content-center fw-medium">
                     <div className="d-flex flex-column align-items-center text-center">
-                      <img alt="Avatar docente" src={getAvatarUrl(teacher?.avatarUrl)} className="rounded-circle shadow-sm mb-3" width={140} height={140} style={{ objectFit: 'cover' }} />
-                      <span className="text-muted text-uppercase">{teacher ? `${teacher.name} ${teacher.paternalSurname} ${teacher.maternalSurname}` : 'No asignado'}</span>
+                      <img 
+                        alt="Avatar docente" 
+                        src={getAvatarUrl(teacher?.avatarUrl)} 
+                        className="rounded-circle shadow-sm mb-3" 
+                        width={140} 
+                        height={140} 
+                        style={{ objectFit: 'cover' }} 
+                      />
+                      <span className="text-muted text-uppercase">
+                        {teacher ? `${teacher.name} ${teacher.paternalSurname} ${teacher.maternalSurname}` : 'No asignado'}
+                      </span>
                       <span className="text-muted mb-2">{teacher?.email || 'No asignado'}</span>
                       <Rating value={5} readOnly cancel={false} />
                     </div>
@@ -264,9 +360,42 @@ export default function GroupDetails() {
             </div>
           </div>
 
-          {/* Tabla de calificaciones - Solo lectura */}
-          <div className="col-12 mb-3">
-            <GroupModulesTable group={group} readOnly={true} />
+          {/* Contenedor con animaciones para las vistas (igual que en Admin) */}
+          <div className="col-12 mb-3" style={{ position: 'relative', overflow: 'hidden' }}>
+            <AnimatePresence mode="wait" initial={false}>
+              {currentView ? (
+                <motion.div 
+                  key="modules-view" 
+                  initial="modulesEnter" 
+                  animate="modulesCenter" 
+                  exit="modulesExit" 
+                  variants={slideVariants} 
+                  transition={transition} 
+                  style={{ width: '100%' }}
+                >
+                  <GroupModulesTable group={group} readOnly={true} />
+                </motion.div>
+              ) : (
+                <motion.div 
+                  key="students-view" 
+                  initial="studentsEnter" 
+                  animate="studentsCenter" 
+                  exit="studentsExit" 
+                  variants={slideVariants} 
+                  transition={transition} 
+                  style={{ width: '100%' }}
+                >
+                  <GroupStudents 
+                    group={group} 
+                    teacher={teacher}
+                    campusId={campusId}
+                    campusName={campusName}
+                    isPrimary={isPrimary}
+                    navigate={navigate}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </>
       )}
