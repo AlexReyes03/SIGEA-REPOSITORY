@@ -19,7 +19,7 @@ import * as bootstrap from 'bootstrap';
 import { getUserByRoleAndPlantel, createUser, updateUser, toggleUserStatus } from '../../../api/userService';
 import { getAllRoles } from '../../../api/roleService';
 import { getCareerByPlantelId } from '../../../api/academics/careerService';
-import { createEnrollment, generateRegistrationNumber, getEnrollmentsByUser, updateEnrollmentRegistration, deleteEnrollment, canRemoveUserFromCareer } from '../../../api/academics/enrollmentService';
+import { createEnrollment, generateRegistrationNumberByRole, getEnrollmentsByUser, updateEnrollmentRegistration, deleteEnrollment, canRemoveUserFromCareer } from '../../../api/academics/enrollmentService';
 import { getAllCampus } from '../../../api/academics/campusService';
 import { assignMultipleCampusToSupervisor, updateSupervisorCampuses, getSupervisorCampuses } from '../../../api/supervisorService';
 import { useToast } from '../../../components/providers/ToastProvider';
@@ -64,44 +64,64 @@ const getStatusConfig = (status) => STATUS_CONFIG[status] || { name: status, lab
 const getRoleFriendlyName = (roleName) => ROLE_LABELS[roleName] || roleName;
 
 const extractMatriculaParts = (registrationNumber) => {
-  if (!registrationNumber) return { year: '', differentiator: '', last4: '' };
+  if (!registrationNumber) return { year: '25', differentiator: '', last4: '0001', suffix: '' };
 
-  const match = registrationNumber.match(/^(\d{2})([A-Z0-9]+)(\d{4})$/);
+  const isTeacher = registrationNumber.endsWith('-M');
+  let baseNumber = isTeacher ? registrationNumber.slice(0, -2) : registrationNumber;
+
+  const match = baseNumber.match(/^(\d{2})([A-Z0-9]+)(\d{4})$/);
   if (match) {
     return {
       year: match[1],
       differentiator: match[2],
       last4: match[3],
+      suffix: isTeacher ? '-M' : '',
     };
   }
 
-  if (registrationNumber.length >= 4) {
+  if (baseNumber.length >= 4) {
     return {
       year: new Date().getFullYear().toString().slice(-2),
       differentiator: '',
-      last4: registrationNumber.slice(-4),
+      last4: baseNumber.slice(-4),
+      suffix: isTeacher ? '-M' : '',
     };
   }
 
-  return { year: new Date().getFullYear().toString().slice(-2), differentiator: '', last4: '0001' };
+  return {
+    year: new Date().getFullYear().toString().slice(-2),
+    differentiator: '',
+    last4: '0001',
+    suffix: isTeacher ? '-M' : '',
+  };
 };
 
-const buildFullRegistrationNumber = (year, differentiator, last4) => {
-  return `${year}${differentiator}${last4.padStart(4, '0')}`;
+const buildFullRegistrationNumber = (year, differentiator, last4, isTeacher = false) => {
+  const safeYear = year || '25';
+  const safeDifferentiator = differentiator || '';
+  const safeLast4 = last4 || '0001';
+  const baseNumber = `${safeYear}${safeDifferentiator}${safeLast4.padStart(4, '0')}`;
+  return isTeacher ? `${baseNumber}-M` : baseNumber;
 };
 
 const extractLast4Digits = (registrationNumber) => {
-  if (!registrationNumber) return '';
-  const match = registrationNumber.match(/(\d{4})$/);
-  return match ? match[1] : '';
+  if (!registrationNumber) return '0001';
+  const isTeacher = registrationNumber.endsWith('-M');
+  const baseNumber = isTeacher ? registrationNumber.slice(0, -2) : registrationNumber;
+  const match = baseNumber.match(/(\d{4})$/);
+  return match ? match[1] : '0001';
 };
 
 const buildFullRegistrationNumberForEdit = (enrollment, newLast4) => {
   const { registrationNumber } = enrollment;
   if (!registrationNumber) return '';
 
-  const prefix = registrationNumber.replace(/\d{4}$/, '');
-  return `${prefix}${newLast4.padStart(4, '0')}`;
+  const isTeacher = registrationNumber.endsWith('-M');
+  const baseNumber = isTeacher ? registrationNumber.slice(0, -2) : registrationNumber;
+  const prefix = baseNumber.replace(/\d{4}$/, '');
+  const safeLast4 = newLast4 || '0001';
+  const newBaseNumber = `${prefix}${safeLast4.padStart(4, '0')}`;
+  return isTeacher ? `${newBaseNumber}-M` : newBaseNumber;
 };
 
 export default function UsersManagement() {
@@ -122,7 +142,7 @@ export default function UsersManagement() {
   const [enrollmentInputs, setEnrollmentInputs] = useState({});
   const [roles, setRoles] = useState([]);
   const [careers, setCareers] = useState([]);
-  const [campus, setCampus] = useState([]); // Nuevo estado para campus
+  const [campus, setCampus] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -182,6 +202,11 @@ export default function UsersManagement() {
   const currentRoleNeedsCampus = useMemo(() => {
     if (!getCurrentRole) return false;
     return ROLE_NEEDS_CAMPUS.includes(getCurrentRole.roleName);
+  }, [getCurrentRole]);
+
+  const isCurrentRoleTeacher = useMemo(() => {
+    if (!getCurrentRole) return false;
+    return getCurrentRole.roleName === 'TEACHER';
   }, [getCurrentRole]);
 
   const careerOptions = useMemo(
@@ -261,7 +286,14 @@ export default function UsersManagement() {
 
   const generateMatriculaForCareer = async (careerId) => {
     try {
-      const matricula = await generateRegistrationNumber(careerId);
+      const currentRole = getCurrentRole;
+      const userRole = currentRole ? currentRole.roleName : 'STUDENT';
+
+      if (!userRole || !careerId) {
+        throw new Error('Faltan datos para generar matrícula');
+      }
+
+      const matricula = await generateRegistrationNumberByRole(careerId, userRole);
       return matricula;
     } catch (error) {
       console.error('Error generating matricula:', error);
@@ -290,11 +322,13 @@ export default function UsersManagement() {
               matricula: matricula,
               year: parts.year,
               last4: parts.last4,
+              suffix: parts.suffix,
+              isTeacher: isCurrentRoleTeacher,
               editable: false,
             });
           } catch (error) {
             const currentYear = new Date().getFullYear().toString().slice(-2);
-            const defaultMatricula = buildFullRegistrationNumber(currentYear, career.differentiator, '0001');
+            const defaultMatricula = buildFullRegistrationNumber(currentYear, career.differentiator, '0001', isCurrentRoleTeacher);
 
             newChips.push({
               careerId: careerId,
@@ -303,6 +337,8 @@ export default function UsersManagement() {
               matricula: defaultMatricula,
               year: currentYear,
               last4: '0001',
+              suffix: isCurrentRoleTeacher ? '-M' : '',
+              isTeacher: isCurrentRoleTeacher,
               editable: true,
               hasError: true,
             });
@@ -343,7 +379,7 @@ export default function UsersManagement() {
         if (chip.careerId === careerId) {
           const year = newYear !== undefined ? newYear : chip.year;
           const last4 = newLast4 !== undefined ? newLast4 : chip.last4;
-          const newMatricula = buildFullRegistrationNumber(year, chip.differentiator, last4);
+          const newMatricula = buildFullRegistrationNumber(year, chip.differentiator, last4, chip.isTeacher);
 
           return {
             ...chip,
@@ -363,7 +399,6 @@ export default function UsersManagement() {
     setSelectedCareers((prev) => prev.filter((id) => id !== careerId));
   };
 
-  // Función optimizada para cargar usuarios por rol y campus con cache
   const loadUsersByRoleAndPlantel = useCallback(
     async (roleId, campusId) => {
       const cacheKey = `${roleId}_${campusId}`;
@@ -395,14 +430,12 @@ export default function UsersManagement() {
     [cachedUsersByRole, showError]
   );
 
-  // Función para refrescar datos manualmente
   const refreshCurrentView = useCallback(async () => {
     if (!selectedTipoUsuario || !user?.campus?.id) return;
 
     setRefreshing(true);
     const cacheKey = `${selectedTipoUsuario}_${user.campus.id}`;
 
-    // Limpiar cache para este rol específico y recargar
     setCachedUsersByRole((prev) => {
       const newCache = { ...prev };
       delete newCache[cacheKey];
@@ -413,7 +446,6 @@ export default function UsersManagement() {
       const data = await getUserByRoleAndPlantel(selectedTipoUsuario, user.campus.id);
       const usersArray = Array.isArray(data) ? data : [];
 
-      // Actualizar cache
       setCachedUsersByRole((prev) => ({
         ...prev,
         [cacheKey]: usersArray,
@@ -462,7 +494,6 @@ export default function UsersManagement() {
     }
   }, [user?.campus?.id]);
 
-  // Carga de campus
   const loadCampus = useCallback(async () => {
     try {
       const data = await getAllCampus();
@@ -473,7 +504,6 @@ export default function UsersManagement() {
     }
   }, []);
 
-  // Effects
   useEffect(() => {
     const loadRoles = async () => {
       try {
@@ -515,7 +545,6 @@ export default function UsersManagement() {
     }
   }, [selectedTipoUsuario, isInitialLoad, user?.campus?.id, loadUsersByRoleAndPlantel]);
 
-  // función para manejar confirmación de eliminación de carreras
   const handleCareerRemovalWithConfirmation = useCallback(
     (removedCareerIds, onConfirm) => {
       if (removedCareerIds.length === 0) {
@@ -565,7 +594,6 @@ export default function UsersManagement() {
 
         let savedUser;
         if (isEdit) {
-          // Detectar carreras que se van a eliminar antes de proceder
           if (currentRoleNeedsCareers && originalUserEnrollments.length > 0) {
             const originalCareerIds = originalUserEnrollments.map((e) => e.careerId);
             const removedCareerIds = originalCareerIds.filter((careerId) => !selectedCareers.includes(careerId));
@@ -586,7 +614,6 @@ export default function UsersManagement() {
 
           savedUser = await createUser(userData);
 
-          // Manejar inscripciones de carreras
           if (currentRoleNeedsCareers && careerChips.length > 0) {
             for (const chip of careerChips) {
               try {
@@ -602,7 +629,6 @@ export default function UsersManagement() {
             }
           }
 
-          // Manejar asignación de campus para supervisores
           if (currentRoleNeedsCampus && campusChips.length > 0) {
             try {
               const campusIds = campusChips.map((chip) => chip.campusId);
@@ -803,7 +829,6 @@ export default function UsersManagement() {
     [processedUsers, confirmAction, showSuccess, showError, reloadCurrentView]
   );
 
-  // Función para resetear todos los estados
   const resetAllStates = () => {
     setFormData({ ...INITIAL_USER_STATE, campusId: user?.campus?.id || '' });
     setSelectedCareers([]);
@@ -930,12 +955,14 @@ export default function UsersManagement() {
 
     if (newCareerIds.length > 0) {
       const newChips = [];
+      const editingUserRole = rolesMap[editingUser?.roleId]?.roleName;
+      const isEditingTeacher = editingUserRole === 'TEACHER';
 
       for (const careerId of newCareerIds) {
         const career = careers.find((c) => c.id === careerId);
         if (career) {
           try {
-            const matricula = await generateMatriculaForCareer(careerId);
+            const matricula = await generateRegistrationNumberByRole(careerId, editingUserRole || 'STUDENT');
             const parts = extractMatriculaParts(matricula);
 
             newChips.push({
@@ -945,11 +972,13 @@ export default function UsersManagement() {
               matricula: matricula,
               year: parts.year,
               last4: parts.last4,
+              suffix: parts.suffix,
+              isTeacher: isEditingTeacher,
               isNew: true,
             });
           } catch (error) {
             const currentYear = new Date().getFullYear().toString().slice(-2);
-            const defaultMatricula = buildFullRegistrationNumber(currentYear, career.differentiator, '0001');
+            const defaultMatricula = buildFullRegistrationNumber(currentYear, career.differentiator, '0001', isEditingTeacher);
 
             newChips.push({
               careerId: careerId,
@@ -958,6 +987,8 @@ export default function UsersManagement() {
               matricula: defaultMatricula,
               year: currentYear,
               last4: '0001',
+              suffix: isEditingTeacher ? '-M' : '',
+              isTeacher: isEditingTeacher,
               isNew: true,
               hasError: true,
             });
@@ -977,7 +1008,7 @@ export default function UsersManagement() {
         if (chip.careerId === careerId) {
           const year = newYear !== undefined ? newYear : chip.year;
           const last4 = newLast4 !== undefined ? newLast4 : chip.last4;
-          const newMatricula = buildFullRegistrationNumber(year, chip.differentiator, last4);
+          const newMatricula = buildFullRegistrationNumber(year, chip.differentiator, last4, chip.isTeacher);
 
           return {
             ...chip,
@@ -1004,9 +1035,9 @@ export default function UsersManagement() {
         const parts = extractMatriculaParts(enrollment.registrationNumber);
         const newYear = value || parts.year;
         const currentLast4 = enrollmentInputs[enrollmentId] || parts.last4;
-        const newMatricula = buildFullRegistrationNumber(newYear, parts.differentiator, currentLast4);
+        const isTeacher = parts.suffix === '-M';
+        const newMatricula = buildFullRegistrationNumber(newYear, parts.differentiator, currentLast4, isTeacher);
 
-        // Guardar toda la nueva matrícula, no solo los últimos 4 dígitos
         setEnrollmentInputs((prev) => ({
           ...prev,
           [`${enrollmentId}_full`]: newMatricula,
@@ -1019,7 +1050,6 @@ export default function UsersManagement() {
     }
   };
 
-  // Función para obtener preview de matrícula existente
   const getExistingCareerPreview = (enrollment) => {
     const fullMatricula = enrollmentInputs[`${enrollment.id}_full`];
     if (fullMatricula) {
@@ -1045,7 +1075,6 @@ export default function UsersManagement() {
     setEditingUser(null);
   };
 
-  // Computed values
   const getCurrentFilterLabel = useCallback(() => {
     if (!selectedTipoUsuario) return 'Usuarios';
     return getRoleLabel(null, selectedTipoUsuario) || 'Usuarios';
@@ -1089,16 +1118,10 @@ export default function UsersManagement() {
           <h5 className="title-text ms-2 me-2 mb-0">{getCurrentFilterLabel()}</h5>
           <span className="badge bg-blue-500 p-2 me-2">{processedUsers.length}</span>
         </div>
-       <div className="d-flex align-items-center gap-2 flex-wrap">
-        <div className='flex-grow-1' style={{ minWidth: '150px', maxWidth: '250px' }}>
-          <InputText 
-            placeholder="Buscar" 
-            value={globalFilter} 
-            onChange={(e) => setGlobalFilter(e.target.value)} 
-            disabled={loading} 
-            className="w-100 p-inputtext-sm" 
-          />
-        </div>
+        <div className="d-flex align-items-center gap-2 flex-wrap">
+          <div className="flex-grow-1" style={{ minWidth: '150px', maxWidth: '250px' }}>
+            <InputText placeholder="Buscar" value={globalFilter} onChange={(e) => setGlobalFilter(e.target.value)} disabled={loading} className="w-100 p-inputtext-sm" />
+          </div>
           <Button icon={refreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} severity="secondary" outlined onClick={refreshCurrentView} disabled={loading || refreshing || !selectedTipoUsuario} tooltip="Actualizar datos" tooltipOptions={{ position: 'top' }} />
           <Button icon="pi pi-upload" outlined={loading || !processedUsers.length} severity="primary" onClick={() => dt.current?.exportCSV()} disabled={loading || !processedUsers.length}>
             <span className="d-none d-sm-inline ms-2">Exportar</span>
@@ -1109,7 +1132,6 @@ export default function UsersManagement() {
     [getCurrentFilterLabel, processedUsers.length, globalFilter, loading, refreshing, refreshCurrentView, selectedTipoUsuario]
   );
 
-  // Templates
   const statusBodyTemplate = useCallback((rowData) => {
     const statusConfig = getStatusConfig(rowData.status);
     return <Tag value={statusConfig.label} severity={statusConfig.severity} />;
@@ -1168,7 +1190,6 @@ export default function UsersManagement() {
     [formData, updateFormField, handleKeyDown]
   );
 
-  // Componente de chip de carrera para el modal de crear
   const CareerChipComponent = useCallback(
     ({ chip, onUpdateYear, onUpdateLast4, onRemove }) => (
       <div className="col-md-6 mb-3">
@@ -1181,13 +1202,12 @@ export default function UsersManagement() {
           </div>
 
           <div className="row g-2">
-            {/* Input para año */}
             <div className="col-3">
               <label className="form-label small">Año</label>
               <input
                 type="text"
                 className="form-control form-control-sm"
-                value={chip.year}
+                value={chip.year || '25'}
                 onChange={(e) => {
                   const value = e.target.value.replace(/\D/g, '').slice(0, 2);
                   onUpdateYear(chip.careerId, value);
@@ -1197,19 +1217,17 @@ export default function UsersManagement() {
               />
             </div>
 
-            {/* Diferenciador (solo lectura) */}
             <div className="col-4">
               <label className="form-label small">Carrera</label>
-              <input type="text" className="form-control form-control-sm" value={chip.differentiator} disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }} />
+              <input type="text" className="form-control form-control-sm" value={chip.differentiator || ''} disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }} />
             </div>
 
-            {/* Input para últimos 4 dígitos */}
             <div className="col-5">
               <label className="form-label small">Número</label>
               <input
                 type="text"
                 className="form-control form-control-sm"
-                value={chip.last4}
+                value={chip.last4 || '0001'}
                 onChange={(e) => {
                   const value = e.target.value.replace(/\D/g, '').slice(0, 4);
                   onUpdateLast4(chip.careerId, value);
@@ -1220,7 +1238,6 @@ export default function UsersManagement() {
             </div>
           </div>
 
-          {/* Preview de matrícula */}
           <div className="mt-2">
             <small className="text-muted">
               Matrícula: <strong className="font-monospace">{chip.matricula}</strong>
@@ -1297,19 +1314,24 @@ export default function UsersManagement() {
             paginator
             rows={5}
             scrollable
-            scrollHeight='55vh'
+            scrollHeight="55vh"
             rowsPerPageOptions={[5, 10, 25]}
             filterDisplay="menu"
             globalFilter={globalFilter}
-            globalFilterFields={['name', 'paternalSurname', 'maternalSurname', 'fullName', 'email', 'displayRegistration', 'campusName', 'roleName', 'roleLabel', 
-              'searchableRole', 'statusLabel', 'createdAt', 'searchableStatus', 'displayCreatedAt']}
+            globalFilterFields={['name', 'paternalSurname', 'maternalSurname', 'fullName', 'email', 'displayRegistration', 'campusName', 'roleName', 'roleLabel', 'searchableRole', 'statusLabel', 'createdAt', 'searchableStatus', 'displayCreatedAt']}
             header={header}
             className="text-nowrap"
             emptyMessage={
               <div className="text-center my-5">
                 <i className="pi pi-users" style={{ fontSize: '2rem', color: '#ccc' }} />
-                <p className="mt-2">{!globalFilter ? (selectedTipoUsuario === null ? 'No hay usuarios registrados' : `No hay ${getCurrentFilterLabel().toLowerCase()}s 
-                registrados`) : `No se encontraron resultados para "${globalFilter}"`}</p>
+                <p className="mt-2">
+                  {!globalFilter
+                    ? selectedTipoUsuario === null
+                      ? 'No hay usuarios registrados'
+                      : `No hay ${getCurrentFilterLabel().toLowerCase()}s 
+                registrados`
+                    : `No se encontraron resultados para "${globalFilter}"`}
+                </p>
               </div>
             }
           >
@@ -1323,7 +1345,6 @@ export default function UsersManagement() {
           </DataTable>
         )}
       </div>
-      {/* Modal CREAR USUARIO */}
       <div className="modal fade" ref={createModalRef} tabIndex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div className="modal-dialog modal-dialog-centered modal-xl">
           <div className="modal-content">
@@ -1336,7 +1357,6 @@ export default function UsersManagement() {
 
             <form onSubmit={(e) => handleFormSubmit(e, false)}>
               <div className="modal-body p-4">
-                {/* Sección: Información Personal */}
                 <div className="mb-4">
                   <div className="d-flex align-items-center mb-3">
                     <MdOutlinePerson className="text-muted me-2" size={20} />
@@ -1383,7 +1403,6 @@ export default function UsersManagement() {
 
                 <Divider />
 
-                {/* Sección: Rol y Configuración */}
                 <div className="mb-4">
                   <div className="d-flex align-items-center mb-3">
                     <MdOutlineAssignment className="text-muted me-2" size={20} />
@@ -1403,7 +1422,6 @@ export default function UsersManagement() {
                   </div>
                 </div>
 
-                {/* Sección: Campus Supervisados - Solo para SUPERVISOR */}
                 {currentRoleNeedsCampus && (
                   <>
                     <Divider />
@@ -1447,7 +1465,6 @@ export default function UsersManagement() {
                   </>
                 )}
 
-                {/* Sección: Carreras y Matrículas - Solo para TEACHER/STUDENT */}
                 {currentRoleNeedsCareers && (
                   <>
                     <Divider />
@@ -1527,7 +1544,6 @@ export default function UsersManagement() {
         </div>
       </div>
 
-      {/* Modal EDITAR USUARIO */}
       <div className="modal fade" ref={editModalRef} tabIndex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div className="modal-dialog modal-dialog-centered modal-xl">
           <div className="modal-content">
@@ -1540,7 +1556,6 @@ export default function UsersManagement() {
 
             <form onSubmit={(e) => handleFormSubmit(e, true)}>
               <div className="modal-body p-4">
-                {/* Sección: Información Personal */}
                 <div className="mb-4">
                   <div className="d-flex align-items-center mb-3">
                     <MdOutlinePerson className="text-muted me-2" size={20} />
@@ -1587,7 +1602,6 @@ export default function UsersManagement() {
 
                 <Divider />
 
-                {/* Sección: Rol */}
                 <div className="mb-4">
                   <div className="d-flex align-items-center mb-3">
                     <MdOutlineAssignment className="text-muted me-2" size={20} />
@@ -1647,7 +1661,6 @@ export default function UsersManagement() {
                   </>
                 )}
 
-                {/* Sección: Gestión de Carreras - Solo para TEACHER/STUDENT */}
                 {currentRoleNeedsCareers && (
                   <>
                     <Divider />
@@ -1673,7 +1686,6 @@ export default function UsersManagement() {
                               disabled={loading}
                             />
 
-                            {/* CARRERAS EXISTENTES */}
                             {userEnrollments.length > 0 && (
                               <div className="mt-3">
                                 <small className="text-muted d-block mb-2">
@@ -1698,13 +1710,12 @@ export default function UsersManagement() {
                                             </div>
 
                                             <div className="row g-2">
-                                              {/* Input para año */}
                                               <div className="col-3">
                                                 <label className="form-label small">Año</label>
                                                 <input
                                                   type="text"
                                                   className="form-control form-control-sm"
-                                                  value={currentYear}
+                                                  value={currentYear || '25'}
                                                   onChange={(e) => {
                                                     const value = e.target.value.replace(/\D/g, '').slice(0, 2);
                                                     updateExistingCareerMatricula(enrollment.id, 'year', value);
@@ -1715,19 +1726,17 @@ export default function UsersManagement() {
                                                 />
                                               </div>
 
-                                              {/* Diferenciador (solo lectura) */}
                                               <div className="col-4">
                                                 <label className="form-label small">Carrera</label>
                                                 <input type="text" className="form-control form-control-sm" value={parts.differentiator || career?.differentiator || ''} disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }} />
                                               </div>
 
-                                              {/* Input para últimos 4 dígitos */}
                                               <div className="col-5">
                                                 <label className="form-label small">Número</label>
                                                 <input
                                                   type="text"
                                                   className="form-control form-control-sm"
-                                                  value={currentLast4}
+                                                  value={currentLast4 || '0001'}
                                                   onChange={(e) => {
                                                     const value = e.target.value.replace(/\D/g, '').slice(0, 4);
                                                     updateExistingCareerMatricula(enrollment.id, 'last4', value);
@@ -1739,7 +1748,6 @@ export default function UsersManagement() {
                                               </div>
                                             </div>
 
-                                            {/* Preview de matrícula */}
                                             <div className="mt-2">
                                               <small className="text-muted">
                                                 Matrícula: <strong className="font-monospace">{preview}</strong>
@@ -1753,7 +1761,6 @@ export default function UsersManagement() {
                               </div>
                             )}
 
-                            {/* NUEVAS CARRERAS */}
                             {editCareerChips.length > 0 && (
                               <div className="mt-3">
                                 <small className="text-muted d-block mb-2">
@@ -1773,13 +1780,12 @@ export default function UsersManagement() {
                                         </div>
 
                                         <div className="row g-2">
-                                          {/* Input para año */}
                                           <div className="col-3">
                                             <label className="form-label small">Año</label>
                                             <input
                                               type="text"
                                               className="form-control form-control-sm"
-                                              value={chip.year}
+                                              value={chip.year || '25'}
                                               onChange={(e) => {
                                                 const value = e.target.value.replace(/\D/g, '').slice(0, 2);
                                                 updateEditChipMatricula(chip.careerId, value, chip.last4);
@@ -1790,19 +1796,17 @@ export default function UsersManagement() {
                                             />
                                           </div>
 
-                                          {/* Diferenciador (solo lectura) */}
                                           <div className="col-4">
                                             <label className="form-label small">Carrera</label>
-                                            <input type="text" className="form-control form-control-sm" value={chip.differentiator} disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }} />
+                                            <input type="text" className="form-control form-control-sm" value={chip.differentiator || ''} disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }} />
                                           </div>
 
-                                          {/* Input para últimos 4 dígitos */}
                                           <div className="col-5">
                                             <label className="form-label small">Número</label>
                                             <input
                                               type="text"
                                               className="form-control form-control-sm"
-                                              value={chip.last4}
+                                              value={chip.last4 || '0001'}
                                               onChange={(e) => {
                                                 const value = e.target.value.replace(/\D/g, '').slice(0, 4);
                                                 updateEditChipMatricula(chip.careerId, chip.year, value);
@@ -1814,7 +1818,6 @@ export default function UsersManagement() {
                                           </div>
                                         </div>
 
-                                        {/* Preview de matrícula */}
                                         <div className="mt-2">
                                           <small className="text-muted">
                                             Matrícula: <strong className="font-monospace">{chip.matricula}</strong>

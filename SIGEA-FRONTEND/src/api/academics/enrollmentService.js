@@ -63,7 +63,11 @@ export const generateRegistrationNumber = async (careerId) => {
   return res;
 };
 
-// Actualizar matrícula individual
+export const generateRegistrationNumberByRole = async (careerId, userRole) => {
+  const res = await request(`/api/enrollments/generate-number/${careerId}/role/${userRole}`);
+  return res;
+};
+
 export const updateEnrollmentRegistration = async (enrollmentId, newRegistrationNumber) => {
   return await request(`/api/enrollments/${enrollmentId}/registration-number`, {
     method: 'PATCH',
@@ -76,7 +80,6 @@ export const getTeachersByCareer = async (careerId) => {
   return res;
 };
 
-// Verificar grupos de estudiante en carrera
 export const checkStudentGroupsInCareer = async (userId, careerId) => {
   const res = await request(`/api/group-students/check-user-groups/${userId}/career/${careerId}`);
   return res;
@@ -108,10 +111,7 @@ export const canRemoveUserFromCareer = async (userId, careerId) => {
   }
 };
 
-// Función para actualizar múltiples matrículas de un usuario
 export const updateUserRegistrations = async (userId, registrationUpdates) => {
-  // registrationUpdates: Array de { enrollmentId, newRegistrationNumber }
   const promises = registrationUpdates.map((update) => updateEnrollmentRegistration(update.enrollmentId, update.newRegistrationNumber));
-
   return Promise.all(promises);
 };
