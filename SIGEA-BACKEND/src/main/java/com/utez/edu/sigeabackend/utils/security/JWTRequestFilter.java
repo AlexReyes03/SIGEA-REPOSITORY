@@ -98,10 +98,10 @@ public class JWTRequestFilter extends OncePerRequestFilter {
 
     private boolean isPublicEndpoint(String requestPath, String method) {
         if ("GET".equalsIgnoreCase(method)) {
-            if ("/sigea/api/careers".equals(requestPath)) {
+            if (requestPath.startsWith("/sigea/api/media/raw/")) {
                 return true;
             }
-            if (requestPath.startsWith("/sigea/api/media/raw/")) {
+            if (requestPath.startsWith("/sigea/api/public/")) {
                 return true;
             }
             if ("/sigea/api/dev-status".equals(requestPath)) {
@@ -114,7 +114,6 @@ public class JWTRequestFilter extends OncePerRequestFilter {
                 return true;
             }
         }
-
         return requestPath.startsWith("/sigea/auth/");
     }
 }
