@@ -1,4 +1,4 @@
-package com.utez.edu.sigeabackend.config;
+/*package com.utez.edu.sigeabackend.config;
 
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,3 +31,4 @@ public class DBConnection {
         return ds;
     }
 }
+*/
