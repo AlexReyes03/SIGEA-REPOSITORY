@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '../../../assets/img/logo_cetec.png';
 import CareerCarousel from '../components/CareerCarousel';
-import { getAllCareers } from '../../../api/academics/careerService';
+import { getCareersForCarousel } from '../../../api/academics/careerService';
 
 export default function AuthLayout({ title, subtitle, children }) {
   const [showCarousel, setShowCarousel] = useState(false);
@@ -13,9 +13,8 @@ export default function AuthLayout({ title, subtitle, children }) {
     const checkCareersWithImages = async () => {
       try {
         setIsLoading(true);
-        const allCareers = await getAllCareers();
-        const filtered = Array.isArray(allCareers) ? allCareers.filter((career) => career.imageUrl) : [];
-        setCareersWithImages(filtered);
+        const filtered = await getCareersForCarousel();
+        setCareersWithImages(Array.isArray(filtered) ? filtered : []);
         setShowCarousel(filtered.length > 0);
       } catch (err) {
         console.error('Error checking careers for carousel:', err);
@@ -67,7 +66,7 @@ export default function AuthLayout({ title, subtitle, children }) {
           <footer className="text-center text-muted small">Copyright © {new Date().getFullYear()} Corporativo CETEC.</footer>
         </div>
 
-        {/* Panel derecho: color sólido + inner shadow + carrusel condicional */}
+        {/* Panel derecho: color sólido + inner shadow + carrusel */}
         <motion.div className="col-md-6 d-none d-md-block auth-panel-right bg-blue-500 dvh-100 dots-bg position-relative" variants={backgroundVariants} initial="hidden" animate="visible" style={{ overflow: 'hidden' }}>
           <AnimatePresence mode="wait">
             {!isLoading && showCarousel && (

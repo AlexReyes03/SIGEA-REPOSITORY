@@ -1,4 +1,5 @@
 import request from '../fetchWrapper';
+import { BASE_URL } from '../common-url';
 
 export const getAllCareers = async () => {
   const res = await request('/api/careers');
@@ -33,4 +34,14 @@ export const deleteCareer = async (id) => {
   return await request(`/api/careers/${id}`, {
     method: 'DELETE',
   });
+};
+
+export const getCareersForCarousel = async () => {
+  const response = await fetch(`${BASE_URL}/api/public/careers/carousel`);
+  
+  if (!response.ok) {
+    throw new Error('Error al obtener carreras para carrusel');
+  }
+  
+  return await response.json();
 };

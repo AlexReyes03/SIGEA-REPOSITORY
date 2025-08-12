@@ -30,7 +30,6 @@ export default function CareerCarousel({ careers = [] }) {
     }
   }, [containerHeight, careers.length]);
 
-  // Autoplay sin problemas
   useEffect(() => {
     if (!isReady || careers.length <= 1) return;
 
@@ -90,7 +89,7 @@ export default function CareerCarousel({ careers = [] }) {
       <div className="career-carousel-container h-100 w-100 d-flex align-items-center justify-content-center">
         <AnimatePresence mode="wait">
           <motion.div
-            key={`career-${currentIndex}`} // Key único
+            key={`career-${currentIndex}`}
             className="career-slide h-100 w-100 d-flex align-items-center justify-content-center"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
