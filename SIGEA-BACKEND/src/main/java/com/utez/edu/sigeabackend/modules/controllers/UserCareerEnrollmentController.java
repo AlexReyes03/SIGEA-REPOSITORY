@@ -70,15 +70,8 @@ public class UserCareerEnrollmentController {
             @PathVariable Long careerId,
             @PathVariable String userRole) {
         try {
-            System.out.println("🔍 DEBUG Controller - generateRegistrationNumberByRole:");
-            System.out.println("  careerId: " + careerId);
-            System.out.println("  userRole: '" + userRole + "'");
-
-            ResponseEntity<String> response = service.generateNewRegistrationNumber(careerId, userRole);
-            System.out.println("  Response body: '" + response.getBody() + "'");
-            return response;
+            return service.generateNewRegistrationNumber(careerId, userRole);
         } catch (Exception e) {
-            System.out.println("  ❌ Error en controller: " + e.getMessage());
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Error al generar matrícula: " + e.getMessage());
         }

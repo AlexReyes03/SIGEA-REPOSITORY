@@ -22,17 +22,14 @@ public class UserCareerEnrollmentService {
     private final UserCareerEnrollmentRepository enrollmentRepo;
     private final UserRepository userRepo;
     private final CareerRepository careerRepo;
-    private final CampusRepository campusRepo;
     private final Random random = new Random();
 
     public UserCareerEnrollmentService(UserCareerEnrollmentRepository enrollmentRepo,
                                        UserRepository userRepo,
-                                       CareerRepository careerRepo,
-                                       CampusRepository campusRepo) {
+                                       CareerRepository careerRepo) {
         this.enrollmentRepo = enrollmentRepo;
         this.userRepo = userRepo;
         this.careerRepo = careerRepo;
-        this.campusRepo = campusRepo;
     }
 
     /** Helper method to convert entity to DTO */
@@ -61,32 +58,22 @@ public class UserCareerEnrollmentService {
     /** Generar matrícula automáticamente con formato específico para TEACHER y STUDENT */
     private String generateRegistrationNumber(CareerEntity career, CampusEntity campus, String userRole) {
         try {
-            System.out.println("🔍 DEBUG Backend - generateRegistrationNumber:");
-            System.out.println("  userRole recibido: '" + userRole + "'");
-
             String year = String.valueOf(Year.now().getValue()).substring(2);
             String differentiator = career.getDifferentiator();
             String basePattern = year + differentiator + "%";
 
             boolean isTeacher = "TEACHER".equals(userRole);
-            System.out.println("  isTeacher: " + isTeacher);
-            System.out.println("  basePattern: '" + basePattern + "'");
-
             String searchPattern = isTeacher ? basePattern + "-M" : basePattern;
-            System.out.println("  searchPattern: '" + searchPattern + "'");
 
             List<String> existingNumbers = enrollmentRepo.findLastRegistrationNumberByCareerAndPattern(
                     career.getId(), searchPattern);
-            System.out.println("  existingNumbers encontrados: " + existingNumbers);
 
             int nextNumber;
             if (!existingNumbers.isEmpty()) {
                 String lastNumber = existingNumbers.getFirst();
-                System.out.println("  lastNumber: '" + lastNumber + "'");
                 String suffix = isTeacher ? "-M" : "";
                 String numberPart = lastNumber.substring(year.length() + differentiator.length(),
                         lastNumber.length() - suffix.length());
-                System.out.println("  numberPart extraído: '" + numberPart + "'");
                 try {
                     nextNumber = Integer.parseInt(numberPart) + 1;
                 } catch (NumberFormatException e) {
@@ -95,7 +82,6 @@ public class UserCareerEnrollmentService {
             } else {
                 nextNumber = 1;
             }
-            System.out.println("  nextNumber: " + nextNumber);
 
             String finalRegistrationNumber;
             int attempts = 0;
@@ -109,19 +95,19 @@ public class UserCareerEnrollmentService {
                     int randomNumber = random.nextInt(9999) + 1;
                     baseNumber = String.format("%s%s%04d", year, differentiator, randomNumber);
                 }
-                System.out.println("  baseNumber: '" + baseNumber + "'");
 
                 finalRegistrationNumber = isTeacher ? baseNumber + "-M" : baseNumber;
-                System.out.println("  finalRegistrationNumber: '" + finalRegistrationNumber + "'");
                 attempts++;
             } while (enrollmentRepo.existsByRegistrationNumberAndCampusId(finalRegistrationNumber, campus.getId())
                     && attempts < maxAttempts);
 
-            System.out.println("  🎯 Matrícula final retornada: '" + finalRegistrationNumber + "'");
+            if (attempts >= maxAttempts) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "No se pudo generar una matrícula única después de " + maxAttempts + " intentos");
+            }
+
             return finalRegistrationNumber;
         } catch (Exception e) {
-            System.out.println("  ❌ Error en generateRegistrationNumber: " + e.getMessage());
-            e.printStackTrace();
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Error al generar matrícula: " + e.getMessage());
         }
