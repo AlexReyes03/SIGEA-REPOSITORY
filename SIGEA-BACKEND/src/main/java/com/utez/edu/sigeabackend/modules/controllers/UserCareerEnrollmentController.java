@@ -3,8 +3,10 @@ package com.utez.edu.sigeabackend.modules.controllers;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.*;
 import com.utez.edu.sigeabackend.modules.services.UserCareerEnrollmentService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -60,6 +62,19 @@ public class UserCareerEnrollmentController {
     @GetMapping("/generate-number/{careerId}")
     public ResponseEntity<String> generateRegistrationNumber(@PathVariable Long careerId) {
         return service.generateNewRegistrationNumber(careerId);
+    }
+
+    /** GET /sigea/api/enrollments/generate-number/{careerId}/role/{userRole} - Generar matrícula considerando el rol */
+    @GetMapping("/generate-number/{careerId}/role/{userRole}")
+    public ResponseEntity<String> generateRegistrationNumberByRole(
+            @PathVariable Long careerId,
+            @PathVariable String userRole) {
+        try {
+            return service.generateNewRegistrationNumber(careerId, userRole);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al generar matrícula: " + e.getMessage());
+        }
     }
 
     /** POST /sigea/api/enrollments - Crear nueva inscripción */

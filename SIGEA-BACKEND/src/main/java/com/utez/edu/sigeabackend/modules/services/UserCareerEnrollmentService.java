@@ -22,20 +22,17 @@ public class UserCareerEnrollmentService {
     private final UserCareerEnrollmentRepository enrollmentRepo;
     private final UserRepository userRepo;
     private final CareerRepository careerRepo;
-    private final CampusRepository campusRepo;
     private final Random random = new Random();
 
     public UserCareerEnrollmentService(UserCareerEnrollmentRepository enrollmentRepo,
                                        UserRepository userRepo,
-                                       CareerRepository careerRepo,
-                                       CampusRepository campusRepo) {
+                                       CareerRepository careerRepo) {
         this.enrollmentRepo = enrollmentRepo;
         this.userRepo = userRepo;
         this.careerRepo = careerRepo;
-        this.campusRepo = campusRepo;
     }
 
-    // Helper method to convert entity to DTO
+    /** Helper method to convert entity to DTO */
     private UserCareerEnrollmentDto toDto(UserCareerEnrollmentEntity entity) {
         return new UserCareerEnrollmentDto(
                 entity.getId(),
@@ -58,27 +55,34 @@ public class UserCareerEnrollmentService {
         );
     }
 
-    // Generar matrícula automáticamente con NUEVO FORMATO: Año + Identificador + 4 dígitos
-    private String generateRegistrationNumber(CareerEntity career, CampusEntity campus) {
+
+
+    /** Generar matrícula automáticamente con formato específico para TEACHER y STUDENT */
+    private String generateRegistrationNumber(CareerEntity career, CampusEntity campus, String userRole) {
         try {
-            String year = String.valueOf(Year.now().getValue()).substring(2); // Últimos 2 dígitos del año
+            String year = String.valueOf(Year.now().getValue()).substring(2);
             String differentiator = career.getDifferentiator();
-            String pattern = year + differentiator + "%"; // NUEVO FORMATO: AñoIdentificador%
+            String basePattern = year + differentiator + "%";
 
-            // Obtener la última matrícula generada para este patrón
+            boolean isTeacher = "TEACHER".equals(userRole);
+            String searchPattern = isTeacher ? basePattern + "-M" : basePattern;
+
             List<String> existingNumbers = enrollmentRepo.findLastRegistrationNumberByCareerAndPattern(
-                    career.getId(), pattern);
+                    career.getId(), searchPattern);
 
-            int nextNumber = 1;
+            int nextNumber;
             if (!existingNumbers.isEmpty()) {
-                String lastNumber = existingNumbers.get(0);
-                // Quitar año + diferenciador para obtener solo los 4 dígitos
-                String numberPart = lastNumber.substring(year.length() + differentiator.length());
+                String lastNumber = existingNumbers.getFirst();
+                String suffix = isTeacher ? "-M" : "";
+                String numberPart = lastNumber.substring(year.length() + differentiator.length(),
+                        lastNumber.length() - suffix.length());
                 try {
                     nextNumber = Integer.parseInt(numberPart) + 1;
                 } catch (NumberFormatException e) {
-                    nextNumber = 1; // Si hay error, empezar desde 1
+                    nextNumber = 1;
                 }
+            } else {
+                nextNumber = 1;
             }
 
             String finalRegistrationNumber;
@@ -86,14 +90,15 @@ public class UserCareerEnrollmentService {
             final int maxAttempts = 1000;
 
             do {
+                String baseNumber;
                 if (attempts < 10) {
-                    // Primeros 10 intentos: usar número secuencial
-                    finalRegistrationNumber = String.format("%s%s%04d", year, differentiator, nextNumber + attempts);
+                    baseNumber = String.format("%s%s%04d", year, differentiator, nextNumber + attempts);
                 } else {
-                    // Después de 10 intentos: usar números aleatorios
                     int randomNumber = random.nextInt(9999) + 1;
-                    finalRegistrationNumber = String.format("%s%s%04d", year, differentiator, randomNumber);
+                    baseNumber = String.format("%s%s%04d", year, differentiator, randomNumber);
                 }
+
+                finalRegistrationNumber = isTeacher ? baseNumber + "-M" : baseNumber;
                 attempts++;
             } while (enrollmentRepo.existsByRegistrationNumberAndCampusId(finalRegistrationNumber, campus.getId())
                     && attempts < maxAttempts);
@@ -110,28 +115,39 @@ public class UserCareerEnrollmentService {
         }
     }
 
-    // Validar matrícula personalizada
-    private void validateCustomRegistrationNumber(String registrationNumber, CampusEntity campus, Long excludeEnrollmentId) {
+    /** Validar matrícula personalizada considerando el sufijo -M para TEACHER */
+    private void validateCustomRegistrationNumber(String registrationNumber, CampusEntity campus, Long excludeEnrollmentId, String userRole) {
         try {
             if (registrationNumber == null || registrationNumber.trim().isEmpty()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La matrícula no puede estar vacía");
             }
 
-            if (registrationNumber.length() > 15) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La matrícula no puede exceder 15 caracteres");
+            boolean isTeacher = "TEACHER".equals(userRole);
+
+            if (isTeacher && !registrationNumber.endsWith("-M")) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Las matrículas de maestros deben terminar con -M");
             }
 
-            // Verificar unicidad en el campus (excluyendo la inscripción actual si es una actualización)
+            if (!isTeacher && registrationNumber.endsWith("-M")) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Solo las matrículas de maestros pueden terminar con -M");
+            }
+
+            if (registrationNumber.length() > 20) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La matrícula no puede exceder 20 caracteres");
+            }
+
             boolean exists = enrollmentRepo.findByRegistrationNumberAndCampusId(registrationNumber, campus.getId())
                     .map(existing -> !existing.getId().equals(excludeEnrollmentId))
                     .orElse(false);
 
             if (exists) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        "Ya existe un estudiante con esta matrícula en el campus");
+                        "Ya existe un usuario con esta matrícula en el campus");
             }
         } catch (ResponseStatusException e) {
-            throw e; // Re-lanzar excepciones de validación
+            throw e;
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Error al validar matrícula: " + e.getMessage());
@@ -234,71 +250,63 @@ public class UserCareerEnrollmentService {
         }
     }
 
-    // Crear nueva inscripción
+    /** Crear nueva inscripción con soporte para sufijo -M en TEACHER */
     @Transactional
     public ResponseEntity<UserCareerEnrollmentDto> createEnrollment(CreateEnrollmentDto dto) {
         try {
-            // Verificar que el usuario existe
             UserEntity user = userRepo.findById(dto.userId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
 
-            // Verificar que la carrera existe
             CareerEntity career = careerRepo.findById(dto.careerId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Carrera no encontrada"));
 
-            // Verificar que no existe ya una inscripción entre este usuario y carrera
             if (enrollmentRepo.existsByUserIdAndCareerId(dto.userId(), dto.careerId())) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
                         "El usuario ya está inscrito en esta carrera");
             }
 
-            // Usar el campus del usuario
             CampusEntity campus = user.getCampus();
 
-            // Verificar que la carrera pertenece al mismo campus que el usuario
             if (!Long.valueOf(career.getCampus().getId()).equals(campus.getId())) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "La carrera no pertenece al campus del usuario");
             }
 
-            // Generar o validar matrícula
+            String userRole = user.getRole().getRoleName();
             String registrationNumber;
+
             if (dto.customRegistrationNumber() != null && !dto.customRegistrationNumber().trim().isEmpty()) {
-                // Usar matrícula personalizada
-                validateCustomRegistrationNumber(dto.customRegistrationNumber(), campus, null);
+                validateCustomRegistrationNumber(dto.customRegistrationNumber(), campus, null, userRole);
                 registrationNumber = dto.customRegistrationNumber().trim();
             } else {
-                // Generar matrícula automáticamente con NUEVO FORMATO
-                registrationNumber = generateRegistrationNumber(career, campus);
+                registrationNumber = generateRegistrationNumber(career, campus, userRole);
             }
 
-            // Crear la inscripción
             UserCareerEnrollmentEntity enrollment = new UserCareerEnrollmentEntity(user, career, campus, registrationNumber);
             UserCareerEnrollmentEntity saved = enrollmentRepo.save(enrollment);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(toDto(saved));
         } catch (ResponseStatusException e) {
-            throw e; // Re-lanzar excepciones de validación
+            throw e;
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Error al crear inscripción: " + e.getMessage());
         }
     }
 
-    // Actualizar inscripción
+    /** Actualizar inscripción con validación de sufijo -M para TEACHER */
     @Transactional
     public ResponseEntity<UserCareerEnrollmentDto> updateEnrollment(Long enrollmentId, UpdateEnrollmentDto dto) {
         try {
             UserCareerEnrollmentEntity enrollment = enrollmentRepo.findById(enrollmentId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inscripción no encontrada"));
 
-            // Actualizar matrícula si se proporciona
             if (dto.registrationNumber() != null && !dto.registrationNumber().trim().isEmpty()) {
-                validateCustomRegistrationNumber(dto.registrationNumber(), enrollment.getCampus(), enrollmentId);
+                String userRole = enrollment.getUser().getRole().getRoleName();
+                validateCustomRegistrationNumber(dto.registrationNumber(), enrollment.getCampus(), enrollmentId, userRole);
                 enrollment.setRegistrationNumber(dto.registrationNumber().trim());
             }
 
-            // Actualizar estado si se proporciona
             if (dto.status() != null) {
                 enrollment.setStatus(dto.status());
             }
@@ -319,11 +327,8 @@ public class UserCareerEnrollmentService {
             UserCareerEnrollmentEntity enrollment = enrollmentRepo.findById(enrollmentId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inscripción no encontrada"));
 
-            // Validar que la nueva matrícula no esté en uso
-            if (enrollmentRepo.existsByRegistrationNumberAndCampusId(newRegistrationNumber, enrollment.getCampus().getId())) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        "Ya existe esta matrícula en el campus");
-            }
+            String userRole = enrollment.getUser().getRole().getRoleName();
+            validateCustomRegistrationNumber(newRegistrationNumber, enrollment.getCampus(), enrollmentId, userRole);
 
             enrollment.setRegistrationNumber(newRegistrationNumber);
             UserCareerEnrollmentEntity saved = enrollmentRepo.save(enrollment);
@@ -412,13 +417,13 @@ public class UserCareerEnrollmentService {
         }
     }
 
-    // Generar nueva matrícula para una carrera específica (endpoint de utilidad)
-    public ResponseEntity<String> generateNewRegistrationNumber(Long careerId) {
+    /** Generar nueva matrícula para una carrera específica considerando el rol del usuario */
+    public ResponseEntity<String> generateNewRegistrationNumber(Long careerId, String userRole) {
         try {
             CareerEntity career = careerRepo.findById(careerId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Carrera no encontrada"));
 
-            String newRegistrationNumber = generateRegistrationNumber(career, career.getCampus());
+            String newRegistrationNumber = generateRegistrationNumber(career, career.getCampus(), userRole);
             return ResponseEntity.ok(newRegistrationNumber);
         } catch (ResponseStatusException e) {
             throw e;
@@ -426,5 +431,9 @@ public class UserCareerEnrollmentService {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Error al generar matrícula: " + e.getMessage());
         }
+    }
+
+    public ResponseEntity<String> generateNewRegistrationNumber(Long careerId) {
+        return generateNewRegistrationNumber(careerId, "STUDENT");
     }
 }
