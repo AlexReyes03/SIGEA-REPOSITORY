@@ -1,7 +1,9 @@
 package com.utez.edu.sigeabackend.modules.repositories;
 
 import com.utez.edu.sigeabackend.modules.entities.CareerEntity;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.PublicCareerDto;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -18,4 +20,12 @@ public interface CareerRepository extends JpaRepository<CareerEntity, Long> {
 
     // Encontrar carrera por diferenciador y campus
     Optional<CareerEntity> findByDifferentiatorAndCampusId(String differentiator, Long campusId);
+
+    @Query("SELECT new com.utez.edu.sigeabackend.modules.entities.dto.academics.PublicCareerDto(" +
+            "c.id, c.name, c.campus.name, " +
+            "CONCAT('/sigea/api/media/raw/', c.image.code)) " +
+            "FROM CareerEntity c " +
+            "WHERE c.image IS NOT NULL " +
+            "ORDER BY c.name ASC")
+    List<PublicCareerDto> findCareersWithImages();
 }

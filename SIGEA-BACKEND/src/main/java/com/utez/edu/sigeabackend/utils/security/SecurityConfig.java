@@ -54,8 +54,6 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "http://localhost:3000",
                 "https://corporativocetec.com"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
@@ -79,8 +77,7 @@ public class SecurityConfig {
                         auth
                                 .requestMatchers("/sigea/auth/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/sigea/api/media/raw/**").permitAll()
-                                .requestMatchers(HttpMethod.GET, "/sigea/api/careers").permitAll()
-                                .requestMatchers(HttpMethod.GET, "/sigea/api/careers/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/sigea/api/public/**").permitAll()
                                 .requestMatchers(HttpMethod.POST, "/sigea/api/create-dev-user").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/sigea/api/dev-status").permitAll()
                                 .anyRequest().authenticated()

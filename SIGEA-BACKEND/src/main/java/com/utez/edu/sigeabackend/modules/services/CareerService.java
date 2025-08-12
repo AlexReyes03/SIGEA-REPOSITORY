@@ -5,6 +5,7 @@ import com.utez.edu.sigeabackend.modules.entities.CareerEntity;
 import com.utez.edu.sigeabackend.modules.entities.UserCareerEnrollmentEntity;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.CareerDto;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.CreateCareerDto;
+import com.utez.edu.sigeabackend.modules.entities.dto.academics.PublicCareerDto;
 import com.utez.edu.sigeabackend.modules.entities.dto.academics.UpdateCareerDto;
 import com.utez.edu.sigeabackend.modules.media.MediaEntity;
 import com.utez.edu.sigeabackend.modules.media.MediaService;
@@ -71,6 +72,15 @@ public class CareerService {
         List<CareerEntity> entities = repository.findAll();
         List<CareerDto> dtos = entities.stream().map(this::toDto).toList();
         return ResponseEntity.ok(dtos);
+    }
+
+    /**
+     * Obtener carreras públicas solo con imágenes para el carrusel
+     * Este endpoint NO requiere autenticación
+     */
+    public ResponseEntity<List<PublicCareerDto>> findCareersForCarousel() {
+        List<PublicCareerDto> careers = repository.findCareersWithImages();
+        return ResponseEntity.ok(careers);
     }
 
     public ResponseEntity<CareerDto> findById(long id) {
