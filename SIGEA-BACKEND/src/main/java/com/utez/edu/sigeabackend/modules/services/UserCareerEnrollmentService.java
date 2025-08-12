@@ -22,14 +22,17 @@ public class UserCareerEnrollmentService {
     private final UserCareerEnrollmentRepository enrollmentRepo;
     private final UserRepository userRepo;
     private final CareerRepository careerRepo;
+    private final CampusRepository campusRepo;
     private final Random random = new Random();
 
     public UserCareerEnrollmentService(UserCareerEnrollmentRepository enrollmentRepo,
                                        UserRepository userRepo,
-                                       CareerRepository careerRepo) {
+                                       CareerRepository careerRepo,
+                                       CampusRepository campusRepo) {
         this.enrollmentRepo = enrollmentRepo;
         this.userRepo = userRepo;
         this.careerRepo = careerRepo;
+        this.campusRepo = campusRepo;
     }
 
     /** Helper method to convert entity to DTO */
@@ -54,8 +57,6 @@ public class UserCareerEnrollmentService {
                 false
         );
     }
-
-
 
     /** Generar matrícula automáticamente con formato específico para TEACHER y STUDENT */
     private String generateRegistrationNumber(CareerEntity career, CampusEntity campus, String userRole) {
