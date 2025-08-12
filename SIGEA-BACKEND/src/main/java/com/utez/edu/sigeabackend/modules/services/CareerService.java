@@ -50,11 +50,6 @@ public class CareerService {
                 .filter(enrollment -> "TEACHER".equals(enrollment.getUser().getRole().getRoleName()))
                 .count();
 
-        String imageUrl = null;
-        if (entity.getImage() != null) {
-            imageUrl = "/sigea/api/media/raw/" + entity.getImage().getCode();
-        }
-
         return new CareerDto(
                 entity.getId(),
                 entity.getName(),
@@ -63,8 +58,7 @@ public class CareerService {
                 entity.getCampus().getName(),
                 groupsCount,
                 studentsCount,
-                teachersCount,
-                imageUrl
+                teachersCount
         );
     }
 
@@ -113,7 +107,6 @@ public class CareerService {
         return ResponseEntity.ok(dto);
     }
 
-    // Crear nueva carrera
     @Transactional
     public ResponseEntity<CareerDto> save(CreateCareerDto dto) {
         CampusEntity plantel = campusRepository.findById(dto.campusId())
@@ -131,7 +124,6 @@ public class CareerService {
         return ResponseEntity.status(HttpStatus.CREATED).body(toDto(saved));
     }
 
-    // Actualizar carrera
     @Transactional
     public ResponseEntity<CareerDto> update(long id, UpdateCareerDto dto) {
         return repository.findById(id)
@@ -147,7 +139,6 @@ public class CareerService {
                             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                                     "El diferenciador debe contener solo letras mayúsculas y números, máximo 5 caracteres");
                         }
-
 
                         existing.setDifferentiator(newDifferentiator);
                     }
@@ -166,7 +157,6 @@ public class CareerService {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // Eliminar carrera
     @Transactional
     public ResponseEntity<Void> delete(long id) {
         return repository.findById(id)
