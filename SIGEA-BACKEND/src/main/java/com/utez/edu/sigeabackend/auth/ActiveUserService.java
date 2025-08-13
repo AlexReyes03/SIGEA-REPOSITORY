@@ -25,7 +25,6 @@ public class ActiveUserService {
         return sessions.size();
     }
 
-    @Scheduled(fixedRate = 60_000)
     public void cleanupExpired() {
         Instant now = Instant.now();
         sessions.entrySet().removeIf(entry -> entry.getValue().isBefore(now));
