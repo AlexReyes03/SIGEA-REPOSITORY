@@ -65,14 +65,11 @@ export default async function request(endpoint, { method = 'GET', body = null, h
 
         if (res.status === 503 && !skipRetry && shouldRetry(res.status, attempt, RETRY_CONFIG.maxRetries)) {
           attempt++;
-          console.warn(`🔄 Reintentando request a ${endpoint} (intento ${attempt}/${RETRY_CONFIG.maxRetries + 1}) - Error 503`);
 
           if (attempt <= RETRY_CONFIG.maxRetries) {
             await delay(RETRY_CONFIG.retryDelay * attempt);
             continue;
           }
-
-          console.error(`❌ Todos los reintentos fallaron para ${endpoint}`);
 
           if (authHandlers && authHandlers.handleAuthError && hadAuthToken && !isAuthEndpoint) {
             authHandlers.handleAuthError(res.status, 'El servicio no está disponible después de varios intentos. Tu sesión se cerrará por seguridad.', endpoint, hadAuthToken);
@@ -92,10 +89,6 @@ export default async function request(endpoint, { method = 'GET', body = null, h
         throw err;
       }
 
-      if (attempt > 0) {
-        console.log(`✅ Request exitoso a ${endpoint} después de ${attempt} reintentos`);
-      }
-
       return data;
     } catch (error) {
       lastError = error;
@@ -103,7 +96,6 @@ export default async function request(endpoint, { method = 'GET', body = null, h
       if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
         if (!skipRetry && shouldRetry(503, attempt, RETRY_CONFIG.maxRetries)) {
           attempt++;
-          console.warn(`🔄 Reintentando por error de red (intento ${attempt}/${RETRY_CONFIG.maxRetries + 1})`);
 
           if (attempt <= RETRY_CONFIG.maxRetries) {
             await delay(RETRY_CONFIG.retryDelay * attempt);
@@ -118,7 +110,6 @@ export default async function request(endpoint, { method = 'GET', body = null, h
 
       if (error.status && !skipRetry && shouldRetry(error.status, attempt, RETRY_CONFIG.maxRetries)) {
         attempt++;
-        console.warn(`🔄 Reintentando por error ${error.status} (intento ${attempt}/${RETRY_CONFIG.maxRetries + 1})`);
 
         if (attempt <= RETRY_CONFIG.maxRetries) {
           await delay(RETRY_CONFIG.retryDelay * attempt);
