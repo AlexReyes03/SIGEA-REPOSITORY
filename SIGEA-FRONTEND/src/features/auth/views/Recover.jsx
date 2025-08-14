@@ -13,21 +13,29 @@ export default function Recover() {
   const { showSuccess, showError } = useToast();
   const navigate = useNavigate();
 
+  const handleEmailChange = (e) => {
+    // Normalizar a minúsculas automáticamente mientras el usuario escribe
+    setEmail(e.target.value.toLowerCase().trim());
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    if (!normalizedEmail) return;
 
     try {
       setSubmitting(true);
-      await requestOtp(email);
-      showSuccess('Hecho', `Hemos enviado un código a ${email} revisa tu bandeja de spam`);
-      navigate('/security/verify-code', { state: { email } });
+      await requestOtp(normalizedEmail);
+      showSuccess('Hecho', `Hemos enviado un código a ${normalizedEmail} revisa tu bandeja de spam`);
+      navigate('/security/verify-code', { state: { email: normalizedEmail } });
     } catch (err) {
       showError('Error', err.message);
     } finally {
       setSubmitting(false);
     }
   };
+
   const isDisabled = !email.trim() || submitting;
 
   return (
@@ -48,10 +56,11 @@ export default function Recover() {
               autoComplete="off"
               spellCheck="false"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={handleEmailChange}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSubmit(e);
               }}
+              style={{ textTransform: 'lowercase' }} // Visual feedback
             />
             <label htmlFor="emailRecover">Correo electrónico</label>
             <MdOutlineEmail size={24} className="position-absolute end-0 me-3 top-50 translate-middle-y text-muted user-select-none" />

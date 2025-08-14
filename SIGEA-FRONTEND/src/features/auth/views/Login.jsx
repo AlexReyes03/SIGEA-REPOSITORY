@@ -19,6 +19,10 @@ export default function LoginForm() {
   const { confirmAction } = useConfirmDialog();
   const navigate = useNavigate();
 
+  const handleEmailChange = (e) => {
+    setEmail(e.target.value.toLowerCase().trim());
+  };
+
   const handleEmailKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -125,7 +129,7 @@ export default function LoginForm() {
       <form onSubmit={handleSubmit} autoComplete="off" spellCheck="false">
         <div className="px-3">
           <div className="form-floating position-relative mb-4">
-            <input id="floatingInput" type="email" className="form-control pe-5" placeholder=" " autoComplete="off" spellCheck="false" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={handleEmailKeyDown} />
+            <input id="floatingInput" type="email" className="form-control pe-5" placeholder=" " autoComplete="off" spellCheck="false" value={email} onChange={handleEmailChange} onKeyDown={handleEmailKeyDown} style={{ textTransform: 'lowercase' }} />
             <label htmlFor="floatingInput">Correo electrónico</label>
             <MdOutlineEmail size={24} className="position-absolute end-0 me-3 top-50 translate-middle-y text-muted user-select-none" />
           </div>

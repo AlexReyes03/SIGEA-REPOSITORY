@@ -89,7 +89,7 @@ public class AuthService {
 
     @Transactional
     public ResponseEntity<?> login(AuthLoginDto dto) {
-        String email = dto.email();
+        String email = dto.email().toLowerCase().trim();
 
         // Bloqueo por demasiados intentos fallidos
         if (attemptService.isLoginBlocked(email)) {
@@ -180,11 +180,13 @@ public class AuthService {
 
     @Transactional
     public ResponseEntity<?> requestPasswordReset(PasswordResetRequestDto dto) {
+        String email = dto.email().toLowerCase().trim();
+
         // Limpia tokens expirados
         tokenRepo.deleteByExpiresAtBefore(LocalDateTime.now());
 
-        // Busca usuario; si no existe, devolvemos OK de todas formas
-        Optional<UserEntity> userOpt = userRepo.findByEmail(dto.email());
+        // Busca usuario con email normalizado; si no existe, devolvemos OK de todas formas
+        Optional<UserEntity> userOpt = userRepo.findByEmail(email);
         if (userOpt.isEmpty()) {
             return ResponseEntity.ok("Si el correo existe, hemos enviado un código de verificación.");
         }
@@ -202,7 +204,6 @@ public class AuthService {
         prt.setUsed(false);
         tokenRepo.save(prt);
 
-        // Envía el OTP "crudo" al correo
         SimpleMailMessage mail = new SimpleMailMessage();
         mail.setTo(user.getEmail());
         mail.setSubject("Código de verificación");
@@ -215,9 +216,11 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public ResponseEntity<?> verifyCode(VerifyCodeDto dto) {
-        // Buscar el token más reciente para este usuario
+        String email = dto.email().toLowerCase().trim();
+
+        // Buscar el token más reciente para este usuario con email normalizado
         Optional<PasswordResetToken> prtOpt = tokenRepo
-                .findTopByUser_EmailOrderByExpiresAtDesc(dto.email());
+                .findTopByUser_EmailOrderByExpiresAtDesc(email);
 
         if (prtOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -227,7 +230,7 @@ public class AuthService {
 
         // Verificar condiciones de uso
         boolean expired = prt.getExpiresAt().isBefore(LocalDateTime.now());
-        boolean wrongUser = !prt.getUser().getEmail().equals(dto.email());
+        boolean wrongUser = !prt.getUser().getEmail().equals(email);
         boolean wrongCode = !passwordEncoder.matches(dto.code(), prt.getTokenHash());
 
         if (prt.isUsed() || expired || wrongUser || wrongCode) {
@@ -244,16 +247,18 @@ public class AuthService {
 
     @Transactional
     public ResponseEntity<?> resetPassword(PasswordResetDto dto) {
-        // Validar el código OTP
+        String email = dto.email().toLowerCase().trim(); // Normalizar email
+
+        // Validar el código OTP con email normalizado
         ResponseEntity<?> verification = verifyCode(
-                new VerifyCodeDto(dto.email(), dto.code())
+                new VerifyCodeDto(email, dto.code())
         );
         if (!verification.getStatusCode().is2xxSuccessful()) {
             return verification;
         }
 
-        // Cargar el usuario
-        UserEntity user = userRepo.findByEmail(dto.email())
+        // Cargar el usuario con email normalizado
+        UserEntity user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "Usuario no encontrado"
                 ));

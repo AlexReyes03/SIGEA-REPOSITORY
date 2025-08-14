@@ -166,33 +166,30 @@ public class UserService {
     // Crear nuevo usuario
     @Transactional
     public ResponseEntity<UserResponseDto> create(CreateUserDto dto) {
-        // Verificar que el email no existe
-        if (userRepo.existsByEmail(dto.email())) {
+        String normalizedEmail = dto.email().toLowerCase().trim();
+
+        if (userRepo.existsByEmail(normalizedEmail)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
 
-        // Verificar que el campus existe
         var campus = campusRepo.findById(dto.campusId())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "Campus no existe"
                 ));
 
-        // Verificar que el rol existe
         var role = roleRepo.findById(dto.roleId())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "Role no existe"
                 ));
 
-        // Crear el usuario
         var user = new UserEntity();
         user.setName(dto.name());
         user.setPaternalSurname(dto.paternalSurname());
         user.setMaternalSurname(dto.maternalSurname());
-        user.setEmail(dto.email());
+        user.setEmail(normalizedEmail);
         user.setCampus(campus);
         user.setRole(role);
-        //Settea el email como contraseña
-        user.setPassword(passwordEncoder.encode(dto.email()));
+        user.setPassword(passwordEncoder.encode(normalizedEmail));
 
         var saved = userRepo.save(user);
         return ResponseEntity
@@ -205,14 +202,23 @@ public class UserService {
     public ResponseEntity<UserResponseDto> update(long id, UpdateUserDto dto) {
         return userRepo.findById(id)
                 .map(existing -> {
-                    // Actualizar campos básicos
                     if (dto.name() != null) existing.setName(dto.name());
                     if (dto.paternalSurname() != null) existing.setPaternalSurname(dto.paternalSurname());
                     if (dto.maternalSurname() != null) existing.setMaternalSurname(dto.maternalSurname());
-                    if (dto.email() != null) existing.setEmail(dto.email());
+
+                    if (dto.email() != null) {
+                        String normalizedEmail = dto.email().toLowerCase().trim();
+
+                        if (userRepo.existsByEmailAndIdNot(normalizedEmail, id)) {
+                            throw new ResponseStatusException(
+                                    HttpStatus.CONFLICT, "El email ya está en uso"
+                            );
+                        }
+                        existing.setEmail(normalizedEmail);
+                    }
+
                     if (dto.status() != null) existing.setStatus(dto.status());
 
-                    // Actualizar campus
                     if (dto.campusId() != null) {
                         var c = campusRepo.findById(dto.campusId())
                                 .orElseThrow(() -> new ResponseStatusException(
@@ -221,7 +227,6 @@ public class UserService {
                         existing.setCampus(c);
                     }
 
-                    // Actualizar rol
                     if (dto.roleId() != null) {
                         var r = roleRepo.findById(dto.roleId())
                                 .orElseThrow(() -> new ResponseStatusException(
@@ -230,7 +235,6 @@ public class UserService {
                         existing.setRole(r);
                     }
 
-                    // Actualizar contraseña si se proporciona
                     if (dto.password() != null && !dto.password().isBlank()) {
                         existing.setPassword(passwordEncoder.encode(dto.password()));
                     }
