@@ -1,10 +1,9 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom'; // ← Agregar este import
+import { useLocation } from 'react-router-dom';
 import { getUserById } from '../../../api/userService';
 import { getStudentsWithGroup, getGroupById } from '../../../api/academics/groupService';
 import { getQualificationsByGroupWithDetails } from '../../../api/academics/qualificationService';
-import { MdOutlineSchool } from 'react-icons/md';
-import { HiOutlineTrophy } from "react-icons/hi2";
+import { MdOutlineSchool, MdOutlineEmojiEvents } from 'react-icons/md';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -21,8 +20,8 @@ export default function Qualifications() {
   const [generalAverage, setGeneralAverage] = useState(null);
 
   const STATUS_LABELS = {
-    'ACTIVE': 'Activo',
-    'INACTIVE': 'Inactivo',
+    ACTIVE: 'Activo',
+    INACTIVE: 'Inactivo',
   };
 
   useEffect(() => {
@@ -33,22 +32,18 @@ export default function Qualifications() {
           setStudentData(userData);
 
           const studentsWithGroups = await getStudentsWithGroup();
-          const studentGroups = studentsWithGroups.filter(
-            item => item.studentId === user.id
-          );
+          const studentGroups = studentsWithGroups.filter((item) => item.studentId === user.id);
 
           if (studentGroups.length > 0) {
             let targetGroup;
             if (selectedCareer?.careerId) {
-              targetGroup = studentGroups.find(group => {
-                return group.careerId === selectedCareer.careerId; 
+              targetGroup = studentGroups.find((group) => {
+                return group.careerId === selectedCareer.careerId;
               });
             }
 
             if (!targetGroup) {
-              targetGroup = studentGroups.find(
-                group => group.additionalEnrollmentsCount === 0
-              ) || studentGroups[0];
+              targetGroup = studentGroups.find((group) => group.additionalEnrollmentsCount === 0) || studentGroups[0];
             }
 
             const groupDetails = await getGroupById(targetGroup.groupId);
@@ -60,7 +55,7 @@ export default function Qualifications() {
               careerName: groupDetails.careerName,
               schedule: `${groupDetails.weekDay} ${groupDetails.startTime} - ${groupDetails.endTime}`,
               period: `${groupDetails.startDate} - ${groupDetails.endDate}`,
-              teacherName: groupDetails.teacherName
+              teacherName: groupDetails.teacherName,
             };
 
             setSelectedGroup(groupForComponent);
@@ -78,47 +73,42 @@ export default function Qualifications() {
   }, [user, selectedCareer]); // ← Agregar selectedCareer como dependencia
 
   const academicInfo = [
-  {
-    label: 'Carrera',
-    value: selectedGroup?.careerName || 'Carrera no disponible',
-    isTitle: true, // Para mantener el estilo de título
-  },
-  {
-    label: 'Estudiante', 
-    value: studentData 
-      ? `${studentData.name} ${studentData.paternalSurname}${studentData.maternalSurname ? ` ${studentData.maternalSurname}` : ''}` 
-      : 'N/A',
-  },
-  {
-    label: 'Matrícula',
-    value: studentData?.primaryRegistrationNumber || 'N/A',
-  },
-  {
-    label: 'Estado',
-    value: STATUS_LABELS[studentData?.status] || 'N/A',
-  },
-  {
-    label: 'Grupo',
-    value: selectedGroup?.name || 'Grupo A',
-  },
-  {
-    label: 'Docente a cargo',
-    value: selectedGroup?.teacherName || 'No asignado',
-  },
-  {
-    label: 'Horario',
-    value: selectedGroup?.schedule || 'No disponible',
-  },
-];
-
+    {
+      label: 'Carrera',
+      value: selectedGroup?.careerName || 'Carrera no disponible',
+      isTitle: true, // Para mantener el estilo de título
+    },
+    {
+      label: 'Estudiante',
+      value: studentData ? `${studentData.name} ${studentData.paternalSurname}${studentData.maternalSurname ? ` ${studentData.maternalSurname}` : ''}` : 'N/A',
+    },
+    {
+      label: 'Matrícula',
+      value: studentData?.primaryRegistrationNumber || 'N/A',
+    },
+    {
+      label: 'Estado',
+      value: STATUS_LABELS[studentData?.status] || 'N/A',
+    },
+    {
+      label: 'Grupo',
+      value: selectedGroup?.name || 'Grupo A',
+    },
+    {
+      label: 'Docente a cargo',
+      value: selectedGroup?.teacherName || 'No asignado',
+    },
+    {
+      label: 'Horario',
+      value: selectedGroup?.schedule || 'No disponible',
+    },
+  ];
 
   const calculateGeneralAverage = async (groupId, studentId) => {
     try {
       const qualifications = await getQualificationsByGroupWithDetails(groupId);
 
-      const studentQualifications = qualifications.filter(
-        q => q.studentId === studentId && q.grade != null && q.grade >= 6 && q.grade <= 10
-      );
+      const studentQualifications = qualifications.filter((q) => q.studentId === studentId && q.grade != null && q.grade >= 6 && q.grade <= 10);
 
       if (studentQualifications.length > 0) {
         const total = studentQualifications.reduce((sum, q) => sum + q.grade, 0);
@@ -158,9 +148,7 @@ export default function Qualifications() {
   return (
     <>
       <div className="bg-white rounded-top p-2">
-        <h3 className="text-blue-500 fw-semibold mx-3 my-1">
-          Calificaciones
-        </h3>
+        <h3 className="text-blue-500 fw-semibold mx-3 my-1">Calificaciones</h3>
       </div>
 
       {/* Información de la materia y promedio */}
@@ -170,15 +158,13 @@ export default function Qualifications() {
             <div className="card-body d-flex flex-column">
               <div className="d-flex align-items-center">
                 <div className="title-icon p-1 rounded-circle">
-                  <HiOutlineTrophy size={40} className="p-1" />
+                  <MdOutlineEmojiEvents size={40} className="p-1" />
                 </div>
                 <h6 className="text-blue-500 fs-5 fw-semibold ms-2 mb-0">Promedio General</h6>
               </div>
               <div className="d-flex flex-column flex-grow-1 align-items-center justify-content-center text-center text-blue-500">
                 <div className="d-flex flex-row align-items-center">
-                  <h1 className='fw-bold'>
-                    {generalAverage || 'Cargando...'}
-                  </h1>
+                  <h1 className="fw-bold">{generalAverage || 'Cargando...'}</h1>
                 </div>
               </div>
             </div>
@@ -201,16 +187,10 @@ export default function Qualifications() {
                     <tbody>
                       {academicInfo.map((info, index) => (
                         <tr key={index}>
-                          <td 
-                            className="text-secondary fw-medium text-nowrap ps-3" 
-                            style={{ width: '40%', verticalAlign: 'middle' }}
-                          >
+                          <td className="text-secondary fw-medium text-nowrap ps-3" style={{ width: '40%', verticalAlign: 'middle' }}>
                             {info.label}
                           </td>
-                          <td 
-                            className={`${info.isTitle ? 'fw-semibold' : 'fw-normal'} text-dark text-nowrap`}
-                            style={{ verticalAlign: 'middle' }}
-                          >
+                          <td className={`${info.isTitle ? 'fw-semibold' : 'fw-normal'} text-dark text-nowrap`} style={{ verticalAlign: 'middle' }}>
                             {info.value}
                           </td>
                         </tr>
@@ -225,11 +205,7 @@ export default function Qualifications() {
       </div>
 
       {/* Componente de calificaciones */}
-      <ConsultSubjects
-        group={selectedGroup}
-        studentId={user?.id}
-        studentData={studentData}
-      />
+      <ConsultSubjects group={selectedGroup} studentId={user?.id} studentData={studentData} />
     </>
   );
 }

@@ -1,4 +1,3 @@
-// Dashboard Estudiante
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MdOutlineEmojiEvents, MdOutlinePerson, MdOutlineGroup, MdOutlineAssignment, MdOutlineSchool, MdOutlineCalendarMonth, MdOutlineSchedule, MdOutlineCoPresent } from 'react-icons/md';
@@ -32,7 +31,7 @@ export default function Dashboard() {
   const { showError } = useToast();
 
   const [loading, setLoading] = useState(true);
-  
+
   // Estados para los indicadores
   const [activeGroups, setActiveGroups] = useState(0);
   const [completedCareers, setCompletedCareers] = useState(0);
@@ -51,17 +50,17 @@ export default function Dashboard() {
 
   const formatDateRange = (startDate, endDate) => {
     if (!startDate || !endDate) return 'Sin fechas';
-    
+
     const start = new Date(startDate);
     const end = new Date(endDate);
-    
+
     const startYear = start.getFullYear();
     const endYear = end.getFullYear();
-    
+
     if (startYear === endYear) {
       return `${startYear}`;
     }
-    
+
     return `${startYear}-${endYear}`;
   };
 
@@ -71,9 +70,8 @@ export default function Dashboard() {
     try {
       setLoading(true);
 
-      // 1. Obtener inscripciones activas del estudiante
       const enrollments = await getEnrollmentsByUser(user.id);
-      const activeEnrollments = Array.isArray(enrollments) ? enrollments.filter(e => e.status === 'ACTIVE') : [];
+      const activeEnrollments = Array.isArray(enrollments) ? enrollments.filter((e) => e.status === 'ACTIVE') : [];
 
       if (activeEnrollments.length === 0) {
         setActiveGroups(0);
@@ -84,7 +82,6 @@ export default function Dashboard() {
         return;
       }
 
-      // 2. Para cada inscripción activa, buscar el grupo donde está inscrito el estudiante
       const studentGroups = [];
       let totalCompleted = 0;
 
@@ -93,15 +90,12 @@ export default function Dashboard() {
           const careerGroups = await getGroupByCareer(enrollment.careerId);
           const groupsArray = Array.isArray(careerGroups) ? careerGroups : careerGroups?.data || [];
 
-          // Buscar en qué grupo está el estudiante
           for (const group of groupsArray) {
             try {
               const groupStudents = await getGroupStudents(group.groupId);
-              const isStudentInGroup = Array.isArray(groupStudents) && 
-                groupStudents.some(student => student.studentId === user.id);
+              const isStudentInGroup = Array.isArray(groupStudents) && groupStudents.some((student) => student.studentId === user.id);
 
               if (isStudentInGroup) {
-                // Calcular progreso del estudiante en este grupo
                 let progress = 0;
                 let completedSubjects = 0;
                 let totalSubjects = 0;
@@ -109,7 +103,7 @@ export default function Dashboard() {
                 try {
                   const curriculum = await getCurriculumById(group.curriculumId);
                   if (curriculum?.modules) {
-                    curriculum.modules.forEach(module => {
+                    curriculum.modules.forEach((module) => {
                       if (module.subjects) {
                         totalSubjects += module.subjects.length;
                       }
@@ -117,7 +111,7 @@ export default function Dashboard() {
                   }
 
                   const qualifications = await getQualificationsByGroupWithDetails(group.groupId);
-                  const studentQualifications = qualifications.filter(q => q.studentId === user.id);
+                  const studentQualifications = qualifications.filter((q) => q.studentId === user.id);
                   completedSubjects = studentQualifications.length;
 
                   progress = totalSubjects > 0 ? Math.round((completedSubjects / totalSubjects) * 100) : 0;
@@ -125,7 +119,6 @@ export default function Dashboard() {
                   console.warn(`Error calculating progress for group ${group.groupId}:`, error);
                 }
 
-                // Si completó el 100% de la carrera, contar como completada
                 if (progress >= 100) {
                   totalCompleted++;
                 }
@@ -137,7 +130,7 @@ export default function Dashboard() {
                   enrollmentId: enrollment.id,
                   progress,
                   completedSubjects,
-                  totalSubjects
+                  totalSubjects,
                 });
                 break;
               }
@@ -149,29 +142,24 @@ export default function Dashboard() {
           console.warn(`Error processing career ${enrollment.careerId}:`, error);
         }
       }
-      console.log()
+      console.log();
       setActiveGroups(studentGroups.length);
       setCompletedCareers(totalCompleted);
       setMyGroups(studentGroups);
 
-      // 3. Obtener horarios de hoy - FILTRAR SOLO GRUPOS ACTIVOS
       const currentWeekDay = getCurrentWeekDay();
-      const todayGroups = studentGroups
-        .filter(group => group.weekDay === currentWeekDay && group.status === 'ACTIVE')
-        .sort((a, b) => a.startTime.localeCompare(b.startTime));
+      const todayGroups = studentGroups.filter((group) => group.weekDay === currentWeekDay && group.status === 'ACTIVE').sort((a, b) => a.startTime.localeCompare(b.startTime));
 
       setTodaySchedule(todayGroups);
 
-      // 4. Obtener evaluaciones pendientes
       try {
         const evaluationData = await getStudentEvaluationModules(user.id);
-        const pendingCount = evaluationData.filter(module => !module.isEvaluated).length;
+        const pendingCount = evaluationData.filter((module) => !module.isEvaluated).length;
         setPendingEvaluations(pendingCount);
       } catch (error) {
         console.warn('Error loading pending evaluations:', error);
         setPendingEvaluations(0);
       }
-
     } catch (error) {
       console.error('Error loading student data:', error);
       showError('Error', 'Error al cargar los datos del estudiante');
@@ -191,7 +179,6 @@ export default function Dashboard() {
     }
   }, [loadStudentData]);
 
-  // Funciones de navegación
   const navigateToGroups = useCallback(() => {
     navigate('/student/groups');
   }, [navigate]);
@@ -200,19 +187,21 @@ export default function Dashboard() {
     navigate('/student/teacher-evaluation');
   }, [navigate]);
 
-  // Nueva función para navegar a calificaciones con estado
-  const handleNavigateToQualifications = useCallback((group) => {
-    const period = formatDateRange(group.startDate, group.endDate);
-    navigate('/student/groups/my-qualifications', {
-      state: {
-        careerId: group.careerId,
-        careerName: group.careerName,
-        enrollmentId: group.enrollmentId,
-        period: period,
-        progress: group.progress
-      }
-    });
-  }, [navigate]);
+  const handleNavigateToQualifications = useCallback(
+    (group) => {
+      const period = formatDateRange(group.startDate, group.endDate);
+      navigate('/student/groups/my-qualifications', {
+        state: {
+          careerId: group.careerId,
+          careerName: group.careerName,
+          enrollmentId: group.enrollmentId,
+          period: period,
+          progress: group.progress,
+        },
+      });
+    },
+    [navigate]
+  );
 
   if (loading) {
     return (
@@ -318,13 +307,7 @@ export default function Dashboard() {
                 <div className="overflow-auto" style={{ maxHeight: '20rem' }}>
                   <div className="d-grid gap-3 mb-3">
                     {myGroups.map((group) => (
-                      <div 
-                        key={group.groupId} 
-                        className="p-3 border rounded hovereable"
-                        onClick={() => handleNavigateToQualifications(group)}
-                        style={{ cursor: 'pointer' }}
-                        title='Ver calificaciones del grupo'
-                      >
+                      <div key={group.groupId} className="p-3 border rounded hovereable" onClick={() => handleNavigateToQualifications(group)} style={{ cursor: 'pointer' }} title="Ver calificaciones del grupo">
                         <div className="d-flex justify-content-between align-items-start mb-2">
                           <div className="flex-grow-1">
                             <h6 className="fw-semibold mb-1">{group.careerName}</h6>
@@ -342,9 +325,9 @@ export default function Dashboard() {
                             </div>
                           </div>
                           <div className="text-end text-nowrap">
-                            <Tag 
-                              value={group.progress >= 100 ? 'Completado' : 'En curso'} 
-                              severity={group.progress >= 100 ? 'success' : 'primary'} 
+                            <Tag
+                              value={group.progress >= 100 ? 'Completado' : 'En curso'}
+                              severity={group.progress >= 100 ? 'success' : 'primary'}
                               title={group.progress >= 100 ? 'Has completado todos los módulos de esta carrera' : 'Actualmente estás cursando esta carrera'}
                             />
                           </div>
@@ -387,89 +370,76 @@ export default function Dashboard() {
                       <MdOutlineCalendarMonth size={48} className="text-muted opacity-50" />
                     </div>
                     <h6 className="text-muted mb-2">Sin clases</h6>
-                    <small className="text-muted">
-                      No tienes clases programadas para hoy {getWeekLabel(getCurrentWeekDay())}
-                    </small>
+                    <small className="text-muted">No tienes clases programadas para hoy {getWeekLabel(getCurrentWeekDay())}</small>
                   </div>
                 ) : (
                   <>
-                  <div className="overflow-auto" style={{ maxHeight: '13rem' }}>
-                    <div className="d-grid gap-2">
-                      {todaySchedule.map((group, index) => {
-                        const now = new Date();
-                        const currentTime = now.getHours() * 100 + now.getMinutes();
-                        const startTime = parseInt(group.startTime.replace(':', ''));
-                        const endTime = parseInt(group.endTime.replace(':', ''));
+                    <div className="overflow-auto" style={{ maxHeight: '13rem' }}>
+                      <div className="d-grid gap-2">
+                        {todaySchedule.map((group, index) => {
+                          const now = new Date();
+                          const currentTime = now.getHours() * 100 + now.getMinutes();
+                          const startTime = parseInt(group.startTime.replace(':', ''));
+                          const endTime = parseInt(group.endTime.replace(':', ''));
 
-                        let status = 'future';
-                        let statusColor = 'text-primary';
-                        let statusText = 'Próxima';
+                          let status = 'future';
+                          let statusColor = 'text-primary';
+                          let statusText = 'Próxima';
 
-                        if (currentTime >= startTime && currentTime <= endTime) {
-                          status = 'current';
-                          statusColor = 'text-success';
-                          statusText = 'Cursando';
-                        } else if (currentTime > endTime) {
-                          status = 'past';
-                          statusColor = 'text-muted';
-                          statusText = 'Finalizada';
-                        }
+                          if (currentTime >= startTime && currentTime <= endTime) {
+                            status = 'current';
+                            statusColor = 'text-success';
+                            statusText = 'Cursando';
+                          } else if (currentTime > endTime) {
+                            status = 'past';
+                            statusColor = 'text-muted';
+                            statusText = 'Finalizada';
+                          }
 
-                        return (
-                          <div
-                            key={`today-${group.groupId}`}
-                            className={`p-3 rounded border hovereable ${
-                              status === 'current' 
-                                ? 'bg-success bg-opacity-10 border-success' 
-                                : status === 'past' 
-                                ? 'bg-light' 
-                                : 'bg-primary bg-opacity-10 border-primary'
-                            }`}
-                            onClick={() => handleNavigateToQualifications(group)}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            <div className="d-flex justify-content-between align-items-center">
-                              <div className="flex-grow-1">
-                                <div className="d-flex align-items-center justify-content-between mb-1">
-                                  <h6 className="fw-semibold mb-0 text-truncate me-2">{group.careerName}</h6>
-                                  <span className={`badge ${
-                                    status === 'current' 
-                                      ? 'bg-success' 
-                                      : status === 'past' 
-                                      ? 'bg-secondary' 
-                                      : 'bg-primary'
-                                  }`} title={status === 'current' ? 'La clase ha empezado' : status === 'past' ? 'La clase ha finalizado' : 'La clase está por comenzar'}>
-                                    {statusText}
-                                  </span>
-                                </div>
-                                <small className="text-muted">
-                                  <MdOutlineGroup size={16} className="me-1" />
-                                  Grupo {group.name} - 
-                                  <span className="text-muted"> {group.startTime}</span>
-                                  <small className="text-muted"> a {group.endTime}</small>
-                                </small>
-                                <div className="mt-1">
+                          return (
+                            <div
+                              key={`today-${group.groupId}`}
+                              className={`p-3 rounded border hovereable ${status === 'current' ? 'bg-success bg-opacity-10 border-success' : status === 'past' ? 'bg-light' : 'bg-primary bg-opacity-10 border-primary'}`}
+                              onClick={() => handleNavigateToQualifications(group)}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              <div className="d-flex justify-content-between align-items-center">
+                                <div className="flex-grow-1">
+                                  <div className="d-flex align-items-center justify-content-between mb-1">
+                                    <h6 className="fw-semibold mb-0 text-truncate me-2">{group.careerName}</h6>
+                                    <span
+                                      className={`badge ${status === 'current' ? 'bg-success' : status === 'past' ? 'bg-secondary' : 'bg-primary'}`}
+                                      title={status === 'current' ? 'La clase ha empezado' : status === 'past' ? 'La clase ha finalizado' : 'La clase está por comenzar'}
+                                    >
+                                      {statusText}
+                                    </span>
+                                  </div>
                                   <small className="text-muted">
-                                    <MdOutlineCoPresent size={14} className="me-1" />
-                                    {group.teacherName}
+                                    <MdOutlineGroup size={16} className="me-1" />
+                                    Grupo {group.name} -<span className="text-muted"> {group.startTime}</span>
+                                    <small className="text-muted"> a {group.endTime}</small>
                                   </small>
+                                  <div className="mt-1">
+                                    <small className="text-muted">
+                                      <MdOutlineCoPresent size={14} className="me-1" />
+                                      {group.teacherName}
+                                    </small>
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                      
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
 
-                  {todaySchedule.length > 0 && (
-                    <div className="mt-3 pt-2 border-top">
-                      <small className="text-muted d-flex align-items-center justify-content-center">
-                        {todaySchedule.length} clase{todaySchedule.length !== 1 ? 's' : ''} programada{todaySchedule.length !== 1 ? 's' : ''} para hoy
-                      </small>
-                    </div>
-                  )}
+                    {todaySchedule.length > 0 && (
+                      <div className="mt-3 pt-2 border-top">
+                        <small className="text-muted d-flex align-items-center justify-content-center">
+                          {todaySchedule.length} clase{todaySchedule.length !== 1 ? 's' : ''} programada{todaySchedule.length !== 1 ? 's' : ''} para hoy
+                        </small>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
