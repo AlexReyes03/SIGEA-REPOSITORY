@@ -3,6 +3,7 @@ import { BrowserRouter } from 'react-router-dom';
 import AppRouter from './routes/AppRouter';
 import { ToastProvider } from './components/providers/ToastProvider';
 import { ConfirmDialogProvider } from './components/providers/ConfirmDialogProvider';
+import { NotificationProvider } from './components/providers/NotificationProvider';
 import AuthInterceptor from './components/AuthInterceptor';
 
 export default function App() {
@@ -11,7 +12,9 @@ export default function App() {
       <ToastProvider>
         <ConfirmDialogProvider>
           <AuthInterceptor>
-            <AppRouter />
+            <NotificationProvider>
+              <AppRouter />
+            </NotificationProvider>
           </AuthInterceptor>
         </ConfirmDialogProvider>
       </ToastProvider>
