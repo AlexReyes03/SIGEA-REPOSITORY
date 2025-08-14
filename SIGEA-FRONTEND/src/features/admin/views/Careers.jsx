@@ -156,7 +156,6 @@ export default function Careers() {
     async (e) => {
       e.preventDefault();
 
-      // Prevenir doble envío
       if (isUpdating) return;
 
       const differentiatorError = validateDifferentiator(formData.differentiator);
@@ -186,7 +185,6 @@ export default function Careers() {
           modalInstance.hide();
         }
 
-        // Recargar datos
         await loadCareers();
       } catch (err) {
         console.error('Error updating career:', err);
@@ -229,7 +227,6 @@ export default function Careers() {
     [isDeleting, confirmAction, showSuccess, showError, loadCareers]
   );
 
-  // Abre cualquiera de los dos modales
   const openModal = useCallback(
     (ref, career = null) => {
       if (career) {
@@ -249,10 +246,10 @@ export default function Careers() {
   );
 
   const isCareerActive = useCallback((career) => {
+    if (!career) return false;
     return career.studentsCount > 0 || career.groupsCount > 0 || career.teachersCount > 0;
   }, []);
 
-  // Función para navegar a curriculums
   const handleCareerClick = useCallback(
     (career) => {
       navigate('/admin/careers/curriculums', { state: { career } });
@@ -369,17 +366,19 @@ export default function Careers() {
           <i className="pi pi-pencil me-2" />
           Modificar
         </button>
-        <button
-          className="dropdown-item text-danger"
-          onClick={() => {
-            handleDelete(selectedCareer);
-            opRef.current.hide();
-          }}
-          disabled={isDeleting}
-        >
-          <i className="pi pi-trash me-2" />
-          Eliminar
-        </button>
+        {!isCareerActive(selectedCareer) && (
+          <button
+            className="dropdown-item text-danger"
+            onClick={() => {
+              handleDelete(selectedCareer);
+              opRef.current.hide();
+            }}
+            disabled={isDeleting}
+          >
+            <i className="pi pi-trash me-2" />
+            Eliminar
+          </button>
+        )}
       </OverlayPanel>
 
       {/* Modal CREAR */}

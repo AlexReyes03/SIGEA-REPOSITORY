@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from 'primereact/button';
@@ -17,6 +17,12 @@ export default function ResetPassword() {
   const { state } = useLocation();
   const email = state?.email || '';
   const code = state?.code || '';
+
+  useEffect(() => {
+      if (!email || !code) {
+        navigate('/security/recover');
+      }
+    }, [email, code, navigate, showError]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {

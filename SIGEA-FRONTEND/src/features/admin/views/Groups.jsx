@@ -45,7 +45,6 @@ const weekDayAbbreviations = {
   DOM: 'Dom',
 };
 
-// Función para generar nombre automáticamente
 const generateGroupName = (weekDay, startTime, endTime) => {
   if (!weekDay || !startTime || !endTime) return '';
 
@@ -96,12 +95,11 @@ const validateDateRange = (startDate, endDate) => {
 const validateTeacherConflict = (teachers, selectedTeacher, weekDay, startTime, endTime, groups, excludeGroupId = null) => {
   if (!selectedTeacher || !weekDay || !startTime || !endTime) return null;
 
-  // Solo considerar grupos ACTIVE para conflictos
   const conflictingGroup = groups.find((group) => {
     if (excludeGroupId && group.groupId === excludeGroupId) return false;
     if (group.teacherId !== selectedTeacher.id) return false;
     if (group.weekDay !== weekDay) return false;
-    if (group.status !== 'ACTIVE') return false; // Solo grupos activos
+    if (group.status !== 'ACTIVE') return false;
 
     const groupStart = new Date(`1970-01-01T${group.startTime}`);
     const groupEnd = new Date(`1970-01-01T${group.endTime}`);
@@ -174,7 +172,7 @@ export default function Groups() {
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({
     name: '',
-    weekDay: 'LUN', // Día por defecto
+    weekDay: 'LUN',
     startTime: midnight,
     endTime: midnight,
     teacher: null,
@@ -184,7 +182,7 @@ export default function Groups() {
   });
   const [validationErrors, setValidationErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
-  const [nameWasManuallyEdited, setNameWasManuallyEdited] = useState(false); // Para controlar el bug
+  const [nameWasManuallyEdited, setNameWasManuallyEdited] = useState(false);
 
   const processedData = useMemo(() => {
     return data.map((group) => ({
@@ -209,7 +207,6 @@ export default function Groups() {
     return touchedFields[fieldName] && validationErrors[fieldName];
   };
 
-  // Efecto para actualizar nombre automáticamente
   useEffect(() => {
     if (!nameWasManuallyEdited && form.weekDay && form.startTime && form.endTime) {
       const autoName = generateGroupName(form.weekDay, form.startTime, form.endTime);
@@ -224,7 +221,6 @@ export default function Groups() {
     }
   }, [form.startDate, form.curriculum]);
 
-  // Validar formulario
   const validateForm = (formData = form) => {
     const errors = {};
 
@@ -347,7 +343,7 @@ export default function Groups() {
     setEditingGroupId(group.groupId);
     setTouchedFields({});
     setValidationErrors({});
-    setNameWasManuallyEdited(true); // Considerar que el nombre ya está editado
+    setNameWasManuallyEdited(true);
     new Modal(updateModalRef.current).show();
   };
 
@@ -425,7 +421,6 @@ export default function Groups() {
     }
   };
 
-  // Función para cambiar estado del grupo
   const toggleGroupStatus = (row) => {
     const newStatus = row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
     const actionText = newStatus === 'ACTIVE' ? 'activar' : 'desactivar';
@@ -503,7 +498,6 @@ export default function Groups() {
     </div>
   );
 
-  // Template para mostrar el estado como Tag
   const statusBodyTemplate = (rowData) => {
     const getSeverity = (status) => {
       switch (status) {
@@ -547,7 +541,7 @@ export default function Groups() {
         tooltip={row.status === 'ACTIVE' ? 'Desactivar grupo' : 'Activar grupo'}
         tooltipOptions={{ position: 'left' }}
         onClick={() => toggleGroupStatus(row)}
-        disabled={row.status === 'COMPLETED'} // No permitir cambiar estado de grupos completados
+        disabled={row.status === 'COMPLETED'} 
       />
       <Button icon="pi pi-arrow-up-right" text rounded outlined tooltip="Ver detalles" tooltipOptions={{ position: 'left' }} onClick={() => navigate('/admin/careers/groups/details', { state: { group: row, career } })} />
     </div>
@@ -597,7 +591,7 @@ export default function Groups() {
           <CareerTabs />
         </div>
         <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 220 }}>
-          <ProgressSpinner style={{ width: '50px', height: '50px' }} strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" />
+          <ProgressSpinner style={{ width: '40px', height: '40px' }} />
         </div>
       </>
     );
@@ -709,7 +703,7 @@ export default function Groups() {
                           value={form.name}
                           onChange={(e) => {
                             setForm({ ...form, name: e.target.value });
-                            setNameWasManuallyEdited(true); // Marcar como editado manualmente
+                            setNameWasManuallyEdited(true);
                             markFieldAsTouched('name');
                           }}
                           placeholder="Ingrese el nombre del grupo"

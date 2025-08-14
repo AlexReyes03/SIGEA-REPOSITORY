@@ -68,24 +68,20 @@ export default function Curriculums() {
   const [newSubName, setNewSubName] = useState('');
   const [weeksNumber, setWeeksNumber] = useState(1);
 
-  // Función mejorada para hacer focus y selección
   const focusAndSelectElement = (itemId, type) => {
     setPendingFocus({ itemId, type });
   };
 
-  // Efecto para manejar focus pendiente después de cargar datos
   useEffect(() => {
     if (pendingFocus && !loading) {
       const { itemId, type } = pendingFocus;
 
       if (type === 'curriculum') {
-        // Simular click en el curriculum
         setSelectedCurriculumId(itemId);
         setSelectedModuleId(null);
         setSelectedSubjectId(null);
         setIsModuleCollapsed(false);
 
-        // Hacer scroll al elemento
         setTimeout(() => {
           const element = document.querySelector(`[data-curriculum-id="${itemId}"]`);
           if (element) {
@@ -93,12 +89,10 @@ export default function Curriculums() {
           }
         }, 100);
       } else if (type === 'module') {
-        // Simular click en el módulo
         setSelectedModuleId(itemId);
         setSelectedSubjectId(null);
         setIsSubjectCollapsed(false);
 
-        // Hacer scroll al elemento
         setTimeout(() => {
           const element = document.querySelector(`[data-module-id="${itemId}"]`);
           if (element) {
@@ -107,7 +101,6 @@ export default function Curriculums() {
         }, 100);
       }
 
-      // Limpiar el pending focus después de un tiempo
       setTimeout(() => {
         setPendingFocus(null);
         if (type === 'curriculum') {
@@ -119,7 +112,6 @@ export default function Curriculums() {
     }
   }, [data, loading, pendingFocus]);
 
-  // Calcular duración de un módulo específico
   const getModuleDuration = useMemo(() => {
     return (module) => {
       if (!module?.subjects || module.subjects.length === 0) {
@@ -139,7 +131,6 @@ export default function Curriculums() {
     };
   }, [data]);
 
-  // Calcular duración de un curriculum específico
   const getCurriculumDuration = useMemo(() => {
     return (curriculum) => {
       if (!curriculum?.modules || curriculum.modules.length === 0) {
@@ -213,7 +204,6 @@ export default function Curriculums() {
     }
   }, [data]);
 
-  // Crear plan de estudios
   const handleCreateCurriculum = async (e) => {
     e.preventDefault();
     if (!newCurrName.trim()) return;
@@ -226,7 +216,6 @@ export default function Curriculums() {
       setNewCurrName('');
       Modal.getInstance(modalCurrRef.current).hide();
 
-      // Configurar focus para después de cargar datos
       setLastCreatedCurriculumId(newCurriculum.id);
       focusAndSelectElement(newCurriculum.id, 'curriculum');
 
@@ -253,7 +242,6 @@ export default function Curriculums() {
       setNewModName('');
       Modal.getInstance(modalModRef.current).hide();
 
-      // Configurar focus para después de cargar datos
       setLastCreatedModuleId(newModule.id);
       focusAndSelectElement(newModule.id, 'module');
 
@@ -282,7 +270,6 @@ export default function Curriculums() {
       setWeeksNumber(1);
       await loadCurriculums();
       Modal.getInstance(modalSubRef.current).hide();
-      // No hacemos focus para materias como solicitado
     } catch (err) {
       showError('Error', 'No se pudo crear la materia');
     }

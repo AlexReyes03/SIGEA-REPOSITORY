@@ -63,7 +63,7 @@ export default function ProfileAvatarUpload() {
     setUploading(true);
     try {
       const dto = await uploadAvatar(user.id, file);
-      updateUser({ avatarUrl: dto.url }); // <-- Usa updateUser aquí
+      updateUser({ avatarUrl: dto.url });
       showSuccess('Hecho', 'Tu foto de perfil ha sido actualizada');
       setFile(null);
       setTotalSize(0);

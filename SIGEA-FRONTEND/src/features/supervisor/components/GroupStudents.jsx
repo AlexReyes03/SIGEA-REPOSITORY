@@ -1,4 +1,3 @@
-// src/features/supervisor/components/GroupStudents.jsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
@@ -30,7 +29,6 @@ export default function GroupStudents({
   const [evaluations, setEvaluations] = useState([]);
   const [globalFilter, setGlobalFilter] = useState('');
 
-  // Cargar datos del componente
   const loadData = useCallback(async () => {
     if (!group?.curriculumId || !group?.groupId || !teacher?.id) {
       setLoading(false);
@@ -40,7 +38,6 @@ export default function GroupStudents({
     try {
       setLoading(true);
 
-      // Cargar datos en paralelo
       const [curriculumData, studentsData, evaluationsData] = await Promise.all([
         getCurriculumById(group.curriculumId),
         getGroupStudents(group.groupId),
@@ -50,7 +47,6 @@ export default function GroupStudents({
       setCurriculum(curriculumData);
       setStudents(studentsData || []);
 
-      // Mapear evaluaciones para fácil acceso
       const evaluationsMap = {};
       if (evaluationsData && evaluationsData.data) {
         evaluationsData.data.forEach(evaluation => {
@@ -75,7 +71,6 @@ export default function GroupStudents({
     loadData();
   }, [loadData]);
 
-  // Función para navegar a TeacherScore
   const handleViewTeacherScore = () => {
     if (navigate && teacher) {
       navigate('/supervisor/campuses-teachers/teachers/teacher-score', {
@@ -90,14 +85,12 @@ export default function GroupStudents({
     }
   };
 
-  // Preparar datos para la tabla
   const tableData = useMemo(() => {
     if (!students || !curriculum) return [];
 
     return students.map(student => {
       const hasEvaluated = evaluations[student.studentId];
       
-      // Objeto base del estudiante
       const row = {
         studentId: student.studentId,
         fullName: student.fullName,
@@ -108,7 +101,6 @@ export default function GroupStudents({
         evaluationRating: hasEvaluated ? hasEvaluated.star : null
       };
 
-      // Agregar columnas para cada módulo
       if (curriculum.modules) {
         curriculum.modules.forEach(module => {
           row[`module_${module.id}`] = hasEvaluated;
@@ -119,7 +111,6 @@ export default function GroupStudents({
     });
   }, [students, curriculum, evaluations]);
 
-  // Datos filtrados para la búsqueda personalizada
   const filteredData = useMemo(() => {
     if (!globalFilter || globalFilter.trim() === '') {
       return tableData;
@@ -138,7 +129,6 @@ export default function GroupStudents({
     });
   }, [tableData, globalFilter]);
 
-  // Grid lines como en GroupModulesTable
   const gridLinesX = useMemo(
     () => ({
       borderLeft: '1px solid #ededed',
@@ -147,7 +137,6 @@ export default function GroupStudents({
     []
   );
 
-  // Columna del estudiante sin avatar
   const studentTemplate = (rowData) => (
     <div className="text-nowrap">
       <div className="fw-medium">{rowData.fullName}</div>
@@ -160,7 +149,6 @@ export default function GroupStudents({
     </div>
   );
 
-  // Template para el estado de evaluación
   const evaluationStatusTemplate = (rowData) => {
     if (rowData.hasEvaluated) {
       return (
@@ -183,7 +171,6 @@ export default function GroupStudents({
     }
   };
 
-  // Template para columnas de módulos
   const moduleTemplate = (rowData, module) => {
     if (rowData.hasEvaluated) {
       return (
@@ -200,12 +187,10 @@ export default function GroupStudents({
     }
   };
 
-  // Filtro global
   const onGlobalFilterChange = (e) => {
     setGlobalFilter(e.target.value);
   };
 
-  // Header de la tabla
   const renderHeader = () => (
     <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
       <div className="d-flex align-items-center">
@@ -247,7 +232,6 @@ export default function GroupStudents({
     </div>
   );
 
-  // Estadísticas rápidas
   const evaluatedCount = tableData.filter(student => student.hasEvaluated).length;
   const pendingCount = tableData.length - evaluatedCount;
   const evaluationPercentage = tableData.length > 0 ? (evaluatedCount / tableData.length) * 100 : 0;
@@ -273,7 +257,6 @@ export default function GroupStudents({
       
       <div className="card border-0">
         <div className="card-body">
-          {/* Estadísticas rápidas */}
           <div className="row mb-4">
             <div className="col-12 col-md-4 mb-3 mb-md-0">
               <div className="text-center p-3 border rounded">
@@ -295,7 +278,6 @@ export default function GroupStudents({
             </div>
           </div>
 
-          {/* DataTable con grid lines y responsividad corregida */}
           <DataTable
             value={filteredData}
             paginator
@@ -313,7 +295,6 @@ export default function GroupStudents({
               borderRight: '1px solid #ededed',
             }}
           >
-            {/* Columna del estudiante */}
             <Column
               field="fullName"
               header="Estudiante"
@@ -323,7 +304,6 @@ export default function GroupStudents({
               bodyClassName="text-nowrap"
             />
 
-            {/* Columna de estado de evaluación */}
             <Column
               field="hasEvaluated"
               header="Estado"
@@ -333,7 +313,6 @@ export default function GroupStudents({
               bodyClassName="text-nowrap"
             />
 
-            {/* Columnas dinámicas para cada módulo */}
             {curriculum?.modules?.map((module, index) => (
               <Column
                 key={module.id}

@@ -19,7 +19,6 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { changePassword } from '../../../api/authService';
 import ProfileAvatarUpload from '../components/ProfileAvatarUpload';
 
-// APIs reales del sistema
 import { getGroupByCareer, getGroupByTeacher, getGroupStudents, getStudentGroupHistory, getGroupById } from '../../../api/academics/groupService';
 import { getAllCareers, getCareerByPlantelId } from '../../../api/academics/careerService';
 import { getCurriculumByCareerId, getCurriculumById } from '../../../api/academics/curriculumService';
@@ -36,8 +35,6 @@ export default function Profile() {
   const { confirmAction } = useConfirmDialog();
   const location = useLocation();
   const navigate = useNavigate();
-
-  // Estados existentes del modal de contraseña
   const [value, setValue] = useState(0);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -45,7 +42,6 @@ export default function Profile() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
 
-  // Estados para datos dinámicos por rol
   const [roleData, setRoleData] = useState({
     loading: true,
     card1Data: null,
@@ -68,35 +64,6 @@ export default function Profile() {
   };
   const roleLabel = ROLE_MAP[user.role?.name || user.role] || 'Sin rol';
 
-  // Funciones auxiliares para cálculos
-  const calculateCurriculumDuration = (curriculum) => {
-    if (!curriculum?.modules || curriculum.modules.length === 0) {
-      return { weeks: 0, months: 0, years: 0, text: 'Sin módulos' };
-    }
-
-    const totalWeeks = curriculum.modules.reduce((acc, module) => {
-      if (!module.subjects) return acc;
-      return acc + module.subjects.reduce((subAcc, subject) => subAcc + (subject.weeks || 0), 0);
-    }, 0);
-
-    const totalMonths = totalWeeks / 4;
-    const years = Math.floor(totalMonths / 12);
-    const remainingMonths = Math.floor(totalMonths % 12);
-
-    let text = '';
-    if (years > 0 && remainingMonths > 0) {
-      text = `${years} año${years > 1 ? 's' : ''} y ${remainingMonths} mes${remainingMonths > 1 ? 'es' : ''}`;
-    } else if (years > 0) {
-      text = `${years} año${years > 1 ? 's' : ''}`;
-    } else if (remainingMonths > 0) {
-      text = `${remainingMonths} mes${remainingMonths > 1 ? 'es' : ''}`;
-    } else {
-      text = `${totalWeeks} ${totalWeeks === 1 ? 'semana' : 'semanas'}`;
-    }
-
-    return { weeks: totalWeeks, months: totalMonths, years, remainingMonths, text };
-  };
-
   const formatDateRange = (startDate, endDate) => {
     if (!startDate || !endDate) return 'Fechas no disponibles';
 
@@ -114,24 +81,20 @@ export default function Profile() {
     return `${formatDate(start)} - ${formatDate(end)}`;
   };
 
-  // Funciones de carga de datos por rol usando APIs reales
   const loadAdminData = async () => {
     try {
       if (!user?.campus?.id) {
         throw new Error('No se encontró información del plantel del administrador');
       }
 
-      // Obtener roles para filtrar correctamente
       const roles = await getAllRoles();
       const teacherRole = roles.find((r) => r.roleName === 'TEACHER');
 
-      // Datos del plantel específico del admin
       const [careers, teachers] = await Promise.all([getCareerByPlantelId(user.campus.id), getUserByRoleAndPlantel(teacherRole.id, user.campus.id)]);
 
       const careersArray = Array.isArray(careers) ? careers : careers?.data || [];
       const teachersArray = Array.isArray(teachers) ? teachers : [];
 
-      // Verificar carreras sin plan de estudios
       let careersWithoutCurriculum = 0;
       for (const career of careersArray) {
         try {
@@ -141,11 +104,10 @@ export default function Profile() {
             careersWithoutCurriculum++;
           }
         } catch (error) {
-          careersWithoutCurriculum++; // Asume que no tiene plan si hay error
+          careersWithoutCurriculum++;
         }
       }
 
-      // Contar grupos sin docente
       let groupsWithoutTeacher = 0;
       for (const career of careersArray) {
         try {
@@ -157,8 +119,7 @@ export default function Profile() {
         }
       }
 
-      // Simular notificaciones pendientes (por ahora)
-      const pendingNotifications = Math.floor(Math.random() * 3); // 0-2 notificaciones
+      const pendingNotifications = Math.floor(Math.random() * 3);
 
       return {
         card1Data: {
@@ -195,14 +156,12 @@ export default function Profile() {
 
   const loadTeacherData = async () => {
     try {
-      // Obtener grupos del docente
       const groups = await getGroupByTeacher(user.id);
       const groupsArray = Array.isArray(groups) ? groups : [];
 
       let totalStudents = 0;
       const groupsWithStudents = [];
 
-      // Calcular estudiantes por grupo
       for (const group of groupsArray) {
         try {
           const students = await getGroupStudents(group.groupId);
@@ -221,7 +180,6 @@ export default function Profile() {
         }
       }
 
-      // Obtener evaluaciones del docente
       let teacherPerformance = {
         averageRating: 0,
         totalEvaluations: 0,
@@ -246,7 +204,6 @@ export default function Profile() {
         console.warn('Error cargando evaluaciones del docente:', error);
       }
 
-      // Obtener día actual para horarios
       const today = new Date();
       const dayIndex = today.getDay();
       const weekDays = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB'];
@@ -260,7 +217,7 @@ export default function Profile() {
           icon: MdOutlineGroup,
           activeGroups: groupsArray.length,
           totalStudents: totalStudents,
-          groups: groupsWithStudents.slice(0, 3), // Mostrar solo los primeros 3
+          groups: groupsWithStudents.slice(0, 3),
           todayGroups: todayGroups,
           currentWeekDay: currentWeekDay,
         },
@@ -347,10 +304,8 @@ export default function Profile() {
             continue;
           }
 
-          // Obtener el curriculum del grupo
           const curriculum = await getCurriculumById(foundActiveGroup.curriculumId);
 
-          // Calcular total de materias en el curriculum
           let totalSubjects = 0;
           if (curriculum?.modules) {
             curriculum.modules.forEach((module) => {
@@ -360,17 +315,13 @@ export default function Profile() {
             });
           }
 
-          // Obtener calificaciones del estudiante en este grupo
           const qualifications = await getQualificationsByGroupWithDetails(foundActiveGroup.groupId);
 
-          // Contar materias calificadas por este estudiante
           const studentQualifications = qualifications.filter((q) => q.studentId === user.id);
           const completedSubjects = studentQualifications.length;
 
-          // Calcular progreso basado en materias completadas
           const progress = totalSubjects > 0 ? Math.round((completedSubjects / totalSubjects) * 100) : 0;
 
-          // Formatear período con fechas reales del grupo
           const period = formatDateRange(groupDetails.startDate, groupDetails.endDate);
 
           progressData.push({
@@ -419,7 +370,6 @@ export default function Profile() {
     }
   };
 
-  // Cargar datos según el rol del usuario
   const loadRoleData = async () => {
     setRoleData((prev) => ({ ...prev, loading: true, error: null }));
 
@@ -473,7 +423,6 @@ export default function Profile() {
     }
   };
 
-  // Effects existentes
   useEffect(() => {
     if (location.state?.shouldChangePassword) {
       setIsOpening(true);
@@ -535,14 +484,12 @@ export default function Profile() {
     };
   }, []);
 
-  // Cargar datos del rol al montar el componente
   useEffect(() => {
     if (user) {
       loadRoleData();
     }
   }, [user]);
 
-  // Funciones existentes de formateo y validación
   const formatDate = (dateString) => {
     if (!dateString) return 'Sin fecha';
     try {
@@ -589,7 +536,6 @@ export default function Profile() {
     },
   ];
 
-  // Funciones existentes de validación y manejo de contraseña
   const validateForm = () => {
     if (!currentPassword.trim()) {
       showError('Error', 'La contraseña actual es requerida');
@@ -675,7 +621,6 @@ export default function Profile() {
   const isShortPass = newPassword && newPassword.length < 8;
   const isMismatch = confirmPassword && newPassword && newPassword !== confirmPassword;
 
-  // Helper para obtener labels de días
   const getWeekLabel = (code) => {
     const weekDayOptions = [
       { label: 'Lunes', value: 'LUN' },
@@ -689,7 +634,6 @@ export default function Profile() {
     return weekDayOptions.find((o) => o.value === code)?.label || code;
   };
 
-  // Renderizar cards dinámicos por rol
   const renderCard1 = () => {
     if (roleData.loading) {
       return (
@@ -713,7 +657,6 @@ export default function Profile() {
 
     const { card1Data } = roleData;
     if (!card1Data) {
-      // Para SUPERVISOR que no tiene cards
       return (
         <div className="card border-0 h-100">
           <div className="card-body">
@@ -980,7 +923,7 @@ export default function Profile() {
         <h3 className="text-blue-500 fw-semibold mx-3 my-1">Perfil</h3>
       </div>
 
-      {/* PRIMERA FILA - NO MODIFICAR: Avatar + Información Personal */}
+      {/* PRIMERA FILA - Avatar + Información Personal */}
       <div className="row mt-3">
         <div className="col-12 col-md-4 mb-3 mb-md-0">
           <div className="card border-0 h-100">
@@ -1042,7 +985,7 @@ export default function Profile() {
         </div>
       )}
 
-      {/* Modal de cambio de contraseña - SIN CAMBIOS */}
+      {/* Modal de cambio de contraseña */}
       <div className="modal fade" ref={changePasswordModalRef} tabIndex={-1} data-bs-backdrop="static" data-bs-keyboard="false">
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">

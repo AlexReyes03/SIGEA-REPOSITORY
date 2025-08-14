@@ -34,7 +34,6 @@ export default function GroupModulesTable({ group }) {
   const [showQualificationDetails, setShowQualificationDetails] = useState({});
   const [showHistoricalStudents, setShowHistoricalStudents] = useState(true);
 
-  // Nuevo estado para forzar re-render cuando sea necesario
   const [forceUpdate, setForceUpdate] = useState(0);
 
   const loadData = useCallback(async () => {
@@ -128,7 +127,6 @@ export default function GroupModulesTable({ group }) {
         return row;
       });
 
-      // Ordenar: primero activos, luego por nombre
       rows.sort((a, b) => {
         if (a.isActive && !b.isActive) return -1;
         if (!a.isActive && b.isActive) return 1;
@@ -137,7 +135,6 @@ export default function GroupModulesTable({ group }) {
 
       setTableData(rows);
 
-      // Forzar actualización para resolver bugs de renderizado
       setTimeout(() => {
         setForceUpdate((prev) => prev + 1);
       }, 100);
@@ -155,7 +152,6 @@ export default function GroupModulesTable({ group }) {
     }
   }, [group, loadData]);
 
-  // Funciones mejoradas para evitar problemas de caché
   const hasInvalidValues = useCallback(
     (moduleId) => {
       const moduleInvalidCells = invalidCells[moduleId] || {};
@@ -179,7 +175,6 @@ export default function GroupModulesTable({ group }) {
       const module = curriculum.modules.find((m) => m.id === moduleId);
       if (!module || !module.subjects.length) return true;
 
-      // Solo considerar estudiantes activos para determinar si el módulo está completo
       const activeStudents = tableData.filter((student) => student.isActive);
       if (activeStudents.length === 0) return true;
 
@@ -193,7 +188,6 @@ export default function GroupModulesTable({ group }) {
     [tableData, curriculum]
   );
 
-  // Sistema mejorado para obtener valores actuales (sin caché problemático)
   const getCurrentValue = useCallback(
     (moduleId, studentId, subjectId, originalValue) => {
       const editedValue = editedGrades[moduleId]?.[studentId]?.[subjectId];
@@ -207,7 +201,6 @@ export default function GroupModulesTable({ group }) {
       const studentId = options.rowData.studentId;
       const currentValue = getCurrentValue(moduleId, studentId, subjId, options.value);
 
-      // NO permitir edición si el estudiante no está activo
       if (!options.rowData.isActive) {
         return <span style={{ display: 'block', textAlign: 'center', opacity: 0.7 }}>{currentValue || '—'}</span>;
       }
@@ -241,7 +234,6 @@ export default function GroupModulesTable({ group }) {
           },
         }));
 
-        // Forzar actualización del componente para reflejar cambios inmediatamente
         setTimeout(() => {
           options.editorCallback(val);
           setForceUpdate((prev) => prev + 1);
@@ -255,7 +247,6 @@ export default function GroupModulesTable({ group }) {
     [getCurrentValue, invalidCells]
   );
 
-  // Handlers mejorados
   const createHandleSave = useCallback(
     (moduleId) => async () => {
       const hasInvalidGrades = hasInvalidValues(moduleId);
@@ -283,7 +274,6 @@ export default function GroupModulesTable({ group }) {
             const gradesToSave = [];
 
             Object.entries(edits).forEach(([studentId, subjMap]) => {
-              // Verificar que el estudiante esté activo antes de guardar
               const student = tableData.find((s) => s.studentId === Number(studentId));
               if (!student || !student.isActive) {
                 console.warn(`Intento de guardar calificación para estudiante inactivo: ${studentId}`);
@@ -310,7 +300,6 @@ export default function GroupModulesTable({ group }) {
 
             showSuccess('Hecho', 'Calificaciones registradas exitosamente');
 
-            // Limpiar estados de edición
             setEditedGrades((prev) => ({
               ...prev,
               [moduleId]: {},
@@ -324,7 +313,6 @@ export default function GroupModulesTable({ group }) {
               [moduleId]: false,
             }));
 
-            // Recargar datos con delay para asegurar que el backend procesó los cambios
             setTimeout(() => {
               loadData();
             }, 500);
@@ -352,7 +340,6 @@ export default function GroupModulesTable({ group }) {
         [moduleId]: {},
       }));
 
-      // Forzar actualización para refrescar la vista
       setTimeout(() => {
         setForceUpdate((prev) => prev + 1);
       }, 100);
@@ -360,7 +347,6 @@ export default function GroupModulesTable({ group }) {
     []
   );
 
-  // Función para manejar el toggle de detalles (simplificada)
   const handleToggleDetails = useCallback((moduleId) => {
     setShowQualificationDetails((prev) => ({
       ...prev,
@@ -368,7 +354,6 @@ export default function GroupModulesTable({ group }) {
     }));
   }, []);
 
-  // Función para manejar el colapso/expansión de módulos (con fix para tooltips)
   const handleToggleCollapse = useCallback((moduleId) => {
     setShowQualificationDetails((prev) => ({
       ...prev,
@@ -394,13 +379,11 @@ export default function GroupModulesTable({ group }) {
     setShowHistoricalStudents((prev) => !prev);
   }, []);
 
-  // Módulos ordenados
   const sortedModules = useMemo(() => {
     if (!curriculum?.modules) return [];
     return [...curriculum.modules].sort((a, b) => b.id - a.id);
   }, [curriculum?.modules]);
 
-  // Filtrar datos de la tabla según showHistoricalStudents
   const filteredTableData = useMemo(() => {
     if (showHistoricalStudents) {
       return tableData;
@@ -408,7 +391,6 @@ export default function GroupModulesTable({ group }) {
     return tableData.filter((row) => row.isActive);
   }, [tableData, showHistoricalStudents]);
 
-  // Estilos
   const gridLinesX = useMemo(
     () => ({
       borderLeft: '1px solid #ededed',
@@ -417,7 +399,6 @@ export default function GroupModulesTable({ group }) {
     []
   );
 
-  // Crear header groups para todos los módulos (mejorado)
   const headerGroups = useMemo(() => {
     const groups = {};
     sortedModules.forEach((module) => {
@@ -439,21 +420,18 @@ export default function GroupModulesTable({ group }) {
     return groups;
   }, [sortedModules, forceUpdate]);
 
-  // Crear table keys mejoradas (menos agresivas)
   const tableKeys = useMemo(() => {
     const keys = {};
     sortedModules.forEach((module) => {
       const isEditing = isEditingModule[module.id];
       const editedCount = Object.keys(editedGrades[module.id] || {}).length;
       const detailsShown = showQualificationDetails[module.id];
-      // Solo incluir forceUpdate cuando realmente sea necesario (en modo edición)
       const forceKey = isEditing ? forceUpdate : 0;
       keys[module.id] = `${module.id}-${isEditing ? 'edit' : 'view'}-${detailsShown ? 'details' : 'nodetails'}-${editedCount}-${forceKey}-${showHistoricalStudents}`;
     });
     return keys;
   }, [sortedModules, isEditingModule, editedGrades, showQualificationDetails, forceUpdate, showHistoricalStudents]);
 
-  // Template para el nombre del estudiante
   const studentNameTemplate = (row) => {
     return (
       <div className="d-flex align-items-center gap-2">
@@ -476,16 +454,13 @@ export default function GroupModulesTable({ group }) {
         const isEditing = isEditingModule[module.id];
         const search = searchTerms[module.id] || '';
 
-        // Valores calculados por módulo
         const hasInvalidGrades = hasInvalidValues(module.id);
         const hasValidGrades = hasValidGradesToSave(module.id);
         const allGradesComplete = areAllGradesComplete(module.id);
 
-        // Handlers específicos del módulo
         const handleSave = createHandleSave(module.id);
         const handleCancelEdit = createHandleCancelEdit(module.id);
 
-        // Obtener header group y table key
         const headerGroup = headerGroups[module.id];
         const tableKey = tableKeys[module.id];
 
@@ -679,7 +654,6 @@ export default function GroupModulesTable({ group }) {
                           return <span style={{ display: 'block', textAlign: 'center', color: '#6c757d' }}>SC</span>;
                         }
 
-                        // Para estudiantes históricos en modo edición, mostrar valor con opacidad
                         if (isEditing && !row.isActive) {
                           return (
                             <span
@@ -706,7 +680,6 @@ export default function GroupModulesTable({ group }) {
                           return <span>{originalValue ?? ''}</span>;
                         }
 
-                        // NO permitir edición si el estudiante no está activo
                         if (!rowData.isActive) {
                           setTimeout(() => options.editorCallback(originalValue));
                           return <span style={{ display: 'block', textAlign: 'center', opacity: 0.5 }}>{originalValue || 'SC'}</span>;
@@ -727,7 +700,6 @@ export default function GroupModulesTable({ group }) {
                     className="fw-semibold"
                     style={gridLinesX}
                     body={(row) => {
-                      // Calcular promedio usando datos actuales (incluyendo ediciones)
                       const grades = module.subjects
                         .map((s) => {
                           const originalValue = row[s.id];

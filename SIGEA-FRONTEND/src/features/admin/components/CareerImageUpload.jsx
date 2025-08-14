@@ -102,7 +102,6 @@ export default function CareerImageUpload({ onImagesUpdated }) {
     }
   }, [user?.campus?.id, showError]);
 
-  // Limpia el file y el peso al cerrar el modal
   useEffect(() => {
     const modalEl = modalRef.current;
     if (!modalEl) return;
@@ -171,10 +170,8 @@ export default function CareerImageUpload({ onImagesUpdated }) {
       await uploadCareerImage(selectedCareer.id, file);
       showSuccess('Éxito', `Imagen actualizada para ${selectedCareer.name}`);
 
-      // Actualizar la lista de carreras
       await loadCareers();
 
-      // Notificar al componente padre
       if (onImagesUpdated) {
         onImagesUpdated();
       }
@@ -209,9 +206,7 @@ export default function CareerImageUpload({ onImagesUpdated }) {
     new Modal(modalRef.current).show();
   };
 
-  // CAMBIO: No limpiar imagen si es la misma carrera
   const selectCareer = (career) => {
-    // Solo limpiar si es una carrera diferente
     if (selectedCareer?.id !== career.id) {
       setFile(null);
       setTotalSize(0);
@@ -224,8 +219,7 @@ export default function CareerImageUpload({ onImagesUpdated }) {
   const headerTemplate = (options) => {
     const { className, chooseButton, uploadButton, cancelButton } = options;
 
-    // Calcular progreso basado en si la imagen fue optimizada o no
-    const maxDisplaySize = 5 * 1024 * 1024; // 5MB para display
+    const maxDisplaySize = 5 * 1024 * 1024;
     const value = Math.min((totalSize / maxDisplaySize) * 100, 100);
     const formatedValue = fileUploadRef && fileUploadRef.current ? fileUploadRef.current.formatSize(totalSize) : '0 B';
 
@@ -404,7 +398,7 @@ export default function CareerImageUpload({ onImagesUpdated }) {
                       name="careerImage"
                       customUpload
                       accept="image/*"
-                      maxFileSize={100_000_000} // 100MB para permitir cualquier imagen inicial
+                      maxFileSize={100_000_000}
                       uploadHandler={onTemplateUpload}
                       onSelect={onTemplateSelect}
                       onError={onTemplateClear}

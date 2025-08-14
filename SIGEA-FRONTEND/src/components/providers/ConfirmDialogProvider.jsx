@@ -36,7 +36,7 @@ export const ConfirmDialogProvider = ({ children }) => {
         maxWidth: '500px',
       },
       contentStyle: {
-        textAlign: 'center',
+        textAlign: 'start',
         wordWrap: 'break-word',
         wordBreak: 'break-word',
         whiteSpace: 'normal',

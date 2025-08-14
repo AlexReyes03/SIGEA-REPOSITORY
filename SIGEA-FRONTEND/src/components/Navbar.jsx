@@ -170,7 +170,11 @@ const Navbar = forwardRef(function Navbar({ toggleSidebar }, toggleRef) {
                   <button
                     className="dropdown-item"
                     onClick={() => {
-                      navigate(`/${roleKey.toLowerCase()}/profile`);
+                      const profilePath =
+                        roleKey === 'DEV'
+                          ? '/developer/profile'
+                          : `/${roleKey.toLowerCase()}/profile`;
+                      navigate(profilePath);
                       setShow(false);
                     }}
                   >

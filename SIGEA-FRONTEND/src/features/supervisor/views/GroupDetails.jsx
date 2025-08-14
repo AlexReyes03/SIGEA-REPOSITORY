@@ -27,7 +27,6 @@ const weekDayOptions = [
 
 const weekLabel = (code) => weekDayOptions.find((o) => o.value === code)?.label || code;
 
-// Función helper para formatear fechas a "MES - AÑO"
 const formatDateToMonthYear = (dateString) => {
   if (!dateString) return 'No definida';
 
@@ -40,7 +39,6 @@ const formatDateToMonthYear = (dateString) => {
   return `${month} ${year}`;
 };
 
-// Función helper para calcular el estado del grupo
 const getGroupStatus = (startDate, endDate) => {
   if (!startDate || !endDate) return 'Sin fecha';
 
@@ -57,7 +55,6 @@ const getGroupStatus = (startDate, endDate) => {
   }
 };
 
-// Variantes de animación para las transiciones (igual que en Admin)
 const slideVariants = {
   modulesEnter: {
     x: '100%',
@@ -100,8 +97,7 @@ export default function GroupDetails() {
 
   const { group, career, campusId, campusName, isPrimary } = location.state || {};
 
-  // Estados para el cambio de vista (igual que en Admin)
-  const [currentView, setCurrentView] = useState(true); // true = módulos, false = estudiantes
+  const [currentView, setCurrentView] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const [teacher, setTeacher] = useState(null);
@@ -113,7 +109,6 @@ export default function GroupDetails() {
     return `${BACKEND_BASE_URL}${url}`;
   }
 
-  // Función para manejar el cambio de vista con animaciones (igual que en Admin)
   const handleViewChange = useCallback(() => {
     if (isTransitioning) return;
 
@@ -160,7 +155,6 @@ export default function GroupDetails() {
     };
   }, [group, navigate, showError, career, campusId, campusName, isPrimary]);
 
-  // Información del grupo
   const groupInfo = [
     {
       label: 'Carrera',
@@ -188,7 +182,6 @@ export default function GroupDetails() {
     },
   ];
 
-  // Configuración de la vista actual (actualizada para supervisor)
   const getViewConfig = () => {
     if (currentView) {
       return {
@@ -209,7 +202,6 @@ export default function GroupDetails() {
 
   const viewConfig = getViewConfig();
 
-  // Breadcrumb para supervisor
   const breadcrumbItems = [
     {
       label: 'Campus',
@@ -241,7 +233,6 @@ export default function GroupDetails() {
 
   return (
     <>
-      {/* Header con botón de cambio de vista (igual que en Admin) */}
       <div className="d-flex flex-row justify-content-between align-items-center bg-white rounded-top p-2">
         <h3 className="text-blue-500 fw-semibold text-truncate mx-3 my-1">{viewConfig.headerText}</h3>
         <Button 
@@ -360,7 +351,6 @@ export default function GroupDetails() {
             </div>
           </div>
 
-          {/* Contenedor con animaciones para las vistas (igual que en Admin) */}
           <div className="col-12 mb-3" style={{ position: 'relative', overflow: 'hidden' }}>
             <AnimatePresence mode="wait" initial={false}>
               {currentView ? (
