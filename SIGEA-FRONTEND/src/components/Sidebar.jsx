@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useConfirmDialog } from './providers/ConfirmDialogProvider';
+import { useNotificationContext } from './providers/NotificationProvider';
 
 export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onLogout }) {
   const sidebarRef = useRef(null);
@@ -12,6 +13,9 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
   const location = useLocation();
   const { confirmAction } = useConfirmDialog();
   const { user } = useAuth();
+  
+  // Usar el contexto de notificaciones
+  const { notificationCount } = useNotificationContext();
 
   const hasRenderedOnce = useRef(false);
   const currentPath = location.pathname;
@@ -52,6 +56,14 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
 
   const MENU_ITEMS = useMemo(() => {
     if (!user) return [];
+    
+    const createNotificationItem = (basePath) => ({
+      label: 'Notificaciones',
+      path: `${basePath}/notifications`,
+      Icon: MdNotifications,
+      badge: notificationCount > 0 ? notificationCount : null
+    });
+
     switch (user.role.name) {
       case 'ADMIN':
         return [
@@ -60,7 +72,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
           { label: 'Carreras', path: '/admin/careers', Icon: MdSchool },
           { label: 'Usuarios', path: '/admin/users', Icon: MdGroups },
           { label: 'Perfil', path: '/admin/profile', Icon: MdPerson },
-          { label: 'Notificaciones', path: '/admin/notifications', Icon: MdNotifications },
+          createNotificationItem('/admin'),
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },
         ];
       case 'DEV':
@@ -77,7 +89,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
           { label: 'Carreras', path: '/supervisor/campuses-careers', Icon: MdSchool },
           { label: 'Desempeño', path: '/supervisor/campuses-teachers', Icon: MdLeaderboard },
           { label: 'Perfil', path: '/supervisor/profile', Icon: MdPerson },
-          { label: 'Notificaciones', path: '/supervisor/notifications', Icon: MdNotifications },
+          createNotificationItem('/supervisor'),
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },
         ];
       case 'TEACHER':
@@ -85,7 +97,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
           { label: 'Inicio', path: '/teacher', Icon: MdHome },
           { label: 'Mis Cursos', path: '/teacher/groups', Icon: MdSchool },
           { label: 'Perfil', path: '/teacher/profile', Icon: MdPerson },
-          { label: 'Notificaciones', path: '/teacher/notifications', Icon: MdNotifications },
+          createNotificationItem('/teacher'),
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },
         ];
       case 'STUDENT':
@@ -94,7 +106,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
           { label: 'Grupos', path: '/student/groups', Icon: MdSchool },
           { label: 'Evaluación Docente', path: '/student/teacher-evaluation', Icon: MdLeaderboard },
           { label: 'Perfil', path: '/student/profile', Icon: MdPerson },
-          { label: 'Notificaciones', path: '/student/notifications', Icon: MdNotifications },
+          createNotificationItem('/student'),
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },
         ];
       default:
@@ -103,7 +115,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
           { label: 'Cerrar sesión', path: null, Icon: MdLogout },
         ];
     }
-  }, [user]);
+  }, [user, notificationCount]);
 
   const activeItemPath = useMemo(() => {
     const matches = MENU_ITEMS.filter((item) => item.path && currentPath.startsWith(item.path)).sort((a, b) => b.path.length - a.path.length);
@@ -154,13 +166,53 @@ export default function Sidebar({ isOpen, toggleSidebar, onClose, toggleRef, onL
           const isCurrent = !isOpen && item.path === activeItemPath;
           return (
             <motion.li key={item.label} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.1 }} className="mb-2" style={{ cursor: 'pointer' }}>
-              <button type="button" className={'btn btn-light d-flex align-items-center sidebar-btn w-100' + (isCurrent ? ' sidebar-btn-current' : '') + (isCurrent && showBlueBg ? ' sidebar-btn-current-animate' : '')} onClick={() => handleItemClick(item)} tabIndex={0}>
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.1 + 0.05 }}>
+              <button 
+                type="button" 
+                className={`btn btn-light d-flex align-items-center sidebar-btn w-100 position-relative${isCurrent ? ' sidebar-btn-current' : ''}${isCurrent && showBlueBg ? ' sidebar-btn-current-animate' : ''}`} 
+                onClick={() => handleItemClick(item)} 
+                tabIndex={0}
+              >
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }} 
+                  animate={{ opacity: 1, x: 0 }} 
+                  transition={{ delay: idx * 0.1 + 0.05 }}
+                  className="position-relative"
+                >
                   <item.Icon size={28} />
+                  {/* Badge de notificaciones */}
+                  {item.badge && (
+                    <span 
+                      className="position-absolute translate-middle badge rounded-pill bg-danger"
+                      style={{
+                        top: '15%',
+                        left: '85%',
+                        fontSize: '0.65rem',
+                        minWidth: '18px',
+                        height: '18px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0 5px'
+                      }}
+                    >
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  )}
                 </motion.div>
                 {isOpen && (
-                  <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.1 }} className="ms-2 text-truncate text-nowrap">
+                  <motion.span 
+                    initial={{ opacity: 0, x: -10 }} 
+                    animate={{ opacity: 1, x: 0 }} 
+                    transition={{ delay: idx * 0.1 }} 
+                    className="ms-2 text-truncate text-nowrap d-flex align-items-center"
+                  >
                     {item.label}
+                    {/* Badge cuando sidebar está abierto */}
+                    {item.badge && (
+                      <span className="badge bg-danger ms-auto" style={{ fontSize: '0.7rem' }}>
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
                   </motion.span>
                 )}
               </button>
