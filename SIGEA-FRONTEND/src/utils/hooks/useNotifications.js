@@ -160,54 +160,86 @@ export const useNotifications = () => {
       // Desconectar conexión anterior si existe
       disconnectWebSocket();
 
-      const socketUrl = import.meta.env.VITE_WEBSOCKET_URL || `${BACKEND_BASE_URL}/ws`;
-      const socket = new SockJS(socketUrl);
-      const stompClient = Stomp.over(socket);
+      console.log('Attempting to connect to WebSocket...');
 
-      // Configurar logging
-      stompClient.debug = (str) => {
-        console.log('STOMP:', str);
+      // Crear socket con SockJS
+      const socketUrl = import.meta.env.VITE_WEBSOCKET_URL || `${BACKEND_BASE_URL}/ws`;
+      console.log('WebSocket URL:', socketUrl);
+      
+      // Crear socket factory function para reconexión automática
+      const socketFactory = () => {
+        const socket = new SockJS(socketUrl);
+        return socket;
       };
 
-      // Conectar con autenticación JWT
-      stompClient.connect(
-        { 
-          Authorization: `Bearer ${token}`,
-          'X-Auth-Token': token // Header alternativo por si acaso
-        },
-        (frame) => {
-          console.log('Connected to WebSocket:', frame);
-          setConnected(true);
-          reconnectAttempts.current = 0;
+      const stompClient = Stomp.over(socketFactory);
 
-          // Subscribirse a notificaciones del usuario
-          const notificationSub = stompClient.subscribe(
-            `/user/queue/notifications`,
-            handleWebSocketMessage
-          );
-
-          // Subscribirse a conteo de notificaciones
-          const countSub = stompClient.subscribe(
-            `/user/queue/notification-count`,
-            handleWebSocketMessage
-          );
-
-          // Guardar subscripciones
-          subscriptionsRef.current = [notificationSub, countSub];
-          stompClientRef.current = stompClient;
-
-          console.log(`Subscribed to user queues for user ID: ${user.id}`);
-        },
-        (error) => {
-          console.error('WebSocket connection error:', error);
-          setConnected(false);
-          handleReconnect();
-        }
-      );
+      // Configurar debug y logging
+      stompClient.debug = (str) => {
+        console.log('STOMP Debug:', str);
+      };
 
       // Configurar heartbeat
       stompClient.heartbeat.outgoing = 20000; // 20s
       stompClient.heartbeat.incoming = 20000; // 20s
+
+      // Headers de conexión con JWT
+      const connectHeaders = {
+        'Authorization': `Bearer ${token}`,
+        'X-Auth-Token': token // Header alternativo
+      };
+
+      console.log('Connecting with headers:', { Authorization: 'Bearer [TOKEN]', 'X-Auth-Token': '[TOKEN]' });
+
+      // Conectar con autenticación JWT
+      stompClient.connect(
+        connectHeaders,
+        (frame) => {
+          console.log('Successfully connected to WebSocket:', frame);
+          setConnected(true);
+          reconnectAttempts.current = 0;
+
+          try {
+            // Subscribirse a notificaciones del usuario
+            const notificationSub = stompClient.subscribe(
+              `/user/queue/notifications`,
+              handleWebSocketMessage,
+              { id: 'notifications-sub' }
+            );
+
+            // Subscribirse a conteo de notificaciones
+            const countSub = stompClient.subscribe(
+              `/user/queue/notification-count`,
+              handleWebSocketMessage,
+              { id: 'count-sub' }
+            );
+
+            // Guardar subscripciones
+            subscriptionsRef.current = [notificationSub, countSub];
+            stompClientRef.current = stompClient;
+
+            console.log(`Successfully subscribed to user queues for user ID: ${user.id}`);
+
+          } catch (subError) {
+            console.error('Error during subscription:', subError);
+          }
+        },
+        (error) => {
+          console.error('WebSocket connection error:', error);
+          setConnected(false);
+          
+          // Si es error de autenticación (403), no reintentar inmediatamente
+          if (error && error.toString().includes('403')) {
+            console.error('Authentication failed - check JWT token');
+            // Esperar más tiempo antes de reintentar
+            setTimeout(() => {
+              handleReconnect();
+            }, 5000);
+          } else {
+            handleReconnect();
+          }
+        }
+      );
 
     } catch (err) {
       console.error('Error connecting to WebSocket:', err);
@@ -237,17 +269,29 @@ export const useNotifications = () => {
   const disconnectWebSocket = useCallback(() => {
     // Limpiar subscripciones
     subscriptionsRef.current.forEach(subscription => {
-      if (subscription) {
-        subscription.unsubscribe();
+      if (subscription && subscription.unsubscribe) {
+        try {
+          subscription.unsubscribe();
+        } catch (err) {
+          console.warn('Error unsubscribing:', err);
+        }
       }
     });
     subscriptionsRef.current = [];
 
     // Desconectar cliente STOMP
-    if (stompClientRef.current && stompClientRef.current.connected) {
-      stompClientRef.current.disconnect();
+    if (stompClientRef.current) {
+      try {
+        if (stompClientRef.current.connected) {
+          stompClientRef.current.disconnect(() => {
+            console.log('WebSocket disconnected successfully');
+          });
+        }
+      } catch (err) {
+        console.warn('Error disconnecting STOMP client:', err);
+      }
+      stompClientRef.current = null;
     }
-    stompClientRef.current = null;
 
     // Limpiar timeout de reconexión
     if (reconnectTimeoutRef.current) {
@@ -263,12 +307,17 @@ export const useNotifications = () => {
   useEffect(() => {
     if (user?.id) {
       loadNotifications();
-      connectWebSocket();
-    }
+      
+      // Pequeña demora antes de conectar WebSocket
+      const timeout = setTimeout(() => {
+        connectWebSocket();
+      }, 1000);
 
-    return () => {
-      disconnectWebSocket();
-    };
+      return () => {
+        clearTimeout(timeout);
+        disconnectWebSocket();
+      };
+    }
   }, [user?.id, loadNotifications, connectWebSocket, disconnectWebSocket]);
 
   // Cleanup al desmontar
