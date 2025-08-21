@@ -16,14 +16,12 @@ export const useNotifications = () => {
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
 
-  // Refs para WebSocket
   const stompClientRef = useRef(null);
   const subscriptionsRef = useRef([]);
   const reconnectTimeoutRef = useRef(null);
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 3;
 
-  // Cargar notificaciones iniciales
   const loadNotifications = useCallback(async () => {
     if (!user?.id) return;
 
@@ -33,11 +31,7 @@ export const useNotifications = () => {
 
       setNotifications(Array.isArray(notificationsData) ? notificationsData : []);
       setNotificationCount(countData?.count || countData?.unreadCount || 0);
-
-      console.log('✅ Notifications loaded:', notificationsData.length);
-      console.log('✅ Count:', countData?.count || countData?.unreadCount || 0);
     } catch (err) {
-      console.error('❌ Error loading notifications:', err);
       setNotifications([]);
       setNotificationCount(0);
     } finally {
@@ -45,7 +39,6 @@ export const useNotifications = () => {
     }
   }, [user?.id]);
 
-  // Actualizar una notificación localmente
   const updateNotificationLocally = useCallback((notificationId, updates) => {
     setNotifications((prev) => prev.map((notification) => (notification.id === notificationId ? { ...notification, ...updates } : notification)));
 
@@ -54,7 +47,6 @@ export const useNotifications = () => {
     }
   }, []);
 
-  // Agregar nueva notificación
   const addNotification = useCallback((newNotification) => {
     setNotifications((prev) => [newNotification, ...prev]);
     if (!newNotification.read) {
@@ -62,7 +54,6 @@ export const useNotifications = () => {
     }
   }, []);
 
-  // Eliminar notificación localmente
   const removeNotificationLocally = useCallback((notificationId) => {
     setNotifications((prev) => {
       const notification = prev.find((n) => n.id === notificationId);
@@ -76,14 +67,11 @@ export const useNotifications = () => {
     });
   }, []);
 
-  // Manejar mensajes del WebSocket
   const handleWebSocketMessage = useCallback(
     (message) => {
       try {
         const parsedMessage = JSON.parse(message.body);
         const { type, data } = parsedMessage;
-
-        console.log('📨 WebSocket message received:', { type, data });
 
         switch (type) {
           case 'NOTIFICATION':
@@ -100,137 +88,97 @@ export const useNotifications = () => {
               json: data.json || '{}',
             };
             addNotification(notification);
-            console.log('🔔 New notification added:', notification.title);
             break;
 
           case 'NOTIFICATION_COUNT':
             setNotificationCount(data.unreadCount || 0);
-            console.log('🔄 Count updated to:', data.unreadCount);
             break;
 
           case 'CONNECTION_STATUS':
-            console.log('🔗 Connection status:', data);
             break;
 
           case 'ERROR':
-            console.error('❌ WebSocket error:', data);
             break;
 
           default:
-            console.warn('❓ Unknown message type:', type);
+            break;
         }
-      } catch (err) {
-        console.error('❌ Error parsing WebSocket message:', err);
-      }
+      } catch (err) {}
     },
     [addNotification]
   );
 
-  // Conectar WebSocket
   const connectWebSocket = useCallback(() => {
     if (!user?.id) return;
 
     const token = localStorage.getItem('token');
     if (!token) {
-      console.error('❌ No JWT token found');
       return;
     }
 
-    // Desconectar conexión anterior
     disconnectWebSocket();
-
-    console.log('🔄 Connecting to WebSocket...');
 
     try {
       const socketUrl = `${BASE_URL}/ws`;
-      console.log('🌐 WebSocket URL:', socketUrl);
-
       const socket = new SockJS(socketUrl);
       const stompClient = Stomp.over(socket);
 
-      // Configurar debug mínimo
-      stompClient.debug = (str) => {
-        if (str.includes('CONNECTED') || str.includes('ERROR') || str.includes('DISCONNECT')) {
-          console.log('🔧 STOMP:', str);
-        }
-      };
+      stompClient.debug = () => {};
 
-      // Headers de conexión
       const connectHeaders = {
         Authorization: `Bearer ${token}`,
       };
 
-      // Conectar
       stompClient.connect(
         connectHeaders,
         (frame) => {
-          console.log('✅ WebSocket connected successfully');
           setConnected(true);
           reconnectAttempts.current = 0;
 
           try {
-            // Suscribirse a notificaciones
             const notificationSub = stompClient.subscribe(`/user/queue/notifications`, handleWebSocketMessage);
 
-            // Suscribirse a conteo
             const countSub = stompClient.subscribe(`/user/queue/notification-count`, handleWebSocketMessage);
 
             subscriptionsRef.current = [notificationSub, countSub];
             stompClientRef.current = stompClient;
-
-            console.log(`✅ Subscribed for user: ${user.id}`);
-          } catch (subError) {
-            console.error('❌ Subscription error:', subError);
-          }
+          } catch (subError) {}
         },
         (error) => {
-          console.error('❌ WebSocket connection failed:', error);
           setConnected(false);
 
           if (reconnectAttempts.current < maxReconnectAttempts) {
             const delay = Math.pow(2, reconnectAttempts.current) * 2000;
             reconnectAttempts.current++;
-            console.log(`🔄 Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current})`);
 
             reconnectTimeoutRef.current = setTimeout(() => {
               connectWebSocket();
             }, delay);
-          } else {
-            console.log('❌ Max reconnection attempts reached');
           }
         }
       );
     } catch (err) {
-      console.error('❌ WebSocket setup error:', err);
       setConnected(false);
     }
   }, [user?.id, handleWebSocketMessage]);
 
-  // Desconectar WebSocket
   const disconnectWebSocket = useCallback(() => {
-    // Limpiar subscripciones
     subscriptionsRef.current.forEach((sub) => {
       try {
         if (sub && sub.unsubscribe) sub.unsubscribe();
-      } catch (err) {
-        console.warn('⚠️ Error unsubscribing:', err);
-      }
+      } catch (err) {}
     });
     subscriptionsRef.current = [];
 
-    // Desconectar cliente
     if (stompClientRef.current) {
       try {
         if (stompClientRef.current.connected) {
           stompClientRef.current.disconnect();
         }
-      } catch (err) {
-        console.warn('⚠️ Error disconnecting:', err);
-      }
+      } catch (err) {}
       stompClientRef.current = null;
     }
 
-    // Limpiar timeout
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
@@ -240,24 +188,18 @@ export const useNotifications = () => {
     reconnectAttempts.current = 0;
   }, []);
 
-  // Métodos stub
   const loadNotificationCount = useCallback(async () => {
     if (!user?.id) return;
     try {
       const countData = await getNotificationCount(user.id);
       setNotificationCount(countData?.count || countData?.unreadCount || 0);
-    } catch (err) {
-      console.error('❌ Error loading count:', err);
-    }
+    } catch (err) {}
   }, [user?.id]);
 
-  // Efectos
   useEffect(() => {
     if (user?.id) {
-      console.log('🚀 Starting notifications for user:', user.id);
       loadNotifications();
 
-      // Pequeña demora antes de conectar WebSocket
       const timeout = setTimeout(() => {
         connectWebSocket();
       }, 1000);
@@ -269,7 +211,6 @@ export const useNotifications = () => {
     }
   }, [user?.id, loadNotifications, connectWebSocket, disconnectWebSocket]);
 
-  // Cleanup
   useEffect(() => {
     return () => disconnectWebSocket();
   }, [disconnectWebSocket]);
