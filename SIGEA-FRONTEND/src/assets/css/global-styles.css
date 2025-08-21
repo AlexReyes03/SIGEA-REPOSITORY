@@ -162,6 +162,10 @@ Button {
   background-color: var(--bg-blue-800);
 }
 
+.bg-green {
+  background: #3EC80C;
+}
+
 .bg-gray-800 {
   background-color: var(--bg-gray-800);
 }
