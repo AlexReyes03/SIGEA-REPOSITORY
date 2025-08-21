@@ -81,6 +81,8 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/sigea/api/public/**").permitAll()
                                 .requestMatchers(HttpMethod.POST, "/sigea/api/create-dev-user").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/sigea/api/dev-status").permitAll()
+                                .requestMatchers("/sigea/ws/**").permitAll()
+                                .requestMatchers("/sigea/ws-native/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .sessionManagement(sess ->
